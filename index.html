@@ -257,7 +257,85 @@ const SUBJ0=[
 ];
 function initSubjects(){return SUBJ0.map(s=>({...s,topics:s.topics.map(t=>{const c=s.past.filter(p=>p.t.includes(t.id)).length,f=Math.round(100*c/s.past.length);return {...t,sid:s.id,count:c,total:s.past.length,freq:f,level:f>=70?'muy':f>=40?'imp':'comp'}})}))}
 function genSubject(name,diff,exam){const id='x'+Math.random().toString(36).slice(2,6);const lv=[['muy',80],['imp',50],['comp',20]];return {id,name,emoji:'📘',diff,exam,past:[],topics:lv.map((l,i)=>({id:id+i,sid:id,name:'Unidad '+(i+1),m0:45,pts:['Contenido central de la unidad.','Ejercicios típicos de parciales.','Resumen cargado desde tus materiales.'],ana:'Una pieza del rompecabezas de la materia.',tec:'Contenido a cargar desde tus materiales.',count:0,total:0,freq:l[1],level:l[0]}))}}
+const visT=s=>s.onlyMat?s.topics.filter(t=>t.fromMat):s.topics;
 const findT=(subs,id)=>{for(const s of subs){const t=s.topics.find(x=>x.id===id);if(t)return {s,t}}return null};
+
+/* ---------- Materias de la Facultad de Medicina (UdelaR, Plan 2008) ---------- */
+const UDELAR_MED=[
+{a:1,n:'Introducción a la Biología Celular y Molecular',e:'🧬',t:['Química de las biomoléculas','Membranas biológicas','Flujo de la información genética','Metabolismo y energía celular','Ciclo y división celular']},
+{a:1,n:'Introducción a la Bioestadística',e:'📊',t:['Estadística descriptiva','Probabilidad','Distribución normal','Estimación e intervalos de confianza','Pruebas de hipótesis']},
+{a:1,n:'Salud Pública y Humanidades',e:'🏥',t:['Proceso salud-enfermedad','Determinantes sociales de la salud','Sistema Nacional Integrado de Salud','Epidemiología básica','Bioética y derechos humanos']},
+{a:1,n:'Aprendizaje en Territorio',e:'🏘️',t:['Atención primaria de salud','Diagnóstico de situación de salud','Promoción y prevención','Trabajo con la comunidad']},
+{a:2,n:'Biología Celular y Molecular',e:'🔬',t:['Estructura y función de proteínas','Replicación, transcripción y traducción','Señalización celular','Bioenergética y metabolismo','Genética molecular']},
+{a:2,n:'Anatomía Clínica y Bioética',e:'🦴',t:['Aparato locomotor','Tórax','Abdomen','Cabeza y cuello','Bioética clínica']},
+{a:2,n:'Histología y Biofísica del Músculo y la Locomoción',e:'💪',t:['Tejido epitelial y conectivo','Cartílago y hueso','Tejido muscular','Contracción muscular','Biomecánica de la locomoción']},
+{a:2,n:'Neurociencia',e:'🧠',t:['Potencial de membrana y de acción','Sinapsis y neurotransmisión','Sistemas sensoriales','Sistemas motores','Funciones superiores y neuroanatomía']},
+{a:2,n:'Cardiovascular y Respiratorio',e:'🫀',t:['Ciclo cardíaco','Electrocardiograma','Hemodinamia y presión arterial','Mecánica ventilatoria','Intercambio gaseoso','Regulación de la respiración']},
+{a:3,n:'Digestivo, Renal, Endocrino, Metabolismo y Nutrición',e:'🫘',t:['Fisiología digestiva','Filtración glomerular y función tubular','Equilibrio hidroelectrolítico y ácido-base','Eje hipotálamo-hipófisis','Metabolismo y nutrición']},
+{a:3,n:'Hematología e Inmunobiología',e:'🩸',t:['Hematopoyesis','Hemostasis y coagulación','Inmunidad innata','Inmunidad adaptativa','Grupos sanguíneos']},
+{a:3,n:'Reproductor y Desarrollo',e:'👶',t:['Gametogénesis','Fecundación y embriología temprana','Organogénesis','Fisiología del embarazo','Crecimiento y desarrollo']},
+{a:3,n:'Metodología Científica I',e:'🧪',t:['Diseños de estudio','Búsqueda bibliográfica','Lectura crítica','Protocolo de investigación']},
+{a:4,n:'Fisiopatología',e:'⚙️',t:['Inflamación','Fisiopatología cardiovascular','Fisiopatología respiratoria','Fisiopatología renal','Fisiopatología digestiva']},
+{a:4,n:'Anatomía Patológica',e:'🧫',t:['Lesión y muerte celular','Inflamación y reparación','Trastornos hemodinámicos','Neoplasias','Patología por sistemas']},
+{a:4,n:'Microbiología (Bacteriología, Virología, Parasitología y Micología)',e:'🦠',t:['Bacteriología','Virología','Parasitología','Micología','Antimicrobianos']},
+{a:4,n:'Farmacología y Terapéutica',e:'💊',t:['Farmacocinética','Farmacodinamia','Fármacos del sistema nervioso autónomo','Antiinflamatorios y analgésicos','Fármacos cardiovasculares']},
+{a:4,n:'Medicina Interna (Clínica Médica)',e:'🩺',t:['Historia clínica y semiología','Síndromes cardiovasculares','Síndromes respiratorios','Síndromes digestivos','Síndromes renales y metabólicos']},
+{a:5,n:'Pediatría',e:'🧸',t:['Crecimiento y desarrollo','Recién nacido','Alimentación infantil','Infecciones respiratorias','Deshidratación y diarrea']},
+{a:5,n:'Ginecotocología',e:'🤰',t:['Control del embarazo','Parto y puerperio','Patología obstétrica','Patología ginecológica','Salud sexual y reproductiva']},
+{a:5,n:'Clínica Quirúrgica',e:'🔪',t:['Abdomen agudo','Patología herniaria','Traumatismos','Patología biliar','Preoperatorio y postoperatorio']},
+{a:5,n:'Salud Mental y Psiquiatría',e:'🧩',t:['Entrevista psiquiátrica','Trastornos del ánimo','Trastornos de ansiedad','Psicosis','Consumo problemático de sustancias']},
+{a:5,n:'Medicina Familiar y Comunitaria',e:'🏡',t:['Atención continua','Prevención por etapas de la vida','Enfermedades crónicas','Abordaje familiar']},
+{a:6,n:'Medicina Legal',e:'⚖️',t:['Responsabilidad médica','Certificado de defunción','Lesiones','Secreto profesional']},
+{a:6,n:'Internado Obligatorio',e:'🏥',t:['Medicina','Cirugía','Pediatría','Ginecotocología','Medicina Familiar y Comunitaria']}];
+const keyOf=n=>fold(String(n||'')).replace(/[^a-z0-9ñ]+/g,' ').trim();
+function catSubject(c,exam=21){
+  const id='u'+keyOf(c.n).split(' ').map(w=>w.slice(0,2)).join('').slice(0,8)+Math.random().toString(36).slice(2,4);
+  const lv=i=>i<2?'muy':i<4?'imp':'comp';
+  return {id,name:c.n,emoji:c.e,diff:3,exam,past:[],udelar:true,topics:c.t.map((n,i)=>({id:id+'t'+i,sid:id,name:n,m0:40,pts:['Conceptos centrales de '+n+'.','Subí tus apuntes para que el resumen use tu material.','Practicá con preguntas del tema.'],ana:'Una pieza clave de '+c.n+'.',tec:'Subí tu material de '+n+' para tener la explicación de tu curso.',count:0,total:0,freq:[80,70,50,45,20,20][i]||20,level:lv(i)}))};
+}
+
+/* ---------- Temario desde el material: divide los documentos en temas y estima el tiempo ---------- */
+const isHead=l=>{const t=l.trim();if(t.length<3||t.length>80)return false;const w=t.split(/\s+/).length;if(w>10)return false;
+  if(/^#{1,4}\s/.test(t)||/^(\d+(\.\d+)*[.)-]?|[IVX]+[.)-])\s+\S/.test(t)||/^(tema|unidad|cap[ií]tulo|clase|m[oó]dulo|bolilla)\b/i.test(t))return true;
+  if(/:$/.test(t)&&w<=8)return true;const up=t.replace(/[^A-Za-zÁÉÍÓÚÑ]/g,''),UP=up.replace(/[^A-ZÁÉÍÓÚÑ]/g,'');return up.length>=4&&UP.length/up.length>.75;};
+const cleanHead=h=>h.replace(/^#{1,4}\s*/,'').replace(/^(\d+(\.\d+)*[.)-]?|[IVX]+[.)-])\s+/,'').replace(/^(tema|unidad|cap[ií]tulo|clase|m[oó]dulo|bolilla)\s*\d*\s*[:.\-–]?\s*/i,'').replace(/[:.]$/,'').trim().replace(/^./,c=>c.toUpperCase());
+function splitSections(text){
+  const lines=String(text||'').split('\n');let secs=[],cur=null;
+  lines.forEach(l=>{if(isHead(l)&&cleanHead(l).length>=3){cur={name:cleanHead(l),body:''};secs.push(cur)}else if(cur)cur.body+=l+'\n';else{cur={name:'',body:l+'\n'};secs.push(cur)}});
+  secs=secs.filter(x=>x.name&&wordsOf(x.body)>=12);
+  if(secs.length>=2)return secs;
+  /* sin títulos: "Tema. Desarrollo…" al comienzo de cada párrafo */
+  const paras=String(text||'').split(/\n+/).map(x=>x.trim()).filter(x=>wordsOf(x)>=12);
+  secs=paras.map(x=>{const m=x.match(/^([^.:]{3,70})[.:]\s+(.*)$/s);return m&&m[1].split(/\s+/).length<=7?{name:m[1].trim().replace(/^./,c=>c.toUpperCase()),body:m[2]}:null}).filter(Boolean);
+  if(secs.length>=2)return secs;
+  /* último recurso: partes de ~300 palabras con su palabra más repetida */
+  const ws=String(text||'').split(/\s+/),out=[];
+  for(let i=0;i<ws.length;i+=300){const body=ws.slice(i,i+300).join(' ');if(wordsOf(body)<40)continue;const cnt={};(body.match(/[A-Za-zÁÉÍÓÚÑáéíóúñ]{6,}/g)||[]).forEach(w=>{const k=fold(w);if(!STOPW.has(k))cnt[k]=(cnt[k]||0)+1});const top=Object.entries(cnt).sort((x,y)=>y[1]-x[1])[0];out.push({name:'Parte '+(out.length+1)+(top?': '+top[0].replace(/^./,c=>c.toUpperCase()):''),body})}
+  return out;
+}
+const blocksFor=w=>Math.max(1,Math.min(6,Math.ceil(w/300)));
+function localSyllabus(mats){
+  const all=[];
+  mats.filter(m=>m.kind!=='examen').forEach(m=>splitSections(m.text).forEach(x=>{const k=keyOf(x.name),prev=all.find(y=>keyOf(y.name)===k);if(prev){prev.body+='\n'+x.body}else all.push({name:x.name,body:x.body,src:m.name})}));
+  const exams=mats.filter(m=>m.kind==='examen').map(m=>fold(m.text));
+  let tops=all.slice().sort((x,y)=>wordsOf(y.body)-wordsOf(x.body)).slice(0,12);
+  tops=all.filter(x=>tops.includes(x));
+  const rank=tops.slice().sort((x,y)=>wordsOf(y.body)-wordsOf(x.body));
+  return tops.map(x=>{
+    const w=wordsOf(x.body),r=rank.indexOf(x)/Math.max(1,tops.length),kw=keyWords(x.name).filter(k=>k.length>=5);
+    const inEx=exams.filter(e=>kw.length&&kw.every(k=>e.includes(k.slice(0,Math.max(5,k.length-2))))).length;
+    const imp=/importante|clave|fundamental|siempre (lo )?toman|ojo/i.test(x.body);
+    const level=inEx||(imp&&r<.8)||r<.4?'muy':r<.8?'imp':'comp';
+    const sn=sentencesOf(x.body);
+    return {name:x.name,pts:(sn.length?sn:[x.body.trim().slice(0,200)]).slice(0,4),tec:sn.slice(0,2).join(' '),ana:'',level,blocks:blocksFor(w),src:x.src,body:x.body.trim().slice(0,3000),inEx};
+  });
+}
+/* Busca en el material el fragmento que habla de un tema (para leerlo durante el bloque) */
+function excerptFor(mats,name){
+  const kw=keyWords(name).filter(k=>k.length>=4);if(!kw.length)return null;
+  for(const m of mats){const t=fold(m.text||'');let i=t.indexOf(fold(name));if(i<0){const k=kw.sort((x,y)=>y.length-x.length)[0];i=t.indexOf(k)}if(i>=0){const a=Math.max(0,t.lastIndexOf('\n',i));return {src:m.name,body:m.text.slice(a,a+2500).trim()}}}
+  return null;
+}
 
 /* ---------- Banco de preguntas ---------- */
 const Q=(s,t,type,lvl,q,opts,a,ex)=>({id:'q'+(Q.n=(Q.n||0)+1),s,t,type,lvl,q,opts,a,ex});
@@ -302,7 +380,7 @@ function buildPlan(S){
   const {subjects,prefs,mastery,slow,kept,reviews,rescue}=S,out=[],N=21;
   const exam=s=>rescue&&rescue.exam[s.id]!=null?rescue.exam[s.id]:s.exam;
   const nowMin=Math.ceil(((S.nowMs-D0.getTime())/6e4)/5)*5;
-  const work={};subjects.forEach(s=>s.topics.forEach(t=>work[t.id]=Math.max(.08,(100-(mastery[t.id]??50))/100)));
+  const work={},need={};subjects.forEach(s=>s.topics.forEach(t=>{work[t.id]=Math.max(.08,(100-(mastery[t.id]??50))/100);need[t.id]=t.blocks?Math.max(0,Math.round(t.blocks*(100-(mastery[t.id]??40))/80)):0}));
   const occ=Array.from({length:N},()=>[]);
   for(let d=0;d<N;d++)(CLASES[dateOf(d).getDay()]||[]).forEach(([sid,a,b,k])=>{if(subjects.some(s=>s.id===sid)){out.push({id:`c${d}-${a}`,day:d,start:a,dur:b-a,type:'class',subj:sid,label:k});occ[d].push([a,b])}});
   kept.forEach(k=>{out.push({...k,done:true});occ[k.day]&&occ[k.day].push([k.start,k.start+k.dur])});
@@ -320,10 +398,10 @@ function buildPlan(S){
       t=free(t);if(t+DUR>end)break;
       let pick=null,rv=false;
       if(pend.length){const r=pend.shift(),f=findT(subjects,r.topic);if(f){pick=f;rv=true}}
-      if(!pick){let best=-1;subjects.forEach(s=>{const e=exam(s);if(e<=d)return;if(rescue&&rescue.exam[s.id]==null)return;const days=e-d;s.topics.forEach(tp=>{if(rescue&&tp.level==='comp')return;const sc=LV[tp.level].w*(1+10/days)*(.6+s.diff/5)*(work[tp.id]+.1)*(1+(slow[tp.id]||0)*.3)*(last&&last.id===tp.id?.5:1)*(1+tp.freq/200);if(sc>best){best=sc;pick={s,t:tp}}})})}
+      if(!pick){let best=-1;subjects.forEach(s=>{const e=exam(s);if(e<=d)return;if(rescue&&rescue.exam[s.id]==null)return;const days=e-d;s.topics.forEach(tp=>{if(rescue&&tp.level==='comp')return;if(s.onlyMat&&!tp.fromMat)return;const sc=(need[tp.id]>0?1.6:1)*LV[tp.level].w*(1+10/days)*(.6+s.diff/5)*(work[tp.id]+.1)*(1+(slow[tp.id]||0)*.3)*(last&&last.id===tp.id?.5:1)*(1+tp.freq/200);if(sc>best){best=sc;pick={s,t:tp}}})})}
       if(!pick)break;
       out.push({id:`s${d}-${t}`,day:d,start:t,dur:DUR,type:'study',subj:pick.s.id,topic:pick.t.id,review:rv,done:false});
-      work[pick.t.id]*=.78;last=pick.t;occ[d].push([t,t+DUR]);budget-=DUR;n++;t+=DUR;
+      need[pick.t.id]=(need[pick.t.id]||0)-1;work[pick.t.id]*=need[pick.t.id]>0?.92:.78;last=pick.t;occ[d].push([t,t+DUR]);budget-=DUR;n++;t+=DUR;
       const rd=n%2===0?30:10;
       if(budget>=DUR&&t+rd+DUR<=end){out.push({id:`r${d}-${t}`,day:d,start:t,dur:rd,type:'rest',label:rd===30?'Descanso largo':'Descanso'});occ[d].push([t,t+rd]);t+=rd}
     }
@@ -373,7 +451,7 @@ function rescuePlan(subjects,mastery,items,hours,cover,startMin){
 /* Recalcula frecuencias y niveles a partir de los parciales (incluye los que subió la persona) */
 function restat(s){
   if(!s.past.length)return s;
-  return {...s,topics:s.topics.map(t=>{const c=s.past.filter(p=>p.t.includes(t.id)).length,f=Math.round(100*c/s.past.length);return {...t,count:c,total:s.past.length,freq:f,level:f>=70?'muy':f>=40?'imp':'comp'}})};
+  return {...s,topics:s.topics.map(t=>{const c=s.past.filter(p=>p.t.includes(t.id)).length,f=Math.round(100*c/s.past.length);return {...t,count:c,total:s.past.length,freq:f,level:t.fromMat&&!c?t.level:f>=70?'muy':f>=40?'imp':'comp'}})};
 }
 /* ---------- Íconos (trazos estilo Lucide) ---------- */
 const IC={
@@ -418,7 +496,7 @@ function Ahora({a}){
   const todayS=plan.filter(b=>b.type==='study'&&b.day===0);
   const list=todayS.length?todayS:plan.filter(b=>b.type==='study'&&!b.done).slice(0,4);
   const why=b=>{const {s,t}=findT(subjects,b.topic),l=[];
-    l.push(t.total?`Aparece en ${t.count} de ${t.total} parciales anteriores (${t.freq}%).`:'Es una unidad central de la materia.');
+    l.push(t.fromMat?`Es un tema de tu material (${t.src||'tus apuntes'}): calculamos ~${t.blocks||1} bloques de 45 min.`:t.total?`Aparece en ${t.count} de ${t.total} parciales anteriores (${t.freq}%).`:'Es una unidad central de la materia.');
     l.push(`${s.name} rinde en ${a.examOf(s)} días y hoy dominás este tema en un ${mastery[t.id]}%.`);
     if(b.review)l.push('Es un repaso: fallaste una pregunta de este tema.');
     if(a.slow[t.id])l.push('Subió de prioridad porque tardaste más de lo previsto.');
@@ -431,13 +509,16 @@ function Ahora({a}){
       <div className="row wrap" style=${{marginTop:18}}><button className="btn btn-i" disabled=${run.left>0} onClick=${a.endRest}><${Icon} n="check" s=${16}/> Ya descansé</button><button className="btn btn-ghost" onClick=${a.skipRest}>Saltear</button></div></div>`;
   }else if(run&&run.phase==='running'){
     const {s,t}=findT(subjects,run.block.topic);
+    const ex=t.body?{src:t.src,body:t.body}:excerptFor(a.mats.filter(m=>m.subj===s.id&&m.text),t.name);
     hero=html`<div className=${'hero '+thc(s.id)}><div className="eyebrow">En curso · ${s.name}</div>
       <h2 style=${{fontSize:'clamp(24px,7vw,30px)',fontWeight:700,marginTop:6}}>${t.name}</h2>
       <div className="timer" style=${{margin:'16px 0 12px'}}>${mmss(run.left)}</div>
       <div style=${{background:'rgba(255,255,255,.28)',height:8,borderRadius:99,overflow:'hidden'}}><i style=${{display:'block',height:'100%',background:'#fff',borderRadius:99,width:(100*(1-run.left/run.total))+'%'}}/></div>
       <div className="row wrap" style=${{marginTop:20}}><button className="btn btn-i btn-big" onClick=${a.finishRun}><${Icon} n="check" s=${18}/> Terminé</button>
         <button className="btn btn-ghost" onClick=${a.togglePause}><${Icon} n=${run.paused?'play':'pause'} s=${16}/> ${run.paused?'Seguir':'Pausar'}</button>
-        <button className="btn btn-ghost" onClick=${a.slower}><${Icon} n="clock" s=${16}/> Me tardé más</button></div></div>`;
+        <button className="btn btn-ghost" onClick=${a.slower}><${Icon} n="clock" s=${16}/> Me tardé más</button></div>
+      ${ex?html`<details style=${{marginTop:16,background:'rgba(255,255,255,.92)',color:'#1d1d2b',borderRadius:18,padding:'12px 14px'}} open><summary style=${{fontWeight:600,cursor:'pointer'}}>📎 Estudiá con tu material${ex.src?' · '+ex.src:''}</summary><div style=${{marginTop:8,fontSize:14,whiteSpace:'pre-wrap',maxHeight:320,overflow:'auto',lineHeight:1.5}}>${ex.body}</div></details>`
+        :html`<p style=${{marginTop:14,fontSize:13,opacity:.9}}>Tip: subí tus apuntes de ${s.name} en "Apuntes" y acá vas a ver la parte de este tema.</p>`}</div>`;
   }else if(nb){
     const {s,t}=findT(subjects,nb.topic),w=why(nb);
     hero=html`<div className=${'hero '+thc(s.id)}>
@@ -451,9 +532,9 @@ function Ahora({a}){
   }
   const exams=[...subjects].sort((x,y)=>a.examOf(x)-a.examOf(y));
   const d0=dateOf(0);
-  const ts=[...cs.topics].sort((x,y)=>LV[y.level].w-LV[x.level].w).filter(t=>showC||t.level!=='comp');
+  const ts=[...visT(cs)].sort((x,y)=>LV[y.level].w-LV[x.level].w).filter(t=>showC||t.level!=='comp');
   const nComp=cs.topics.filter(t=>t.level==='comp').length;
-  const tools=[['ejercicios','Practicar',reviews.length?`${reviews.length} repaso${reviews.length>1?'s':''} pendiente${reviews.length>1?'s':''}`:'Preguntas por tema','✏️','th-fis'],['simulador','Simulacro','Ensayá un parcial','⏱️','th-bio'],['logros','Logros',`Racha de ${stats.streak} días`,'🔥','th-x'],['match','Study Match','Estudiá con alguien','🤝','th-ana']];
+  const tools=[['ejercicios','Practicar',reviews.length?`${reviews.length} repaso${reviews.length>1?'s':''} pendiente${reviews.length>1?'s':''}`:'Preguntas por tema','✏️','th-fis'],['simulador','Simulacro','Ensayá un parcial','⏱️','th-bio'],['logros','Logros',`Racha de ${stats.streak} días`,'🔥','th-x'],['match','Grupos de estudio','Chateá y compartí material','🤝','th-ana']];
   return html`<div className="screen" style=${{padding:0,gap:22}}>
     <div className="row" style=${{justifyContent:'space-between',alignItems:'flex-start'}}>
       <div className="grow"><h1 style=${{fontSize:'clamp(28px,8vw,34px)',fontWeight:700}}>${DNF[d0.getDay()]} ${d0.getDate()}</h1><p className="mut" style=${{fontSize:14,marginTop:2}}>${todayS.length?`${todayS.filter(b=>!b.done).length} de ${todayS.length} bloques pendientes`:'Tus próximos bloques'}</p></div>
@@ -467,7 +548,7 @@ function Ahora({a}){
       <div className="scrollx">${exams.map(s=>{const d=a.examOf(s);return html`<div key=${s.id} style=${{background:d<=10?'var(--t-rose)':d<=20?'var(--t-cream)':'var(--t-blue)',borderRadius:24,padding:'12px 18px',minWidth:150,flex:'0 0 auto'}}><div className="row" style=${{gap:6,alignItems:'baseline'}}><b className="num" style=${{fontSize:36,fontWeight:700,lineHeight:1}}>${d}</b><span className="mut" style=${{fontSize:13}}>${d===1?'día':'días'}</span>${d<=10&&html`<span style=${{alignSelf:'center'}}><${Icon} n="alert" s=${18}/></span>`}</div><p style=${{fontSize:13.5,fontWeight:500,marginTop:4}}>${s.name}</p>${d<=10&&html`<p style=${{fontSize:11.5,fontWeight:600}}>URGENTE</p>`}</div>`})}</div></div>
     <div className="fl" style=${{gap:12}}><h2 style=${{fontSize:20,fontWeight:600}}>Qué importa más</h2>
       <div className="scrollx">${subjects.map(s=>html`<button key=${s.id} className="chip" style=${{flex:'0 0 auto'}} aria-pressed=${s.id===cs.id} onClick=${()=>setSub(s.id)}>${s.emoji} ${s.name}</button>`)}</div>
-      <div className="fl" style=${{gap:8}}>${ts.map(t=>html`<button key=${t.id} className=${'trow '+thc(cs.id)} onClick=${()=>a.openTutor(t.id)}><span className="grow"><b style=${{fontWeight:500,display:'block'}}>${t.name}</b><span className="mut" style=${{fontSize:12.5}}>${t.total?`${t.count} de ${t.total} parciales`:'Unidad central'} · dominio <span className="num">${mastery[t.id]}%</span></span></span><${LevelTag} lv=${t.level}/></button>`)}</div>
+      <div className="fl" style=${{gap:8}}>${ts.map(t=>html`<button key=${t.id} className=${'trow '+thc(cs.id)} onClick=${()=>a.openTutor(t.id)}><span className="grow"><b style=${{fontWeight:500,display:'block'}}>${t.name}</b><span className="mut" style=${{fontSize:12.5}}>${t.fromMat?'📎 '+(t.src||'tu material')+' · ~'+(t.blocks||1)+' bloques':t.total?`${t.count} de ${t.total} parciales`:'Unidad central'} · dominio <span className="num">${mastery[t.id]}%</span></span></span><${LevelTag} lv=${t.level}/></button>`)}</div>
       ${nComp>0&&html`<button className="chip" style=${{alignSelf:'flex-start'}} onClick=${()=>setShowC(!showC)}>${showC?'Ocultar':'Mostrar'} complementarios (${nComp})</button>`}</div>
     <div className="fl" style=${{gap:12}}><h2 style=${{fontSize:20,fontWeight:600}}>Más herramientas</h2>
       <div className="tools">${tools.map(([k,t,s,e,th])=>html`<button key=${k} className=${'tool '+th} onClick=${()=>a.go(k)}><span className="tile" style=${{width:42,height:42,fontSize:20}}>${e}</span><span><b style=${{fontWeight:600,display:'block',fontSize:15}}>${t}</b><span className="mut" style=${{fontSize:12.5,lineHeight:1.3,display:'block'}}>${s}</span></span></button>`)}</div></div>
@@ -493,7 +574,7 @@ function Calendario({a}){
         if(b.type==='rest')return html`<div key=${b.id} className="tl"><time className="num">${hhmm(b.start)}</time><div className="brk" style=${{paddingTop:8}}>${b.label} · ${b.dur} min</div></div>`;
         if(b.type==='class')return html`<div key=${b.id} className="tl"><time className="num">${hhmm(b.start)}</time><div className=${'ccard '+thc(b.subj)}><b style=${{fontWeight:600}}>Clase de ${sn(b.subj)}</b><p className="mut num" style=${{fontSize:13}}>${b.label} · ${hhmm(b.start)}–${hhmm(b.start+b.dur)}</p></div></div>`;
         const f=findT(subjects,b.topic);if(!f)return null;const {s,t}=f;
-        return html`<div key=${b.id} className="tl"><time className="num">${hhmm(b.start)}</time><div><button className=${'gcard '+thc(s.id)+(b.done?' done':'')} aria-expanded=${open===b.id} onClick=${()=>setOpen(open===b.id?null:b.id)}><b style=${{fontWeight:600,display:'block',fontSize:15.5}}>${b.done?'✓ ':b.review?'↻ ':''}${t.name}</b><span style=${{fontSize:13,opacity:.92}} className="num">${s.name} · ${b.dur} min${b.review?' · repaso':''}${b.done?' · hecho':''}</span></button>
+        return html`<div key=${b.id} className="tl"><time className="num">${hhmm(b.start)}</time><div><button className=${'gcard '+thc(s.id)+(b.done?' done':'')} aria-expanded=${open===b.id} onClick=${()=>setOpen(open===b.id?null:b.id)}><b style=${{fontWeight:600,display:'block',fontSize:15.5}}>${b.done?'✓ ':b.review?'↻ ':''}${t.name}</b><span style=${{fontSize:13,opacity:.92}} className="num">${s.name} · ${b.dur} min${t.fromMat?' · 📎 tu material':''}${b.review?' · repaso':''}${b.done?' · hecho':''}</span></button>
           ${open===b.id&&!b.done&&html`<div className="row wrap" style=${{marginTop:8}}><button className="btn btn-s btn-sm" disabled=${!!a.run} onClick=${()=>{a.startRun(b);a.go('ahora')}}><${Icon} n="play" s=${14}/> Empezar ahora</button><button className="btn btn-sm" onClick=${()=>a.slowTopic(b.topic)}><${Icon} n="clock" s=${14}/> Tardé más con este tema</button></div>`}</div></div>`})}
     </div>
     <p className="mut" style=${{fontSize:12.5}}>Tocá un bloque para empezarlo. Si te lleva más tiempo, avisanos y recalculamos tu semana.</p></div>`;
@@ -504,10 +585,10 @@ function Materias({a}){
   const {subjects,mastery}=a;
   const [sid,setSid]=useState(null),[tab,setTab]=useState('res'),[over,setOver]=useState(false),[fi,setFi]=useState(0),[flip,setFlip]=useState(false);
   const s=subjects.find(x=>x.id===sid);
-  const deck=useMemo(()=>s?[...s.topics].sort((x,y)=>LV[y.level].w-LV[x.level].w):[],[s]);
+  const deck=useMemo(()=>s?[...visT(s)].sort((x,y)=>LV[y.level].w-LV[x.level].w):[],[s]);
   const avgOf=x=>Math.round(x.topics.reduce((p,t)=>p+mastery[t.id],0)/x.topics.length);
   if(!s)return html`<div className="screen" style=${{padding:0}}>
-    <${Head} title="Tus materias" sub="Tocá una para ver resúmenes, tarjetas y parciales."/>
+    <${Head} title="Tus materias" sub="Tocá una para ver resúmenes, tarjetas y parciales." right=${html`<button className="btn btn-sm btn-s" style=${{alignSelf:'center'}} onClick=${()=>a.openOnb(2)}><${Icon} n="plus" s=${14}/> Materias</button>`}/>
     <div className="fl" style=${{gap:12}}>${subjects.map(x=>html`<button key=${x.id} className=${'rowt '+thc(x.id)} style=${{padding:16}} onClick=${()=>{setSid(x.id);setTab('res');setFi(0);setFlip(false)}}><span className="tile">${x.emoji}</span><span className="grow"><b style=${{fontSize:17,fontWeight:600,display:'block'}}>${x.name}</b><span className="mut" style=${{fontSize:13,display:'block'}}>Parcial en ${a.examOf(x)} días · dominio ${avgOf(x)}%</span><span style=${{display:'block',marginTop:8}}><${Bar} v=${avgOf(x)}/></span></span><${Icon} n="chevR"/></button>`)}</div></div>`;
   const d=a.examOf(s),files=a.mats.filter(m=>m.subj===s.id),avg=avgOf(s),exp=d<=10;
   const card=deck[fi%deck.length];
@@ -516,7 +597,7 @@ function Materias({a}){
   mat:html`<${MaterialPanel} a=${a} subj=${s.id}/>`,
   res:html`<div className="fl" style=${{gap:12}}>
     <div className="alertbox" style=${{background:'var(--t-lilac)'}}><b>${exp?'Resumen exprés':'Resumen completo'}</b> · parcial en ${d} días${files.length?` · con tu temario y ${files.length} archivo${files.length>1?'s':''}`:''}. ${exp?'Quedan afuera los temas secundarios.':'Incluye todos los temas por orden de importancia.'}</div>
-    ${s.topics.filter(t=>exp?t.level!=='comp':true).map(t=>html`<div key=${t.id} className=${'ccard '+thc(s.id)}>
+    ${visT(s).filter(t=>exp?t.level!=='comp':true).map(t=>html`<div key=${t.id} className=${'ccard '+thc(s.id)}>
       <div className="row wrap" style=${{justifyContent:'space-between'}}><h3 style=${{fontSize:17,fontWeight:600}}>${t.name}</h3><${LevelTag} lv=${t.level}/></div>
       <ul style=${{margin:'10px 0 0',paddingLeft:18,fontSize:14}}>${(exp&&t.level==='imp'?t.pts.slice(0,2):t.pts).map((p,i)=>html`<li key=${i} style=${{marginTop:4}}>${p}</li>`)}</ul></div>`)}
     ${exp&&html`<p className="mut" style=${{fontSize:13}}>Fuera del resumen exprés: ${s.topics.filter(t=>t.level==='comp').map(t=>t.name).join(', ')||'nada'}.</p>`}</div>`,
@@ -929,7 +1010,7 @@ function MaterialPanel({a,subj}){
   const [ai,setAi]=useSample();
   const [kind,setKind]=useState('apuntes'),[over,setOver]=useState(false),[paste,setPaste]=useState(false),[pn,setPn]=useState(''),[pt,setPt]=useState('');
   const [job,setJob]=useState(null),[err,setErr]=useState(null),[open,setOpen]=useState(null),[q,setQ]=useState(''),[live,setLive]=useState(null),[note,setNote]=useState(null);
-  const [pick,setPick]=useState('all'),[xc,setXc]=useState({n:8,type:'mix',lvl:0,weak:true});
+  const [pick,setPick]=useState('all'),[xc,setXc]=useState({n:8,type:'mix',lvl:0,weak:true}),[syl,setSyl]=useState(null),[only,setOnly]=useState(true);
   const ctl=useRef(null),inId='mat-in-'+subj;
   const mats=a.mats.filter(m=>m.subj===subj),usable=mats.filter(m=>m.text&&m.text.trim().length>20);
   const exams=usable.filter(m=>m.kind==='examen'),newExams=exams.filter(m=>!m.analyzed),imgs=mats.filter(m=>(m.status==='img'||m.status==='scan')&&BLOBS.has(m.id));
@@ -987,6 +1068,21 @@ function MaterialPanel({a,subj}){
     if(!ok.length){setErr('No pude armar ejercicios con ese material. Probá con más texto.');return}
     QBANK.push(...ok);a.bumpQ();setNote('Listo: sumé '+ok.length+' ejercicios personalizados de tu material. Tocá "Practicar" para resolverlos.');
   });
+  const makeSyl=()=>{
+    const src=usable;
+    if(!aiOk){const r=localSyllabus(src);if(r.length<2){setErr('No pude separar tus documentos en temas. Probá poniéndole un título a cada tema (una línea corta antes de cada parte).');return}setErr(null);setSyl(r);return}
+    run('syl',async sig=>{
+      const ctx=a.matContext(subj,60000);
+      const p='Sos un tutor universitario. Dividí el material de '+s.name+' ('+a.prefs.carrera+') que subió el estudiante en los TEMAS de estudio que contiene, en el orden en que aparecen (entre 4 y 12). Usá los parciales anteriores (si hay) para decidir la importancia. Devolvé SOLO un array JSON. Cada elemento: {"name":"nombre corto del tema","pts":["3 a 5 ideas clave, concretas, sacadas del material"],"ana":"una analogía simple","tec":"explicación técnica de 2 o 3 frases según el material","level":"muy"|"imp"|"comp","blocks":número de bloques de 45 minutos que lleva estudiarlo (1 a 6, según extensión y dificultad),"src":"nombre exacto del archivo donde está"}. Español rioplatense. No inventes temas que no estén en el material.\n\nMATERIAL:\n'+ctx;
+      const r=await ai.json(p,{cache:false,signal:sig});
+      const arr=(Array.isArray(r)?r:(r&&(r.topics||r.temas))||[]).filter(x=>x&&typeof x.name==='string'&&x.name.trim());
+      if(arr.length<2){setErr('No pude separar tu material en temas. Probá con más texto.');return}
+      setSyl(arr.slice(0,12).map(x=>{const ex=excerptFor(src.filter(m=>!x.src||m.name===x.src).concat(src),x.name);return {name:x.name.trim().slice(0,70),pts:(Array.isArray(x.pts)?x.pts:[]).map(String).filter(Boolean).slice(0,5),ana:String(x.ana||''),tec:String(x.tec||''),level:['muy','imp','comp'].includes(x.level)?x.level:'imp',blocks:Math.max(1,Math.min(6,Math.round(+x.blocks)||2)),src:String(x.src||(ex&&ex.src)||''),body:ex?ex.body:''}}));
+    });
+  };
+  const sylNeed=syl?syl.reduce((x,t)=>x+t.blocks,0)*45:0,sylHave=Math.max(0,d-1)*a.prefs.maxH*60;
+  const useSyl=()=>{a.applySyllabus(subj,syl,only);setSyl(null);setNote('Listo: tu cronograma de '+s.name+' ahora se arma con los '+syl.length+' temas de tu material.')};
+  const matTopics=s.topics.filter(t=>t.fromMat);
   const makeLocalQs=()=>{
     const src=ids?usable.filter(m=>ids.includes(m.id)):usable;
     const ok=localQs(src,xc.n,subj,s.topics,xc.type==='vf'?'vf':xc.type==='sc'?'sc':'mix');
@@ -1057,6 +1153,18 @@ function MaterialPanel({a,subj}){
 
     ${ready&&html`<div className="fl" style=${{gap:10}}>
       <h3 style=${{fontSize:18,fontWeight:700}}>Usá tu material</h3>
+      <div className="card fl" style=${{gap:10}}><b>🗂️ Estudiar con tu material: temario y cronograma</b>
+        <span className="mut" style=${{fontSize:13}}>Divido tus documentos en temas, estimo cuántos bloques de 45 minutos lleva cada uno y armo tu cronograma de horas de estudio con eso. Durante cada bloque vas a tener a mano la parte de tu material.</span>
+        ${matTopics.length>0&&!syl&&html`<div className="alertbox" style=${{background:'var(--t-mint)'}}>Tu cronograma ya usa ${matTopics.length} temas de tu material${s.onlyMat?' (solo esos)':''}.</div>`}
+        <div className="row wrap"><button className="btn btn-s btn-sm" disabled=${!!job} onClick=${makeSyl}>${job==='syl'?'Separando en temas…':matTopics.length?'Volver a detectar temas':'Detectar temas'}</button>${matTopics.length>0&&html`<button className="btn btn-sm" onClick=${()=>a.go('calendario')}>Ver cronograma</button>`}</div>
+        ${syl&&html`<div className="fl" style=${{gap:8}}>
+          ${syl.map((t,i)=>html`<div key=${i} className=${'ccard '+thc(subj)} style=${{padding:'10px 14px'}}><div className="row wrap" style=${{justifyContent:'space-between',gap:8}}><b style=${{fontWeight:600}}>${i+1}. ${t.name}</b><${LevelTag} lv=${t.level}/></div>
+            <span className="mut" style=${{fontSize:12.5}}>~${t.blocks} bloque${t.blocks>1?'s':''} de 45 min${t.src?' · '+t.src:''}</span>
+            <div className="row" style=${{gap:6,marginTop:6}} role="group" aria-label=${'Importancia de '+t.name}>${['muy','imp','comp'].map(l=>html`<button key=${l} className="chip" style=${{padding:'.25rem .7rem',fontSize:12}} aria-pressed=${t.level===l} onClick=${()=>setSyl(syl.map((x,j)=>j===i?{...x,level:l}:x))}>${LV[l].name}</button>`)}<button className="chip" style=${{padding:'.25rem .7rem',fontSize:12,marginLeft:'auto'}} aria-label=${'Quitar '+t.name} onClick=${()=>setSyl(syl.filter((x,j)=>j!==i))}>Quitar</button></div></div>`)}
+          <div className="alertbox" style=${{background:sylNeed>sylHave?'var(--t-rose)':'var(--t-blue)'}}>Necesitás unas <b>${Math.round(sylNeed/60)} h</b> de estudio para estos temas. Hasta el parcial (${d} días, máx. ${a.prefs.maxH} h por día) tenés unas <b>${Math.round(sylHave/60)} h</b>.${sylNeed>sylHave?' No entra todo: priorizo los temas muy importantes y los complementarios quedan para el final.':''}</div>
+          <label className="row" style=${{gap:8,fontSize:13.5,cursor:'pointer'}}><input type="checkbox" checked=${only} onChange=${e=>setOnly(e.target.checked)} style=${{width:18,height:18,flex:'0 0 18px',accentColor:'var(--ink)'}}/> Estudiar ${s.name} solo con estos temas</label>
+          <div className="row wrap"><button className="btn btn-s btn-sm" disabled=${syl.length===0} onClick=${useSyl}><${Icon} n="calendar" s=${14}/> Usar en mi cronograma</button><button className="btn btn-sm" onClick=${()=>setSyl(null)}>Cancelar</button></div></div>`}
+      </div>
       ${usable.length>1&&html`<div><div className="eyebrow" style=${{marginBottom:8}}>Preguntas y ejercicios sobre</div><div className="chips">${[['all','Todo mi material'],...usable.map(m=>[m.id,KIND[m.kind].e+' '+m.name])].map(([k,l])=>html`<button key=${k} className="chip" aria-pressed=${(ids?ids[0]:'all')===k} onClick=${()=>setPick(k)} style=${{maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${l}</button>`)}</div></div>`}
       <${MatChat} key=${(ids?ids[0]:'all')+String(!!ai)} a=${a} s=${s} ai=${ai} setAi=${setAi} usable=${usable} ids=${ids}/>
       <div className="card fl" style=${{gap:8}}><b>📘 Guía de estudio</b><span className="mut" style=${{fontSize:13}}>Un resumen ordenado por prioridad, armado con tus archivos.</span>
@@ -1094,7 +1202,7 @@ function MaterialScreen({a}){
     <${MaterialPanel} key=${s.id} a=${a} subj=${s.id}/></div></div>`;
 }
 /* ---------- INGRESO OBLIGATORIO + PERFIL ---------- */
-const UNIS=['Universidad de la República (UdelaR)','Universidad de Buenos Aires (UBA)','Universidad Nacional de La Plata (UNLP)','Universidad Nacional de Córdoba (UNC)','Universidad Católica del Uruguay','Universidad ORT Uruguay','Universidad de Montevideo','Universidad Tecnológica (UTEC)','Universidad de Chile','Universidad Nacional de Colombia','UNAM'];
+const UNIS=['Universidad de la República (UdelaR)','Facultad de Medicina · UdelaR','Universidad de Buenos Aires (UBA)','Universidad Nacional de La Plata (UNLP)','Universidad Nacional de Córdoba (UNC)','Universidad Católica del Uruguay','Universidad ORT Uruguay','Universidad de Montevideo','Universidad Tecnológica (UTEC)','Universidad de Chile','Universidad Nacional de Colombia','UNAM'];
 const CARRERAS=['Medicina','Odontología','Enfermería','Psicología','Derecho','Ingeniería','Arquitectura','Ciencias Económicas','Química','Biología','Veterinaria','Nutrición'];
 const PAISES=['Uruguay','Argentina','Chile','Paraguay','Colombia','México','España'];
 const acctLoad=()=>{try{return JSON.parse(localStorage.getItem('ea-accounts')||'{}')}catch(e){return {}}};
@@ -1184,7 +1292,7 @@ function Welcome({initial,edit,onDone,onClose}){
 }
 
 function Perfil({a,onClose}){
-  const u=a.user,[k,setK]=useState(''),[has,setHas]=useState(!!aiKey.get());
+  const u=a.user,[k,setK]=useState(''),[has,setHas]=useState(!!aiKey.get()),[gc,setGc]=useState(()=>grpCfg.get()),[gu,setGu]=useState(''),[gk,setGk]=useState('');
   return html`<div className="overlay" role="dialog" aria-modal="true" aria-label="Mi perfil"><div className="sheet">
     <div className="row" style=${{justifyContent:'space-between'}}><h2 style=${{fontSize:24,fontWeight:700}}>Mi perfil</h2><button className="ibtn" onClick=${onClose} aria-label="Cerrar"><${Icon} n="x" s=${18}/></button></div>
     <div className="card row" style=${{gap:14}}><span className="av" style=${{width:56,height:56,flexBasis:56,fontSize:20}}>${initials(u.nombre)}</span><div className="grow" style=${{minWidth:0}}><b style=${{fontSize:17,display:'block'}}>${u.nombre}</b><span className="mut" style=${{fontSize:13,overflowWrap:'anywhere'}}>${u.email}</span></div></div>
@@ -1192,6 +1300,9 @@ function Perfil({a,onClose}){
     ${STANDALONE&&html`<div className="card fl" style=${{gap:8}}><b>🤖 IA del tutor (opcional)</b>
       <span className="mut" style=${{fontSize:13}}>${has?'Clave guardada: el tutor, la guía y las preguntas con IA están activos.':'Pegá tu clave de la API de Anthropic para activar el tutor con IA, la guía de estudio y las preguntas desde tu material. Sin clave, todo lo demás funciona igual.'} Se guarda solo en este navegador y se envía únicamente a api.anthropic.com.</span>
       ${has?html`<div><button className="btn btn-sm" onClick=${()=>{aiKey.set('');setHas(false);a.toast('Clave quitada')}}>Quitar clave</button></div>`:html`<div className="row" style=${{gap:8}}><input type="password" aria-label="Clave de la API de Anthropic" placeholder="sk-ant-…" value=${k} onInput=${e=>setK(e.target.value)} autoComplete="off"/><button className="btn btn-s btn-sm" disabled=${k.trim().length<20} onClick=${()=>{aiKey.set(k.trim());setK('');setHas(true);a.toast('IA activada')}}>Guardar</button></div>`}</div>`}
+    <div className="card fl" style=${{gap:8}}><b>🤝 Grupos en línea (opcional)</b>
+      <span className="mut" style=${{fontSize:13}}>${gc?'Conectado: los grupos, el chat y el material compartido son con gente real.':'Sin esto, los grupos de estudio funcionan en modo demo. Para conocer gente real, conectá una base de Supabase (gratis). Los pasos y la tabla están en el README.'} En los grupos se ven tu nombre, universidad, carrera y materias; nunca tu email ni tu contraseña.</span>
+      ${gc?html`<div><button className="btn btn-sm" onClick=${()=>{grpCfg.set(null);setGc(null);a.toast('Grupos en línea desconectados')}}>Desconectar</button></div>`:html`<div className="fl" style=${{gap:8}}><input aria-label="URL del proyecto de Supabase" placeholder="https://xxxx.supabase.co" value=${gu} onInput=${e=>setGu(e.target.value)} autoComplete="off"/><div className="row" style=${{gap:8}}><input type="password" aria-label="Clave pública (anon) de Supabase" placeholder="Clave pública (anon)" value=${gk} onInput=${e=>setGk(e.target.value)} autoComplete="off"/><button className="btn btn-s btn-sm" disabled=${!/^https:\/\/[^\s/]+/.test(gu.trim())||gk.trim().length<20} onClick=${()=>{const c={url:gu.trim(),key:gk.trim()};grpCfg.set(c);setGc(c);a.toast('Grupos en línea conectados')}}>Conectar</button></div></div>`}</div>
     <div className="fl" style=${{gap:10}}><button className="btn" onClick=${a.editPerfil}>Editar mis datos</button><button className="btn" onClick=${()=>{onClose();a.openOnb()}}>Ajustar materias y horarios</button><button className="btn btn-s" onClick=${a.logout}>Cerrar sesión</button></div>
   </div></div>`;
 }
@@ -1223,42 +1334,139 @@ function Logros({a}){
 }
 
 /* ---------- 10 · STUDY MATCH ---------- */
-const PEERS=[
-{n:'Camila R.',u:'Universidad de la República',c:'Medicina',s:'fis',slot:'Tarde',note:'Repasa potencial de acción con esquemas'},
-{n:'Mateo G.',u:'Universidad de la República',c:'Medicina',s:'fis',slot:'Noche',note:'Busca grupo de casos clínicos'},
-{n:'Valentina S.',u:'Universidad de Buenos Aires',c:'Medicina',s:'fis',slot:'Tarde',note:'Estudia con cronómetro, 45 + 10'},
-{n:'Joaquín P.',u:'Universidad de la República',c:'Medicina',s:'ana',slot:'Mañana',note:'Plexo braquial y miembro superior'},
-{n:'Lucía F.',u:'Universidad de la República',c:'Medicina',s:'bio',slot:'Tarde',note:'Krebs y cadena respiratoria'},
-{n:'Santiago M.',u:'Universidad de Buenos Aires',c:'Medicina',s:'ana',slot:'Noche',note:'Prefiere sala silenciosa'},
-{n:'Martina D.',u:'Universidad de la República',c:'Odontología',s:'fis',slot:'Tarde',note:'Fisiología general, primer parcial'},
-{n:'Bruno T.',u:'Universidad de la República',c:'Medicina',s:'bio',slot:'Noche',note:'Cinética enzimática, ejercicios'}];
-const ROOMS=[
-{id:'r1',n:'Sala silenciosa · Fisiología',k:'silent',s:'fis',m:6,t:'Tarde, 16 a 19 h'},
-{id:'r2',n:'Debate de casos · Sinapsis',k:'debate',s:'fis',m:4,t:'Noche, 20 a 22 h'},
-{id:'r3',n:'Sala silenciosa · Anatomía',k:'silent',s:'ana',m:8,t:'Mañana, 8 a 11 h'},
-{id:'r4',n:'Debate de casos · Bioquímica',k:'debate',s:'bio',m:3,t:'Tarde, 17 a 19 h'}];
+/* ---------- GRUPOS DE ESTUDIO ----------
+   Dos modos con la misma interfaz:
+   · En línea: base Supabase propia (URL + clave pública en Mi perfil) → gente real, chat y material compartido.
+   · Demo: todo en este navegador, con compañeros de ejemplo, para probar cómo funciona. */
+const grpCfg={get:()=>{try{return JSON.parse(localStorage.getItem('ea-grp')||'null')}catch(e){return null}},set:c=>{try{c?localStorage.setItem('ea-grp',JSON.stringify(c)):localStorage.removeItem('ea-grp')}catch(e){}}};
+const uidOf=email=>{const k='ea-uid-'+email;try{let v=localStorage.getItem(k);if(!v){v='u'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);localStorage.setItem(k,v)}return v}catch(e){return 'u'+keyOf(email).replace(/\s/g,'')}};
+const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+function sbApi(c){
+  const base=c.url.replace(/\/+$/,'')+'/rest/v1/';
+  const q=async(path,o={})=>{const r=await fetch(base+path,{method:o.method||'GET',headers:{apikey:c.key,Authorization:'Bearer '+c.key,'content-type':'application/json',Prefer:o.prefer||'return=minimal'},body:o.body?JSON.stringify(o.body):undefined});if(!r.ok)throw new Error('HTTP '+r.status);const t=await r.text();return t?JSON.parse(t):null};
+  const e=encodeURIComponent;
+  return {online:true,
+    upsertMe:me=>q('students',{method:'POST',prefer:'resolution=merge-duplicates,return=minimal',body:me}),
+    students:k=>q('students?select=*&subjects=ilike.'+e('*|'+k+'|*')+'&order=ts.desc&limit=60'),
+    groups:k=>q('groups?select=*&subj=eq.'+e(k)+'&order=ts.desc&limit=60'),
+    createGroup:g=>q('groups',{method:'POST',body:g}),
+    members:id=>q('members?select=*&group_id=eq.'+e(id)+'&order=ts.asc'),
+    myGroups:uid=>q('members?select=group_id&uid=eq.'+e(uid)),
+    join:m=>q('members',{method:'POST',prefer:'resolution=ignore-duplicates,return=minimal',body:m}),
+    leave:(id,uid)=>q('members?group_id=eq.'+e(id)+'&uid=eq.'+e(uid),{method:'DELETE'}),
+    messages:(id,since)=>q('messages?select=*&group_id=eq.'+e(id)+'&ts=gt.'+(since||0)+'&order=ts.asc&limit=200'),
+    send:m=>q('messages',{method:'POST',body:m})};
+}
+const DEMO_P=[['Camila R.','Universidad de la República (UdelaR)','Tarde','Hace esquemas y comparte resúmenes'],['Mateo G.','Universidad de la República (UdelaR)','Noche','Busca grupo para casos clínicos'],['Joaquín P.','Universidad de la República (UdelaR)','Mañana','Prefiere repasar con preguntas'],['Lucía F.','Universidad de la República (UdelaR)','Tarde','Estudia con cronómetro, 45 + 10'],['Valentina S.','Universidad de Buenos Aires (UBA)','Tarde','Arma tarjetas de repaso'],['Bruno T.','Universidad de la República (UdelaR)','Noche','Ejercicios y parciales viejos'],['Martina D.','Universidad de la República (UdelaR)','Mañana','Sala silenciosa, cámara apagada']];
+function demoApi(subjects){
+  const K='ea-grp-demo',load=()=>{try{return JSON.parse(localStorage.getItem(K)||'null')}catch(e){return null}},save=d=>{try{localStorage.setItem(K,JSON.stringify(d))}catch(e){}};
+  let db=load()||{students:[],groups:[],members:[],messages:[]};
+  subjects.forEach((s,si)=>{const k=keyOf(s.name);if(db.groups.some(g=>g.subj===k))return;
+    const ppl=[0,1,2,3,4].map(i=>DEMO_P[(si*2+i)%DEMO_P.length]),now=Date.now();
+    ppl.forEach((p,i)=>{const uid='demo'+keyOf(p[0]).replace(/\s/g,'');const ex=db.students.find(x=>x.uid===uid);if(ex){if(!ex.subjects.includes('|'+k+'|'))ex.subjects+=k+'|'}else db.students.push({uid,name:p[0],uni:p[1],carrera:'Medicina',anio:2,slot:p[2],note:p[3],subjects:'|'+k+'|',ts:now-i*36e5})});
+    const g1={id:'dg'+gid(),subj:k,subj_name:s.name,name:'Repaso '+s.name+' · '+ppl[0][2].toLowerCase(),descr:'Nos juntamos a repasar los temas del parcial y compartir resúmenes.',slot:ppl[0][2],uni:ppl[0][1],owner:'demo',owner_name:ppl[0][0],ts:now-2*864e5};
+    const g2={id:'dg'+gid(),subj:k,subj_name:s.name,name:'Parciales viejos de '+s.name,descr:'Resolvemos parciales anteriores juntos.',slot:'Noche',uni:ppl[1][1],owner:'demo',owner_name:ppl[1][0],ts:now-864e5};
+    db.groups.push(g1,g2);
+    [[g1,[0,2,3]],[g2,[1,4]]].forEach(([g,ix])=>ix.forEach(i=>db.members.push({group_id:g.id,uid:'demo'+keyOf(ppl[i][0]).replace(/\s/g,''),name:ppl[i][0],uni:ppl[i][1],carrera:'Medicina',ts:now})));
+    db.messages.push({id:gid(),group_id:g1.id,uid:'demox',name:ppl[0][0],text:'¡Hola! Armé este grupo para repasar '+s.name+'. ¿Qué tema les cuesta más?',ts:now-36e5*5},{id:gid(),group_id:g1.id,uid:'demoy',name:ppl[2][0],text:'Yo tengo un resumen, después lo subo acá 🙌',ts:now-36e5*4});
+  });
+  save(db);
+  const w=f=>{db=load()||db;const r=f(db);save(db);return Promise.resolve(r)};
+  return {online:false,
+    upsertMe:me=>w(d=>{d.students=d.students.filter(x=>x.uid!==me.uid).concat(me)}),
+    students:k=>w(d=>d.students.filter(x=>x.subjects.includes('|'+k+'|'))),
+    groups:k=>w(d=>d.groups.filter(g=>g.subj===k).sort((x,y)=>y.ts-x.ts)),
+    createGroup:g=>w(d=>{d.groups.push(g)}),
+    members:id=>w(d=>d.members.filter(m=>m.group_id===id)),
+    myGroups:uid=>w(d=>d.members.filter(m=>m.uid===uid).map(m=>({group_id:m.group_id}))),
+    join:m=>w(d=>{if(!d.members.some(x=>x.group_id===m.group_id&&x.uid===m.uid))d.members.push(m)}),
+    leave:(id,uid)=>w(d=>{d.members=d.members.filter(x=>!(x.group_id===id&&x.uid===uid))}),
+    messages:(id,since)=>w(d=>d.messages.filter(m=>m.group_id===id&&m.ts>(since||0)&&m.ts<=Date.now()).sort((x,y)=>x.ts-y.ts)),
+    send:m=>w(d=>{d.messages.push(m);
+      const others=d.members.filter(x=>x.group_id===m.group_id&&x.uid!==m.uid&&x.uid.startsWith('demo'));
+      if(others.length&&Math.random()<.8){const o=others[Math.floor(Math.random()*others.length)];
+        const txt=m.file_name?['¡Gracias por compartir '+m.file_name+'! Lo leo esta noche.','Buenísimo el material 🙌 ¿Lo repasamos juntos mañana?']:['¡Dale! Me sumo.','Buenísimo, ¿lo vemos en el próximo bloque?','Yo lo tengo flojo también, repasemos juntos.','👍'];
+        d.messages.push({id:gid(),group_id:m.group_id,uid:o.uid,name:o.name,text:txt[Math.floor(Math.random()*txt.length)],ts:m.ts+1500+Math.floor(Math.random()*2000),demo:true})}})};
+}
+const fmtT=ts=>{const d=new Date(ts),t=d.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});return Date.now()-ts<864e5&&d.getDate()===new Date().getDate()?t:d.toLocaleDateString('es',{day:'numeric',month:'short'})+' '+t};
+
+function GroupChat({a,api,me,g,onBack,onLeave}){
+  const [msgs,setMsgs]=useState([]),[mem,setMem]=useState([]),[txt,setTxt]=useState(''),[share,setShare]=useState(false),[open,setOpen]=useState(null),[err,setErr]=useState(null),[saveTo,setSaveTo]=useState({});
+  const last=useRef(0),endRef=useRef(null);
+  const pull=async()=>{try{const n=await api.messages(g.id,last.current);if(n&&n.length){last.current=n[n.length-1].ts;setMsgs(x=>{const ids=new Set(x.map(m=>m.id));return [...x,...n.filter(m=>!ids.has(m.id))]})}setErr(null)}catch(e){setErr('No pude actualizar el chat. Reviso de nuevo en unos segundos.')}};
+  useEffect(()=>{last.current=0;setMsgs([]);pull();api.members(g.id).then(setMem).catch(()=>{});const id=setInterval(pull,api.online?4000:1500);return()=>clearInterval(id)},[g.id]);
+  useEffect(()=>{if(endRef.current)endRef.current.scrollIntoView({block:'nearest'})},[msgs.length]);
+  const post=async extra=>{const t=txt.trim();if(!t&&!extra)return;const m={id:gid(),group_id:g.id,uid:me.uid,name:me.name,text:t||'',ts:Date.now(),...(extra||{})};setTxt('');try{await api.send(m);pull()}catch(e){setErr('No se pudo enviar. Probá de nuevo.');setTxt(t)}};
+  const myMats=a.mats.filter(m=>m.text&&m.text.trim().length>20);
+  const mySub=a.subjects.find(s=>keyOf(s.name)===g.subj);
+  const saveMat=(m,sid)=>{a.addMat({id:'mt'+gid(),subj:sid,kind:'resumen',name:m.file_name+' (de '+m.name.split(' ')[0]+')',size:m.file_text.length,text:m.file_text.slice(0,MAXCH),status:'ok',words:wordsOf(m.file_text)});a.toast('Guardado en tus apuntes')};
+  return html`<div className="fl" style=${{gap:14}}>
+    <button className="back" onClick=${onBack}><${Icon} n="chevL" s=${16}/> Grupos</button>
+    <div><div className="eyebrow">${g.subj_name}${g.slot?' · '+g.slot:''}</div><h1 style=${{fontSize:'clamp(22px,6vw,28px)',fontWeight:700,marginTop:4}}>${g.name}</h1>${g.descr&&html`<p className="mut" style=${{fontSize:14,marginTop:4}}>${g.descr}</p>`}</div>
+    <div className="row wrap" style=${{gap:6}}>${mem.map(m=>html`<span key=${m.uid} className="lvl" style=${{background:'var(--surf2)',color:'var(--ink)'}} title=${(m.carrera||'')+(m.uni?' · '+m.uni:'')}>${m.uid===me.uid?'Vos':m.name}</span>`)}<span className="mut" style=${{fontSize:12.5,alignSelf:'center'}}>${mem.length} integrante${mem.length===1?'':'s'}</span></div>
+    <div className="card fl" style=${{gap:10,minHeight:260,maxHeight:'55vh',overflow:'auto'}}>
+      ${msgs.length===0&&html`<p className="mut" style=${{fontSize:13.5}}>Todavía no hay mensajes. Saludá al grupo o compartí un resumen.</p>`}
+      ${msgs.map(m=>{const mine=m.uid===me.uid;return html`<div key=${m.id} className=${'bub '+(mine?'bub-u':'bub-t')} style=${{maxWidth:'88%'}}>
+        ${!mine&&html`<div style=${{fontSize:12,fontWeight:600,marginBottom:2}}>${m.name}</div>`}
+        ${m.text&&html`<div style=${{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>${m.text}</div>`}
+        ${m.file_name&&html`<div style=${{marginTop:m.text?8:0,background:mine?'rgba(255,255,255,.15)':'var(--card)',borderRadius:14,padding:'8px 10px'}}>
+          <b style=${{fontSize:13.5}}>📎 ${m.file_name}</b> <span style=${{fontSize:12,opacity:.75}}>· ${wordsOf(m.file_text||'')} palabras</span>
+          <div className="row wrap" style=${{gap:6,marginTop:6}}><button className="chip" style=${{padding:'.2rem .7rem',fontSize:12}} onClick=${()=>setOpen(open===m.id?null:m.id)}>${open===m.id?'Cerrar':'Leer'}</button>
+            ${!mine&&html`<select aria-label="Materia donde guardar" value=${saveTo[m.id]||(mySub||a.subjects[0]).id} onChange=${e=>setSaveTo({...saveTo,[m.id]:e.target.value})} style=${{width:'auto',padding:'.2rem .6rem',fontSize:12,borderRadius:999}}>${a.subjects.map(s=>html`<option key=${s.id} value=${s.id}>${s.name}</option>`)}</select><button className="chip" style=${{padding:'.2rem .7rem',fontSize:12}} onClick=${()=>saveMat(m,saveTo[m.id]||(mySub||a.subjects[0]).id)}>Guardar en mis apuntes</button>`}</div>
+          ${open===m.id&&html`<div style=${{marginTop:8,fontSize:13,whiteSpace:'pre-wrap',maxHeight:220,overflow:'auto'}}>${(m.file_text||'').slice(0,6000)}</div>`}</div>`}
+        <div style=${{fontSize:11,opacity:.6,marginTop:4,textAlign:'right'}}>${fmtT(m.ts)}</div></div>`})}
+      <div ref=${endRef}></div></div>
+    ${err&&html`<div className="alertbox" role="alert" style=${{background:'var(--t-rose)'}}>${err}</div>`}
+    ${share&&html`<div className="card fl" style=${{gap:8}}><b>Compartir material</b>${myMats.length===0?html`<p className="mut" style=${{fontSize:13}}>Todavía no tenés apuntes con texto. Subilos en "Apuntes".</p>`:myMats.map(m=>html`<button key=${m.id} className="opt" onClick=${()=>{post({file_name:m.name,file_text:m.text.slice(0,20000)});setShare(false)}}><span>${KIND[m.kind].e}</span><span className="grow" style=${{textAlign:'left'}}>${m.name}<span className="mut" style=${{fontSize:12,display:'block'}}>${(a.subjects.find(s=>s.id===m.subj)||{}).name||''} · ${wordsOf(m.text)} palabras</span></span></button>`)}</div>`}
+    <form className="row" onSubmit=${e=>{e.preventDefault();post()}}><button type="button" className="ibtn" aria-label="Compartir material" aria-pressed=${share} onClick=${()=>setShare(!share)}><${Icon} n="file" s=${18}/></button><input aria-label="Mensaje al grupo" placeholder="Escribile al grupo…" value=${txt} onInput=${e=>setTxt(e.target.value)} maxLength="2000"/><button className="ibtn" type="submit" style=${{background:'var(--inv)',color:'var(--invfg)'}} aria-label="Enviar"><${Icon} n="send" s=${18}/></button></form>
+    <div><button className="btn btn-sm btn-g" onClick=${()=>onLeave(g)}>Salir del grupo</button></div>
+  </div>`;
+}
+
 function Match({a}){
-  const {subjects,prefs}=a;
-  const mySlot=prefs.from<12?'Mañana':prefs.from<18?'Tarde':'Noche';
-  const [fs,setFs]=useState('all'),[fl,setFl]=useState('all'),[inv,setInv]=useState([]),[room,setRoom]=useState(null);
-  const sn=id=>(subjects.find(s=>s.id===id)||{name:id}).name;
-  const scored=PEERS.map(p=>{const sc=[p.u===prefs.uni,p.c===prefs.carrera,fs==='all'?subjects.some(s=>s.id===p.s):p.s===fs,fl==='all'?p.slot===mySlot:p.slot===fl].filter(Boolean).length;return {...p,sc}}).sort((x,y)=>y.sc-x.sc);
-  const hot=scored.filter(p=>p.sc>=3).length;
-  const nameOf=r=>(r.s&&sn(r.s));
-  return html`<div>
-    <${Head} eyebrow="Study Match" title="Estudiá con alguien" sub="Estudiantes de tu carrera, universidad, materia y horario."/>
-    <div className="card-i row wrap" style=${{gap:18,marginBottom:20}}><div className="num" style=${{fontFamily:"'Poppins',sans-serif",fontWeight:800,fontSize:64,lineHeight:1}}>${hot}</div><div style=${{fontSize:17}}>estudiantes buscando grupo para esta semana<div style=${{opacity:.7,fontSize:13.5}}>${prefs.carrera} · ${prefs.uni}</div></div></div>
-    <div className="fl" style=${{gap:10,marginBottom:16}}><div className="chips">${[['all','Todas mis materias'],...subjects.map(s=>[s.id,s.name])].map(([v,l])=>html`<button key=${v} className="chip" aria-pressed=${fs===v} onClick=${()=>setFs(v)}>${l}</button>`)}</div>
-      <div className="chips">${[['all','Mi franja ('+mySlot.toLowerCase()+')'],['Mañana','Mañana'],['Tarde','Tarde'],['Noche','Noche']].map(([v,l])=>html`<button key=${v} className="chip" aria-pressed=${fl===v} onClick=${()=>setFl(v)}>${l}</button>`)}</div></div>
-    <div className="fl" style=${{gap:8}}>${scored.map(p=>html`<div key=${p.n} className="card row wrap" style=${{boxShadow:p.sc>=3?'inset 5px 0 0 #9c82f7':'0 2px 14px rgba(52,52,110,.06)'}}>
-      <span className="av" aria-hidden="true">${p.n[0]}</span><div className="grow" style=${{minWidth:180}}><b>${p.n}</b> <span className="mut" style=${{fontSize:13}}>· ${sn(p.s)} · ${p.slot}</span><div className="mut" style=${{fontSize:13}}>${p.note}</div><div className="mut" style=${{fontSize:12}}>${p.c} · ${p.u}</div></div>
-      <span title=${p.sc+' de 4 coincidencias'} style=${{display:'inline-flex',gap:3}}>${[0,1,2,3].map(i=>html`<i key=${i} style=${{width:9,height:9,borderRadius:'50%',background:i<p.sc?'#9c82f7':'var(--surf2)',display:'inline-block'}}/>`)}</span>
-      <button className=${'btn btn-sm'+(inv.includes(p.n)?'':' btn-s')} disabled=${inv.includes(p.n)} onClick=${()=>{setInv([...inv,p.n]);a.toast(`Invitación enviada a ${p.n.split(' ')[0]}`)}}>${inv.includes(p.n)?'Invitado ✓':'Invitar a estudiar'}</button></div>`)}</div>
-    <h2 style=${{fontSize:26,fontWeight:800,margin:'32px 0 12px'}}>Salas de estudio</h2>
-    <div className="grid2">${ROOMS.map(r=>html`<div key=${r.id} className=${room===r.id?'card-i':'card-o'}>
-      <div className="eyebrow">${r.k==='silent'?'Enfoque silencioso':'Debate de casos'}</div><h3 style=${{fontSize:20,fontWeight:700,margin:'6px 0 4px'}}>${r.n}</h3>
-      <p style=${{opacity:.75,fontSize:13.5}}>${r.t} · <span className="num">${r.m+(room===r.id?1:0)}</span> adentro</p>
-      <div style=${{marginTop:12}}><button className=${'btn btn-sm '+(room===r.id?'btn-i':'btn-s')} onClick=${()=>{setRoom(room===r.id?null:r.id);a.toast(room===r.id?'Saliste de la sala':`Entraste a ${r.n}`)}}>${room===r.id?'Salir de la sala':'Entrar a la sala'}</button></div></div>`)}</div></div>`;
+  const {subjects,prefs,user}=a;
+  const cfg=grpCfg.get();
+  const api=useMemo(()=>cfg&&cfg.url&&cfg.key?sbApi(cfg):demoApi(subjects),[cfg&&cfg.url,cfg&&cfg.key,subjects.length]);
+  const me=useMemo(()=>({uid:uidOf(user.email),name:user.nombre,uni:prefs.uni||user.uni,carrera:prefs.carrera,anio:prefs.anio,slot:prefs.from<12?'Mañana':prefs.from<18?'Tarde':'Noche',note:'',subjects:'|'+subjects.map(s=>keyOf(s.name)).join('|')+'|',ts:Date.now()}),[user.email,subjects]);
+  const [sid,setSid]=useState(subjects[0].id),[ppl,setPpl]=useState(null),[grs,setGrs]=useState(null),[mine,setMine]=useState([]),[open,setOpen]=useState(null),[form,setForm]=useState(null),[err,setErr]=useState(null),[tick,setTick]=useState(0);
+  const s=subjects.find(x=>x.id===sid)||subjects[0],k=keyOf(s.name);
+  useEffect(()=>{api.upsertMe(me).catch(()=>{})},[api,me]);
+  useEffect(()=>{let ok=true;setPpl(null);setGrs(null);setErr(null);
+    Promise.all([api.students(k),api.groups(k),api.myGroups(me.uid)]).then(([p,g,m])=>{if(!ok)return;setPpl((p||[]).filter(x=>x.uid!==me.uid).sort((x,y)=>(y.uni===me.uni)-(x.uni===me.uni)));setGrs(g||[]);setMine((m||[]).map(x=>x.group_id))}).catch(()=>{if(ok){setErr('No pude conectarme a los grupos en línea. Revisá la URL y la clave en Mi perfil.');setPpl([]);setGrs([])}});
+    return()=>{ok=false}},[api,k,tick]);
+  const join=async g=>{try{await api.join({group_id:g.id,uid:me.uid,name:me.name,uni:me.uni,carrera:me.carrera,ts:Date.now()});setMine(m=>[...m,g.id]);setOpen(g);a.toast('Te uniste a '+g.name)}catch(e){setErr('No pude unirte al grupo. Probá de nuevo.')}};
+  const leave=async g=>{try{await api.leave(g.id,me.uid);setMine(m=>m.filter(x=>x!==g.id));setOpen(null);a.toast('Saliste del grupo')}catch(e){setErr('No pude salir del grupo.')}};
+  const create=async()=>{const n=form.name.trim();if(n.length<3){setErr('Ponele un nombre al grupo.');return}
+    const g={id:'g'+gid(),subj:k,subj_name:s.name,name:n.slice(0,80),descr:form.descr.trim().slice(0,300),slot:form.slot,uni:me.uni,owner:me.uid,owner_name:me.name,ts:Date.now()};
+    try{await api.createGroup(g);setForm(null);await join(g);setTick(t=>t+1)}catch(e){setErr('No pude crear el grupo. Probá de nuevo.')}};
+  if(open)return html`<${GroupChat} a=${a} api=${api} me=${me} g=${open} onBack=${()=>{setOpen(null);setTick(t=>t+1)}} onLeave=${leave}/>`;
+  return html`<div className="fl" style=${{gap:18}}>
+    <${Head} eyebrow="Grupos de estudio" title="Estudiá con otros" sub="Conocé gente que está cursando tu misma materia, armá grupos, chateá y compartí material."/>
+    ${!api.online&&html`<div className="alertbox" style=${{background:'var(--t-cream)'}}><b>Modo demo.</b> Los compañeros y grupos son de ejemplo y todo queda en este navegador. Para conocer gente real, activá <b>Grupos en línea</b> en Mi perfil.</div>`}
+    <div><div className="eyebrow" style=${{marginBottom:8}}>Materia</div><div className="chips">${subjects.map(x=>html`<button key=${x.id} className="chip" aria-pressed=${x.id===s.id} onClick=${()=>{setSid(x.id);setForm(null)}}>${x.emoji} ${x.name}</button>`)}</div></div>
+    ${err&&html`<div className="alertbox" role="alert" style=${{background:'var(--t-rose)'}}>${err}</div>`}
+    <div className="fl" style=${{gap:10}}>
+      <div className="row wrap" style=${{justifyContent:'space-between'}}><h2 style=${{fontSize:20,fontWeight:600}}>Grupos de ${s.name}</h2><button className="btn btn-sm btn-s" onClick=${()=>setForm(form?null:{name:'',descr:'',slot:me.slot})}><${Icon} n="plus" s=${14}/> Crear grupo</button></div>
+      ${form&&html`<div className="card fl" style=${{gap:10}}>
+        <input aria-label="Nombre del grupo" placeholder=${'Ej: Repaso '+s.name+' para el parcial'} value=${form.name} onInput=${e=>setForm({...form,name:e.target.value})}/>
+        <input aria-label="Descripción" placeholder="¿Qué van a hacer? (ej: resolver parciales viejos)" value=${form.descr} onInput=${e=>setForm({...form,descr:e.target.value})}/>
+        <div className="chips">${['Mañana','Tarde','Noche'].map(v=>html`<button key=${v} className="chip" aria-pressed=${form.slot===v} onClick=${()=>setForm({...form,slot:v})}>${v}</button>`)}</div>
+        <div className="row wrap"><button className="btn btn-s btn-sm" onClick=${create}>Crear y entrar</button><button className="btn btn-sm" onClick=${()=>setForm(null)}>Cancelar</button></div></div>`}
+      ${grs===null?html`<p className="mut">Cargando…</p>`:grs.length===0?html`<div className="card"><p className="mut">Todavía no hay grupos de ${s.name}. ¡Creá el primero!</p></div>`
+        :grs.map(g=>{const inG=mine.includes(g.id);return html`<div key=${g.id} className=${'ccard '+thc(s.id)} style=${{padding:'14px 16px'}}>
+          <div className="row wrap" style=${{justifyContent:'space-between',gap:8}}><b style=${{fontWeight:600,fontSize:15.5}}>${g.name}</b>${g.slot&&html`<span className="lvl" style=${{background:'var(--card)',color:'var(--ink)'}}>${g.slot}</span>`}</div>
+          ${g.descr&&html`<p style=${{fontSize:13.5,marginTop:4}}>${g.descr}</p>`}
+          <p className="mut" style=${{fontSize:12.5,marginTop:4}}>Creado por ${g.owner===me.uid?'vos':g.owner_name}${g.uni?' · '+g.uni:''}</p>
+          <div style=${{marginTop:10}}>${inG?html`<button className="btn btn-sm btn-s" onClick=${()=>setOpen(g)}><${Icon} n="msg" s=${14}/> Abrir chat</button>`:html`<button className="btn btn-sm btn-s" onClick=${()=>join(g)}>Unirme</button>`}</div></div>`})}
+    </div>
+    <div className="fl" style=${{gap:10}}>
+      <h2 style=${{fontSize:20,fontWeight:600}}>Cursando ${s.name}</h2>
+      ${ppl===null?html`<p className="mut">Cargando…</p>`:ppl.length===0?html`<div className="card"><p className="mut">Todavía no encontramos a nadie más cursando ${s.name}${api.online?'. Compartí el link de Nexus con tus compañeros':''}.</p></div>`
+        :ppl.map(p=>html`<div key=${p.uid} className="card row wrap" style=${{boxShadow:p.uni===me.uni?'inset 5px 0 0 #9c82f7':''}}>
+          <span className="av" aria-hidden="true">${initials(p.name)}</span><div className="grow" style=${{minWidth:170}}><b>${p.name}</b> <span className="mut" style=${{fontSize:13}}>· ${p.slot||''}</span>${p.note&&html`<div className="mut" style=${{fontSize:13}}>${p.note}</div>`}<div className="mut" style=${{fontSize:12}}>${[p.carrera,p.anio?p.anio+'.º año':'',p.uni].filter(Boolean).join(' · ')}</div></div>
+          ${p.uni===me.uni&&html`<span className="lvl" style=${{background:'var(--t-lilac)',color:'var(--ink)'}}>Tu facultad</span>`}</div>`)}
+      ${ppl&&ppl.length>0&&html`<p className="mut" style=${{fontSize:12.5}}>Para estudiar con alguien, creá un grupo o sumate a uno: ahí pueden chatear y compartir material.</p>`}
+    </div></div>`;
 }
 
 /* ---------- 2 · MODO RESCATE ---------- */
@@ -1287,8 +1495,16 @@ function Rescate({a}){
 
 /* ---------- 1 · ONBOARDING ---------- */
 const ymd=d=>{const x=dateOf(d);return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`};
-function Onboarding({a,onClose}){
-  const [st,setSt]=useState(0),[nm,setNm]=useState('');
+function UdelarPicker({list,setList}){
+  const [yr,setYr]=useState(1);
+  const has=c=>list.some(s=>keyOf(s.name)===keyOf(c.n));
+  const toggle=c=>setList(has(c)?list.filter(s=>keyOf(s.name)!==keyOf(c.n)):[...list,catSubject(c)]);
+  return html`<div className="card fl" style=${{gap:10}}><b>🩺 Facultad de Medicina · UdelaR</b><span className="mut" style=${{fontSize:12.5}}>Materias del Plan 2008 por año. Tocá las que cursás. Si la tuya tiene otro nombre, escribila abajo.</span>
+    <div className="chips" role="group" aria-label="Año">${[1,2,3,4,5,6].map(y=>html`<button key=${y} className="chip" aria-pressed=${yr===y} onClick=${()=>setYr(y)}>${y}.º año</button>`)}</div>
+    <div className="chips">${UDELAR_MED.filter(c=>c.a===yr).map(c=>html`<button key=${c.n} className="chip" aria-pressed=${has(c)} onClick=${()=>toggle(c)}>${has(c)?'✓ ':''}${c.e} ${c.n}</button>`)}</div></div>`;
+}
+function Onboarding({a,onClose,start=0}){
+  const [st,setSt]=useState(start),[nm,setNm]=useState(''),[cat,setCat]=useState(null);
   const [d,setD]=useState({carrera:a.prefs.carrera,uni:a.prefs.uni,anio:a.prefs.anio,subjects:a.subjects.map(s=>({...s})),from:a.prefs.from,to:a.prefs.to,maxH:a.prefs.maxH});
   const upS=(id,p)=>setD({...d,subjects:d.subjects.map(s=>s.id===id?{...s,...p}:s)});
   const N=7,hrs=[...Array(19)].map((_,i)=>i+5);
@@ -1296,7 +1512,8 @@ function Onboarding({a,onClose}){
     ['¿Qué estudiás y dónde?',html`<div className="fl" style=${{gap:12}}><div><label htmlFor="ob-c" style=${{fontWeight:600}}>Carrera</label><input id="ob-c" value=${d.carrera} onInput=${e=>setD({...d,carrera:e.target.value})}/></div><div><label htmlFor="ob-u" style=${{fontWeight:600}}>Universidad</label><input id="ob-u" value=${d.uni} onInput=${e=>setD({...d,uni:e.target.value})}/></div></div>`],
     ['¿En qué año cursás?',html`<div className="chips">${[1,2,3,4,5,6,7].map(v=>html`<button key=${v} className="chip btn-big" style=${{fontSize:18,padding:'.5rem 1.2rem'}} aria-pressed=${d.anio===v} onClick=${()=>setD({...d,anio:v})}>${v}.º</button>`)}</div>`],
     ['¿Qué materias cursás ahora?',html`<div className="fl" style=${{gap:8}}>${d.subjects.map(s=>html`<div key=${s.id} className="card row"><span className="grow" style=${{fontWeight:600}}>${s.emoji} ${s.name}</span><button className="btn btn-sm btn-g" disabled=${d.subjects.length<2} aria-label=${'Quitar '+s.name} onClick=${()=>setD({...d,subjects:d.subjects.filter(x=>x.id!==s.id)})}><${Icon} n="x" s=${14}/></button></div>`)}
-      <form className="row" onSubmit=${e=>{e.preventDefault();if(nm.trim()){setD({...d,subjects:[...d.subjects,genSubject(nm.trim(),3,21)]});setNm('')}}}><input id="ob-n" aria-label="Agregar materia" placeholder="Agregar otra materia" value=${nm} onInput=${e=>setNm(e.target.value)}/><button className="btn" type="submit"><${Icon} n="plus" s=${16}/> Agregar</button></form></div>`],
+      ${(cat??/rep[uú]blica|udelar/i.test(d.uni+' '+a.user.uni))?html`<${UdelarPicker} list=${d.subjects} setList=${l=>setD({...d,subjects:l.length?l:d.subjects})}/>`:html`<button className="btn btn-sm" style=${{alignSelf:'flex-start'}} onClick=${()=>setCat(true)}>🩺 Ver materias de Medicina · UdelaR</button>`}
+      <form className="row" onSubmit=${e=>{e.preventDefault();if(nm.trim()){const c=UDELAR_MED.find(x=>keyOf(x.n)===keyOf(nm));setD({...d,subjects:[...d.subjects,c?catSubject(c):genSubject(nm.trim(),3,21)]});setNm('')}}}><input id="ob-n" list="dl-udelar" aria-label="Agregar materia" placeholder="Agregar otra materia" value=${nm} onInput=${e=>setNm(e.target.value)}/><button className="btn" type="submit"><${Icon} n="plus" s=${16}/> Agregar</button></form><datalist id="dl-udelar">${UDELAR_MED.map(c=>html`<option key=${c.n} value=${c.n}/>`)}</datalist></div>`],
     ['¿Cuándo son los parciales?',html`<div className="fl" style=${{gap:12}}>${d.subjects.map(s=>html`<div key=${s.id}><label htmlFor=${'ob-d-'+s.id} style=${{fontWeight:600}}>${s.name}</label><input id=${'ob-d-'+s.id} type="date" min=${ymd(1)} value=${ymd(s.exam)} onChange=${e=>{const v=e.target.value;if(!v)return;const t=new Date(v+'T00:00:00');upS(s.id,{exam:Math.max(1,Math.round((t-D0)/DAY))})}}/><span className="mut num" style=${{fontSize:13}}>En ${s.exam} días</span></div>`)}</div>`],
     ['¿Qué tan difícil te resulta cada una?',html`<div className="fl" style=${{gap:14}}>${d.subjects.map(s=>html`<div key=${s.id}><b>${s.name}</b><div className="chips" style=${{marginTop:6}} role="group" aria-label=${'Dificultad de '+s.name}>${[1,2,3,4,5].map(v=>html`<button key=${v} className="chip" aria-pressed=${s.diff===v} onClick=${()=>upS(s.id,{diff:v})}>${v}</button>`)}<span className="mut" style=${{fontSize:12.5,alignSelf:'center'}}>1 fácil · 5 muy difícil</span></div></div>`)}</div>`],
     ['¿En qué horario preferís estudiar?',html`<div className="grid2"><div><label htmlFor="ob-f" style=${{fontWeight:600}}>Desde</label><select id="ob-f" value=${d.from} onChange=${e=>setD({...d,from:Math.min(+e.target.value,d.to-1)})}>${hrs.slice(0,-1).map(h=>html`<option key=${h} value=${h}>${hhmm(h*60)}</option>`)}</select></div><div><label htmlFor="ob-t" style=${{fontWeight:600}}>Hasta</label><select id="ob-t" value=${d.to} onChange=${e=>setD({...d,to:Math.max(+e.target.value,d.from+1)})}>${hrs.slice(1).map(h=>html`<option key=${h} value=${h}>${hhmm(h*60)}</option>`)}</select></div></div>`],
@@ -1347,7 +1564,7 @@ function Main({user,isNew,onUser}){
   const A={user,tab,go:setTab,subjects,prefs,mastery,slow,plan,kept,reviews,errors,rescue,stats,run,mats,guides,qv,exInit,simInit,risk0,examOf,toast,nudge,slowTopic,tutorTopic,isDark,
     openPerfil:()=>setPerfil(true),editPerfil:()=>{setPerfil(false);setEditing(true)},
     logout:()=>{sessionEnd();setPerfil(false);onUser(null)},
-    flipTheme:flip,openOnb:()=>setOnb(true),
+    flipTheme:flip,openOnb:st=>setOnb(typeof st==='number'?st:true),
     flagged:reviews.map(r=>r.topic),
     clearTutorTopic:()=>setTutorTopic(null),
     openTutor:id=>{setTutorTopic(id);setTab('tutor')},
@@ -1364,6 +1581,18 @@ function Main({user,isNew,onUser}){
     openPractice:sid=>{setExInit({s:sid,lvl:0,type:'all',src:'mine'});setTab('ejercicios')},
     openSim:sid=>{setSimInit({s:sid,n:10,min:15,ex:3,mine:true});setTab('simulador')},
     addPastExams:(sid,items)=>{const s=subjects.find(x=>x.id===sid);if(!s)return 0;const have=new Set(s.past.map(p=>p.l)),nw=items.filter(it=>it.t.length&&!have.has(it.l));if(!nw.length)return 0;setSubjects(ss=>ss.map(x=>x.id===sid?restat({...x,past:[...x.past,...nw]}):x));return nw.length},
+    applySyllabus:(sid,list,only)=>{
+      const s=subjects.find(x=>x.id===sid);if(!s)return;
+      const used=new Set(),m0={},topics=list.map((x,i)=>{
+        const k=keyOf(x.name),old=s.topics.find(t=>!used.has(t.id)&&(keyOf(t.name)===k||(k.length>5&&(keyOf(t.name).includes(k)||k.includes(keyOf(t.name))))));
+        const id=old?old.id:sid+'m'+Date.now().toString(36)+i;if(old)used.add(old.id);else m0[id]=40;
+        return {...(old||{count:0,total:s.past.length,freq:0,m0:40}),id,sid,name:x.name,pts:x.pts.length?x.pts:['Leé esta parte en '+(x.src||'tu material')+'.'],ana:x.ana||(old&&old.ana)||'Repasalo con tu material: '+(x.src||'tus apuntes')+'.',tec:x.tec||(old&&old.tec)||x.pts.join(' '),level:x.level,blocks:x.blocks,src:x.src,body:x.body,fromMat:true,order:i};
+      });
+      const rest=s.topics.filter(t=>!used.has(t.id)).map(t=>({...t,fromMat:false}));
+      setSubjects(ss=>ss.map(x=>x.id===sid?restat({...x,onlyMat:!!only,topics:[...topics,...rest]}):x));
+      setMastery(m=>({...m,...m0}));
+      toast('Cronograma recalculado con tu material');
+    },
     matContext:(sid,cap=18000,kinds,ids)=>{const ms=mats.filter(m=>m.subj===sid&&m.text&&m.text.trim().length>20&&(!kinds||kinds.includes(m.kind))&&(!ids||ids.includes(m.id)));if(!ms.length)return '';const per=Math.floor(cap/ms.length);return ms.map(m=>'### '+KIND[m.kind].n.toUpperCase()+': '+m.name+'\n'+m.text.trim().slice(0,per)).join('\n\n')},
     startRun:b=>setRun({phase:'running',left:b.dur*60,total:b.dur*60,paused:false,block:b}),
     togglePause:()=>setRun(r=>({...r,paused:!r.paused})),
@@ -1396,7 +1625,7 @@ function Main({user,isNew,onUser}){
     <nav className="dock" aria-label="Principal"><div className="brand"><span className="logo">N</span>Nexus</div><div className="pill">${NAV.map(([k,l,ic])=>html`<button key=${k} className="dk" aria-current=${cur===k?'page':null} onClick=${()=>setTab(k)}><${Icon} n=${ic} s=${21}/><span>${l}</span></button>`)}</div><div className="round"><button className="dk" aria-current=${cur==='tutor'?'page':null} onClick=${()=>setTab('tutor')}><${Icon} n="msg" s=${21}/><span>Tutor</span></button></div><button className="me" onClick=${A.openPerfil} aria-label="Mi perfil"><span className="av">${initials(user.nombre)}</span><span style=${{minWidth:0}}><b style=${{fontSize:14,display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:130}}>${user.nombre.split(' ')[0]}</b><small>${user.uni.replace(/\s*\(.*\)/,'')}</small></span></button></nav>
     ${perfil&&html`<${Perfil} a=${A} onClose=${()=>setPerfil(false)}/>`}
     ${editing&&html`<${Welcome} edit=${true} initial=${user} onDone=${(p)=>{onUser(p);setPrefs(x=>({...x,carrera:p.carrera,uni:p.uni,anio:p.anio,maxH:p.horas||x.maxH}));setEditing(false);toast('Datos actualizados')}} onClose=${()=>setEditing(false)}/>`}
-    ${onb&&html`<${Onboarding} a=${A} onClose=${()=>setOnb(false)}/>`}
+    ${onb&&html`<${Onboarding} a=${A} start=${typeof onb==='number'?onb:0} onClose=${()=>setOnb(false)}/>`}
     ${msg&&html`<div className="toast" role="status">${msg}</div>`}
   </div></div>`;
 }
