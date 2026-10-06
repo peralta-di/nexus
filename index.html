@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
+<script>/* Nexus abre en modo oscuro salvo que la persona haya elegido el claro */try{document.documentElement.setAttribute("data-theme",localStorage.getItem("ea-theme")||"dark")}catch(e){document.documentElement.setAttribute("data-theme","dark")}</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>window.tailwind=window.tailwind||{};tailwind.config={theme:{extend:{colors:{bg:'var(--bg)',ink:'var(--ink)',card:'var(--card)',surf:'var(--surf)',line:'var(--line)',mute:'var(--mute)',inv:'var(--inv)'},fontFamily:{sans:['Poppins','Helvetica Neue','Arial','sans-serif']}}}}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
@@ -21,8 +22,8 @@
  --t-blue:#cddff6;--t-mint:#bde6d3;--t-cream:#f8d9ae;--t-lilac:#d3cef7;--t-rose:#f6c9c8;
  --g-blue:linear-gradient(135deg,#6cc4ff,#3b7cf0);--g-mint:linear-gradient(135deg,#5fe3c8,#25b79d);--g-amber:linear-gradient(135deg,#ffd16a,#ff9a45);--g-lilac:linear-gradient(135deg,#cfb8ff,#9c82f7);--g-pink:linear-gradient(135deg,#ff9fd2,#f26cb0);
  --shadow:0 30px 80px rgba(28,72,58,.16)}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--stage:#0f2a22;--bg:#17161a;--bg2:#17161a;--ink:#f3efe9;--fg:#f3efe9;--mute:#a59e96;--line:#2f2d34;--surf:#232127;--surf2:#2c2a31;--card:#1f1d23;--panel:#211f25;--inv:#f3efe9;--invfg:#17161a;--t-blue:#22344d;--t-mint:#1f4136;--t-cream:#4a3a22;--t-lilac:#34304f;--t-rose:#4a2b2e;--shadow:0 30px 80px rgba(0,0,0,.45);color-scheme:dark}}
-:root[data-theme="dark"]{--stage:#0f2a22;--bg:#17161a;--bg2:#17161a;--ink:#f3efe9;--fg:#f3efe9;--mute:#a59e96;--line:#2f2d34;--surf:#232127;--surf2:#2c2a31;--card:#1f1d23;--panel:#211f25;--inv:#f3efe9;--invfg:#17161a;--t-blue:#22344d;--t-mint:#1f4136;--t-cream:#4a3a22;--t-lilac:#34304f;--t-rose:#4a2b2e;--shadow:0 30px 80px rgba(0,0,0,.45);color-scheme:dark}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--stage:#06140f;--bg:#0c0c0e;--bg2:#0c0c0e;--ink:#f3efe9;--fg:#f3efe9;--mute:#9d978f;--line:#26262b;--surf:#1a1a1e;--surf2:#232328;--card:#141417;--panel:#121215;--inv:#f3efe9;--invfg:#0c0c0e;--t-blue:#1d2c42;--t-mint:#173a2f;--t-cream:#43341d;--t-lilac:#2c2846;--t-rose:#432528;--shadow:0 30px 80px rgba(0,0,0,.6);color-scheme:dark}}
+:root[data-theme="dark"]{--stage:#06140f;--bg:#0c0c0e;--bg2:#0c0c0e;--ink:#f3efe9;--fg:#f3efe9;--mute:#9d978f;--line:#26262b;--surf:#1a1a1e;--surf2:#232328;--card:#141417;--panel:#121215;--inv:#f3efe9;--invfg:#0c0c0e;--t-blue:#1d2c42;--t-mint:#173a2f;--t-cream:#43341d;--t-lilac:#2c2846;--t-rose:#432528;--shadow:0 30px 80px rgba(0,0,0,.6);color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:var(--stage);color:var(--ink);font-family:'Poppins','Helvetica Neue',Arial,sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
 button{font:inherit;color:inherit;cursor:pointer}
@@ -2400,7 +2401,7 @@ function RPanel({a}){
 function Main({user,isNew,onUser}){
   const sv=useRef(null);if(!sv.current)sv.current=loadData(user.email)||{};const SV=sv.current,warned=useRef(false);
   const [tab,setTab]=useState('ahora'),[onb,setOnb]=useState(!!isNew),[tutorTopic,setTutorTopic]=useState(null),[msg,setMsg]=useState(null);
-  const [theme,setTheme]=useState(()=>{try{return localStorage.getItem('ea-theme')}catch(e){return null}});
+  const [theme,setTheme]=useState(()=>{try{return localStorage.getItem('ea-theme')||'dark'}catch(e){return 'dark'}});
   const [prefs,setPrefs]=useState(()=>SV.prefs||{carrera:user.carrera,uni:user.uni,anio:user.anio,from:16,to:22,maxH:user.horas||4});
   const [subjects,setSubjects]=useState(()=>SV.subjects||initSubjects());
   const [mastery,setMastery]=useState(()=>SV.mastery||Object.fromEntries(SUBJ0.flatMap(s=>s.topics.map(t=>[t.id,t.m0]))));
@@ -2446,7 +2447,7 @@ function Main({user,isNew,onUser}){
   const toast=m=>{setMsg(m);clearTimeout(toastT.current);toastT.current=setTimeout(()=>setMsg(null),3200)};
   useEffect(()=>{const r=document.documentElement;if(theme)r.setAttribute('data-theme',theme);else r.removeAttribute('data-theme')},[theme]);
   useEffect(()=>{window.scrollTo(0,0)},[tab]);
-  const isDark=theme?theme==='dark':(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches);
+  const isDark=theme==='dark';
   const flip=()=>{const n=isDark?'light':'dark';setTheme(n);try{localStorage.setItem('ea-theme',n)}catch(e){}};
   useEffect(()=>{if(!run)return;const id=setInterval(()=>setRun(r=>r&&!r.paused&&r.left>0?{...r,left:r.left-1}:r),1000);return()=>clearInterval(id)},[run&&run.phase,run&&run.paused]);
   const examOf=s=>rescue&&rescue.exam[s.id]!=null?rescue.exam[s.id]:s.exam;
