@@ -1,0 +1,6 @@
+# Mercado Pago llama a estas dos funciones sin sesión de Supabase.
+[functions.mp-oauth]
+verify_jwt = false
+
+[functions.mp-webhook]
+verify_jwt = false

@@ -557,6 +557,7 @@ function Ahora({a}){
       <div className="grow"><h1 style=${{fontSize:'clamp(28px,8vw,34px)',fontWeight:700}}>${DNF[d0.getDay()]} ${d0.getDate()}</h1><p className="mut" style=${{fontSize:14,marginTop:2}}>${todayS.length?`${todayS.filter(b=>!b.done).length} de ${todayS.length} bloques pendientes`:'Tus próximos bloques'}</p></div>
       <div className="row" style=${{gap:8}}><button className="ibtn meav" onClick=${a.openPerfil} aria-label="Mi perfil" style=${{background:'var(--g-lilac)',color:'#fff',fontWeight:600,fontSize:14}}>${initials(a.user.nombre)}</button><button className="ibtn" onClick=${a.openOnb} aria-label="Configuración"><${Icon} n="settings" s=${19}/></button><button className="ibtn" onClick=${a.flipTheme} aria-label=${a.isDark?'Modo claro':'Modo oscuro'}><${Icon} n=${a.isDark?'sun':'moon'} s=${19}/></button></div></div>
     <p style=${{fontSize:14.5,fontWeight:500,marginTop:-10,textWrap:'balance'}}>No necesitás hacer todo. Necesitás saber qué hacer ahora.</p>
+    ${STANDALONE&&a.sub&&a.sub.in_trial&&!(a.sub.subscription&&a.sub.subscription.status==='authorized')&&html`<div className="alertbox row wrap" style=${{justifyContent:'space-between',gap:10,background:'var(--t-mint)'}}><span style=${{fontSize:13.5}}><b>Mes gratis: te quedan ${daysLeft(a.sub.trial_ends_at)} días.</b> Después, $${PAGOS.precio} por mes. Si te suscribís ahora, el primer cobro es cuando termina la prueba.</span><button className="btn btn-sm btn-s" onClick=${a.pay.subscribe}>Suscribirme</button></div>`}
     ${hero}
     ${a.rescue?html`<div className="alertbox row wrap" style=${{justifyContent:'space-between'}}><span className="row"><${Icon} n="alert"/> <b>Modo Rescate activo</b></span><button className="btn btn-sm" onClick=${a.stopRescue}>Desactivar</button></div>`:html`<div className="banner"><span style=${{fontSize:34,lineHeight:1}}>🚨</span><div className="grow"><b style=${{fontSize:16}}>MODO RESCATE</b><p style=${{fontSize:12.5,opacity:.95}}>¿Parcial encima y poco tiempo? Armamos tu plan de hoy.</p></div><button className="btn btn-i btn-sm" onClick=${()=>a.go('rescate')}>Armar plan</button></div>`}
     ${list.length>0&&html`<div className="fl" style=${{gap:10}}><div className="row" style=${{justifyContent:'space-between'}}><h2 style=${{fontSize:20,fontWeight:600}}>${todayS.length?'Tu plan de hoy':'Próximos bloques'}</h2><button className="chip" onClick=${()=>a.go('calendario')}>Ver calendario</button></div>
@@ -1294,7 +1295,7 @@ function Welcome({initial,edit,onDone,onClose}){
     e.preventDefault();if(busy)return;
     const c=code.replace(/\D/g,'');if(c.length<6)return setErr({k:'code',m:'Escribí el código de 6 dígitos que te llegó por email.'});
     setBusy(true);
-    try{await checkCode(ver.p.email,c);setBusy(false);await finish(ver.p,true)}
+    try{const j=await checkCode(ver.p.email,c);saveSess(ver.p.email,j);setBusy(false);await finish(ver.p,true)}
     catch(e2){setBusy(false);setErr({k:'code',m:codeErr(e2)})}
   };
   const resend=async()=>{if(busy)return;setBusy(true);try{await sendCode(ver.p.email);setVer({...ver,sentAt:Date.now()});setErr({k:'code',m:'Te mandamos un código nuevo.'})}catch(e2){setErr({k:'code',m:codeErr(e2)})}finally{setBusy(false)}};
@@ -1352,6 +1353,10 @@ function Perfil({a,onClose}){
     <div className="row" style=${{justifyContent:'space-between'}}><h2 style=${{fontSize:24,fontWeight:700}}>Mi perfil</h2><button className="ibtn" onClick=${onClose} aria-label="Cerrar"><${Icon} n="x" s=${18}/></button></div>
     <div className="card row" style=${{gap:14}}><span className="av" style=${{width:56,height:56,flexBasis:56,fontSize:20}}>${initials(u.nombre)}</span><div className="grow" style=${{minWidth:0}}><b style=${{fontSize:17,display:'block'}}>${u.nombre}</b><span className="mut" style=${{fontSize:13,overflowWrap:'anywhere'}}>${u.email}</span></div></div>
     <div className="card fl" style=${{gap:8,fontSize:14}}><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Universidad</span><b style=${{textAlign:'right'}}>${u.uni}</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Carrera</span><b>${u.carrera}</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Año</span><b>${u.anio}.º</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">País</span><b>${u.pais}</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Estudio por día</span><b>${u.horas||3} h</b></div></div>
+    ${STANDALONE&&a.sub&&html`<div className="card fl" style=${{gap:8}}><b>⭐ Suscripción Nexus</b>
+      ${(()=>{const sb=a.sub,st=sb.subscription&&sb.subscription.status,np=sb.subscription&&sb.subscription.next_payment_date;
+        return html`<span className="mut" style=${{fontSize:13.5}}>${st==='authorized'?'Activa · $'+PAGOS.precio+' por mes'+(np?' · próximo cobro el '+new Date(np).toLocaleDateString('es'):''):st==='pending'?'Esperando la confirmación de Mercado Pago.':sb.in_trial?'Mes gratis: te quedan '+daysLeft(sb.trial_ends_at)+' días. Después, $'+PAGOS.precio+' por mes.':'Sin suscripción activa.'}${sb.demo?' (modo demo: los pagos son simulados)':''}</span>
+        <div className="row wrap" style=${{gap:8}}>${st==='authorized'?html`<button className="btn btn-sm btn-g" onClick=${a.pay.cancel}>Cancelar suscripción</button>`:html`<button className="btn btn-sm btn-s" onClick=${a.pay.subscribe}>Suscribirme con Mercado Pago</button>`}${!sb.demo&&html`<button className="btn btn-sm" onClick=${a.pay.refresh}>Actualizar</button>`}</div>`})()}</div>`}
     ${STANDALONE&&html`<div className="card fl" style=${{gap:8}}><b>✳️ Tu cuenta de Claude</b>
       <span className="mut" style=${{fontSize:13}}>${CLAUDE_APP_URL?'Abrí Nexus dentro de claude.ai: el tutor, la guía, los temas y los ejercicios usan tu propia cuenta de Claude, sin clave. Tu progreso de este navegador no se pasa solo: volvé a subir tus apuntes allá.':'Desde el tutor y tus apuntes podés tocar "Seguir en Claude": se abre claude.ai con tu cuenta y un pedido armado con tu carrera, tus parciales, tus temas flojos y tu material.'}</span>
       <div className="row wrap" style=${{gap:8}}>${CLAUDE_APP_URL&&html`<a className="btn btn-s btn-sm" href=${CLAUDE_APP_URL} target="_blank" rel="noopener">Abrir Nexus en Claude ↗</a>`}<button className="btn btn-sm" onClick=${()=>openInClaude('Quiero que seas mi tutor personal de estudio. '+perfilTxt(a)+'\nArmame un plan para esta semana priorizando lo que más me cuesta y lo que rindo antes, y después empecemos por el primer tema con método socrático. Español rioplatense.',a.toast)}>Estudiar en Claude ↗</button></div></div>`}
@@ -1398,6 +1403,8 @@ function Logros({a}){
    · Demo: todo en este navegador, con compañeros de ejemplo, para probar cómo funciona. */
 /* Base Supabase del sitio (la completa quien publica Nexus; ver README). Activa la verificación por email, los grupos, los mensajes y la tienda para todos. */
 const SUPA={url:'',key:''};
+/* Cobros: suscripción mensual con mes gratis y comisión por cada venta de la tienda (los valores reales los define el servidor). */
+const PAGOS={precio:400,moneda:'UYU',prueba:30,comision:.10};
 const grpCfg={get:()=>{try{const c=JSON.parse(localStorage.getItem('ea-grp')||'null');if(c)return c}catch(e){}return SUPA.url&&SUPA.key?SUPA:null},set:c=>{try{c?localStorage.setItem('ea-grp',JSON.stringify(c)):localStorage.removeItem('ea-grp')}catch(e){}}};
 const uidOf=email=>{const k='ea-uid-'+email;try{let v=localStorage.getItem(k);if(!v){v='u'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);localStorage.setItem(k,v)}return v}catch(e){return 'u'+keyOf(email).replace(/\s/g,'')}};
 /* Verificación del email con código (Supabase Auth: manda un código de 6 dígitos al correo) */
@@ -1410,12 +1417,30 @@ async function authCall(path,body){
   return j;
 }
 const sendCode=email=>authCall('otp',{email,create_user:true});
+/* Sesión de Supabase de cada persona (la da la verificación por email): identifica a quien compra, vende o se suscribe */
+const sessStore={k:e=>'ea-sb-'+e,get(e){try{return JSON.parse(localStorage.getItem(this.k(e))||'null')}catch(x){return null}},set(e,v){try{v?localStorage.setItem(this.k(e),JSON.stringify(v)):localStorage.removeItem(this.k(e))}catch(x){}}};
+const saveSess=(email,j)=>{if(j&&j.access_token)sessStore.set(email,{access_token:j.access_token,refresh_token:j.refresh_token,expires_at:Date.now()+(+j.expires_in||3600)*1000,uid:(j.user&&j.user.id)||null})};
+async function liveSession(email){
+  const s=sessStore.get(email);if(!s||!mailCfg())return null;
+  if(s.expires_at>Date.now()+60e3&&s.uid)return s;
+  if(!s.refresh_token)return null;
+  try{const j=await authCall('token?grant_type=refresh_token',{refresh_token:s.refresh_token});saveSess(email,j);return sessStore.get(email)}
+  catch(e){if(e.status===400||e.status===401)sessStore.set(email,null);return null}
+}
+async function callFn(body,s){
+  const c=mailCfg();let r;
+  try{r=await fetch(c.url.replace(/\/+$/,'')+'/functions/v1/pagos',{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+s.access_token,'content-type':'application/json'},body:JSON.stringify(body)})}catch(e){throw {status:0,code:'network'}}
+  let j=null;try{j=await r.json()}catch(e){}
+  if(!r.ok)throw {status:r.status,code:(j&&j.error)||'server'};
+  return j;
+}
+const payErr=e=>({network:'No hay conexión. Probá de nuevo.',seller_not_connected:'Quien vende todavía no conectó Mercado Pago. Escribile para avisarle.',own_listing:'Es tu propia publicación.',not_bought:'Todavía no figura tu pago. Si recién pagaste, esperá un minuto y probá de nuevo.',not_found:'Esa publicación ya no está disponible.',no_session:'Tu sesión venció. Confirmá tu email de nuevo.',cancelled:'Cancelado.'}[e&&e.code]||'No pudimos completar el pago. Probá de nuevo en un momento.');
 const checkCode=(email,token)=>authCall('verify',{type:'email',email,token});
 const codeErr=e=>e.status===429||/rate|seconds/i.test(e.msg||'')?'Pediste muchos códigos seguidos. Esperá un minuto y probá de nuevo.':e.status===0?'No hay conexión. Revisá internet y probá de nuevo.':/expired|invalid|token/i.test(e.msg||'')||e.status===403||e.status===401?'El código no es correcto o ya venció. Revisalo o pedí uno nuevo.':/email/i.test(e.msg||'')&&e.status===400?'No pudimos mandar el correo a ese email. Revisá que esté bien escrito.':'No pudimos completar la verificación. Probá de nuevo en un momento.';
 const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 function sbApi(c){
   const base=c.url.replace(/\/+$/,'')+'/rest/v1/';
-  const q=async(path,o={})=>{const r=await fetch(base+path,{method:o.method||'GET',headers:{apikey:c.key,Authorization:'Bearer '+c.key,'content-type':'application/json',Prefer:o.prefer||'return=minimal'},body:o.body?JSON.stringify(o.body):undefined});if(!r.ok)throw new Error('HTTP '+r.status);const t=await r.text();return t?JSON.parse(t):null};
+  const q=async(path,o={})=>{const r=await fetch(base+path,{method:o.method||'GET',headers:{apikey:c.key,Authorization:'Bearer '+(o.token||c.key),'content-type':'application/json',Prefer:o.prefer||'return=minimal'},body:o.body?JSON.stringify(o.body):undefined});if(!r.ok)throw new Error('HTTP '+r.status);const t=await r.text();return t?JSON.parse(t):null};
   const e=encodeURIComponent;
   return {online:true,
     upsertMe:me=>q('students',{method:'POST',prefer:'resolution=merge-duplicates,return=minimal',body:me}),
@@ -1432,9 +1457,14 @@ function sbApi(c){
     upload:async(path,file)=>{const r=await fetch(c.url.replace(/\/+$/,'')+'/storage/v1/object/archivos/'+path.split('/').map(e).join('/'),{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+c.key,'content-type':file.type||'application/octet-stream','x-upsert':'false'},body:file});if(!r.ok)throw new Error('HTTP '+r.status);return c.url.replace(/\/+$/,'')+'/storage/v1/object/public/archivos/'+path.split('/').map(e).join('/')},
     listings:()=>q('listings?select=*&active=eq.true&order=ts.desc&limit=300'),
     myListings:uid=>q('listings?select=*&uid=eq.'+e(uid)+'&order=ts.desc'),
-    createListing:l=>q('listings',{method:'POST',body:l}),
-    updateListing:(id,p)=>q('listings?id=eq.'+e(id),{method:'PATCH',body:p}),
-    deleteListing:id=>q('listings?id=eq.'+e(id),{method:'DELETE'}),
+    createListing:(l,t)=>q('listings',{method:'POST',body:l,token:t}),
+    updateListing:(id,p,t)=>q('listings?id=eq.'+e(id),{method:'PATCH',body:p,token:t}),
+    deleteListing:(id,t)=>q('listings?id=eq.'+e(id),{method:'DELETE',token:t}),
+    setPrivate:(row,t)=>q('listing_private?on_conflict=listing_id',{method:'POST',prefer:'resolution=merge-duplicates,return=minimal',body:row,token:t}),
+    uploadSale:async(path,file,t)=>{const r=await fetch(c.url.replace(/\/+$/,'')+'/storage/v1/object/ventas/'+path.split('/').map(e).join('/'),{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+t,'content-type':file.type||'application/octet-stream'},body:file});if(!r.ok)throw new Error('HTTP '+r.status);return path},
+    counts:()=>q('listing_sales?select=*'),
+    purchases:(uid,t)=>q('sales?select=*&status=eq.approved&buyer_auth=eq.'+e(uid)+'&order=created_at.desc',{token:t}),
+    salesOf:(uid,t)=>q('sales?select=*&seller_auth=eq.'+e(uid)+'&order=created_at.desc',{token:t}),
     logEvent:ev=>q('listing_events',{method:'POST',body:ev}),
     events:ids=>ids.length?q('listing_events?select=*&listing_id=in.('+ids.map(e).join(',')+')&limit=5000'):Promise.resolve([])};
 }
@@ -1456,6 +1486,7 @@ function demoApi(subjects){
     const pool=[...subjects.map(x=>({n:x.name,t:visT(x).slice(0,3).map(t=>t.name)})),...UDELAR_MED.filter(c=>!subjects.some(x=>keyOf(x.name)===keyOf(c.n))).slice(0,3).map(c=>({n:c.n,t:c.t.slice(0,3)}))];
     pool.forEach((x,i)=>{const k=kinds[i%kinds.length],p=DEMO_P[(i+3)%DEMO_P.length];db.listings.push({id:'dl'+gid(),uid:'demo'+keyOf(p[0]).replace(/\s/g,''),seller_name:p[0]+' (ejemplo)',seller_uni:p[1],title:k[1]+x.n,kind:k[0],subj:keyOf(x.n),subj_name:x.n,topics:x.t.join(', '),unis:'',years:'',carrera:'Medicina',price:k[3],currency:'UYU',contact_kind:'email',contact:'ejemplo@nexus.demo',descr:'Material '+k[2]+'. Ideal para el parcial. (Publicación de ejemplo)',preview:'Vista previa: índice de '+x.t.join(', ')+'.',ts:Date.now()-i*36e5*7,active:true,demo:true})});
   }
+  if(!db.seededS){db.seededS=true;db.sales=db.sales||[];(db.listings||[]).filter(l=>l.demo).forEach((l,i)=>{for(let k=0;k<[7,3,12,5,1,9][i%6];k++)db.sales.push({id:gid(),mp_payment_id:'seed'+gid(),listing_id:l.id,buyer_auth:'demo-comprador'+k,seller_auth:l.uid,amount:l.price,fee:l.price*PAGOS.comision,currency:l.currency,status:'approved',created:Date.now()-k*864e5})})}
   save(db);
   const w=f=>{db=load()||db;const r=f(db);save(db);return Promise.resolve(r)};
   return {online:false,
@@ -1482,7 +1513,14 @@ function demoApi(subjects){
     updateListing:(id,p)=>w(d=>{d.listings=(d.listings||[]).map(l=>l.id===id?{...l,...p}:l)}),
     deleteListing:id=>w(d=>{d.listings=(d.listings||[]).filter(l=>l.id!==id)}),
     logEvent:ev=>w(d=>{d.events=[...(d.events||[]),ev].slice(-3000)}),
-    events:ids=>w(d=>(d.events||[]).filter(ev=>ids.includes(ev.listing_id)))};
+    events:ids=>w(d=>(d.events||[]).filter(ev=>ids.includes(ev.listing_id))),
+    setPrivate:row=>w(d=>{d.listings=(d.listings||[]).map(l=>l.id===row.listing_id?{...l,priv:row}:l)}),
+    uploadSale:(path,file)=>file.size>1.5e6?Promise.reject(new Error('demo_size')):new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result));r.onerror=()=>rej(r.error);r.readAsDataURL(file)}),
+    counts:()=>w(d=>{const c={};(d.sales||[]).forEach(x=>{if(x.status==='approved')c[x.listing_id]=(c[x.listing_id]||0)+1});return Object.entries(c).map(([listing_id,sold])=>({listing_id,sold}))}),
+    purchases:uid=>w(d=>(d.sales||[]).filter(x=>x.buyer_auth===uid&&x.status==='approved').sort((x,y)=>y.created-x.created)),
+    salesOf:uid=>w(d=>(d.sales||[]).filter(x=>x.seller_auth===uid).sort((x,y)=>y.created-x.created)),
+    buyDemo:(l,uid)=>w(d=>{const amount=+l.price||0;d.sales=[...(d.sales||[]),{id:gid(),mp_payment_id:'demo'+gid(),listing_id:l.id,buyer_auth:uid,seller_auth:l.uid,amount,fee:Math.round(amount*PAGOS.comision*100)/100,currency:l.currency,status:'approved',created:Date.now(),created_at:new Date().toISOString()}]}),
+    deliverDemo:id=>w(d=>{const l=(d.listings||[]).find(x=>x.id===id);if(!l)return null;const p=l.priv||{contact_kind:l.contact_kind,contact:l.contact};return {url:p.file_url||null,file_name:p.file_name||null,contact_kind:p.contact_kind||null,contact:p.contact||null}})};
 }
 const dmId=(u1,u2)=>'dm:'+[u1,u2].sort().join(':');
 const readMap={get:()=>{try{return JSON.parse(localStorage.getItem('ea-read')||'{}')}catch(e){return {}}},mark:(id,ts)=>{try{const m=readMap.get();if(!(m[id]>=ts)){m[id]=ts;localStorage.setItem('ea-read',JSON.stringify(m))}}catch(e){}}};
@@ -1566,59 +1604,113 @@ function scoreListing(l,a,me){
 }
 function Tienda({a}){
   const {subjects}=a,api=useApi(subjects),me=useMe(a);
-  const [tab,setTab]=useState('para'),[all,setAll]=useState(null),[mine,setMine]=useState(null),[ev,setEv]=useState([]),[open,setOpen]=useState(null),[fk,setFk]=useState('all'),[q,setQ]=useState(''),[err,setErr]=useState(null),[tick,setTick]=useState(0),[hidden,setHidden]=useState([]);
+  const [tab,setTab]=useState(()=>a.shopInit||'para'),[all,setAll]=useState(null),[mine,setMine]=useState(null),[ev,setEv]=useState([]),[sold,setSold]=useState({}),[open,setOpen]=useState(null),[fk,setFk]=useState('all'),[q,setQ]=useState(''),[sort,setSort]=useState('rel'),[err,setErr]=useState(null),[tick,setTick]=useState(0),[hidden,setHidden]=useState([]),[buy,setBuy]=useState(null),[busy,setBusy]=useState(false);
+  useEffect(()=>{if(a.shopInit)a.clearShop()},[]);
   useEffect(()=>{let ok=true;setErr(null);
-    Promise.all([api.listings(),api.myListings(me.uid)]).then(async([l,m])=>{if(!ok)return;setAll(l||[]);setMine(m||[]);const e=await api.events((m||[]).map(x=>x.id)).catch(()=>[]);if(ok)setEv(e||[])}).catch(()=>{if(ok){setErr('No pude cargar la tienda en línea. Revisá la conexión en Mi perfil.');setAll([]);setMine([])}});
+    Promise.all([api.listings(),api.myListings(me.uid),api.counts().catch(()=>[])]).then(async([l,m,c])=>{if(!ok)return;setAll(l||[]);setMine(m||[]);setSold(Object.fromEntries((c||[]).map(x=>[x.listing_id,+x.sold||0])));const e=await api.events((m||[]).map(x=>x.id)).catch(()=>[]);if(ok)setEv(e||[])}).catch(()=>{if(ok){setErr('No pude cargar la tienda en línea. Probá de nuevo en un momento.');setAll([]);setMine([])}});
     return()=>{ok=false}},[api,tick]);
   const log=(l,kind)=>{if(l.uid===me.uid)return;api.logEvent({id:gid(),listing_id:l.id,kind,uid:me.uid,anio:me.anio,uni:me.uni,subj:l.subj,ts:Date.now()}).catch(()=>{})};
   const view=id=>{const l=(all||[]).find(x=>x.id===id);if(open!==id&&l)log(l,'view');setOpen(open===id?null:id)};
-  const items=(all||[]).filter(l=>l.uid!==me.uid&&!hidden.includes(l.id)).map(l=>({l,...scoreListing(l,a,me)}))
+  const SORTS=[['rel','Recomendado'],['vendidos','Más vendidos'],['barato','Más barato'],['caro','Más caro'],['nuevo','Más nuevo']];
+  const items=(all||[]).filter(l=>l.uid!==me.uid&&!hidden.includes(l.id)).map(l=>({l,...scoreListing(l,a,me),n:sold[l.id]||0}))
     .filter(x=>(tab==='para'?x.mine&&x.sc>0:true)&&(fk==='all'||x.l.kind===fk)&&(!q.trim()||fold(x.l.title+' '+x.l.subj_name+' '+x.l.topics+' '+x.l.descr).includes(fold(q.trim()))))
-    .sort((x,y)=>tab==='para'?y.sc-x.sc:y.l.ts-x.l.ts);
-  const card=({l,why})=>{const u=contactUrl(l);return html`<div key=${l.id} className="card fl" style=${{gap:8}}>
-    <div className="row" style=${{gap:12,alignItems:'flex-start'}}><span className="tile" style=${{width:46,height:46,fontSize:22,flex:'0 0 46px'}}>${LKIND[l.kind]?LKIND[l.kind][0]:'📦'}</span>
+    .sort((x,y)=>sort==='vendidos'?y.n-x.n||y.sc-x.sc:sort==='barato'?(+x.l.price||0)-(+y.l.price||0):sort==='caro'?(+y.l.price||0)-(+x.l.price||0):sort==='nuevo'?y.l.ts-x.l.ts:y.sc-x.sc+(y.n-x.n)*.5);
+  const pay=async l=>{
+    setBusy(true);setErr(null);
+    try{
+      if(a.pay.online){log(l,'click');await a.pay.checkout(l);return}
+      await api.buyDemo(l,me.uid);log(l,'click');setBuy(null);setTick(t=>t+1);setTab('compras');a.toast('Compra aprobada (simulada). Ya está en "Mis compras".');
+    }catch(e){if(!e||e.code!=='cancelled')setErr(payErr(e))}finally{setBusy(false)}
+  };
+  const card=({l,why,n})=>{const free=!(+l.price>0),fee=Math.round((+l.price||0)*PAGOS.comision*100)/100;return html`<div key=${l.id} className="card fl" style=${{gap:8}}>
+    <div className="row" style=${{gap:12,alignItems:'flex-start'}}><span className="tile" style=${{width:46,height:46,fontSize:22,flex:'0 0 46px'}}>${(LKIND[l.kind]||LKIND.otro)[0]}</span>
       <div className="grow" style=${{minWidth:0}}><b style=${{fontSize:16,display:'block',overflowWrap:'anywhere'}}>${l.title}</b><span className="mut" style=${{fontSize:12.5}}>${(LKIND[l.kind]||LKIND.otro)[1]} · ${l.subj_name} · ${l.seller_name}${l.seller_uni?' · '+l.seller_uni:''}</span></div>
-      <b className="num" style=${{whiteSpace:'nowrap',fontSize:16}}>${+l.price?l.currency+' '+(+l.price).toLocaleString('es'):'Gratis'}</b></div>
+      <span className="fl" style=${{alignItems:'flex-end',gap:2}}><b className="num" style=${{whiteSpace:'nowrap',fontSize:16}}>${free?'Gratis':money(l.price,l.currency)}</b>${n>0&&html`<span className="mut num" style=${{fontSize:12,whiteSpace:'nowrap'}}>🔥 ${n} vendido${n===1?'':'s'}</span>`}</span></div>
     ${why&&why.length>0&&html`<div className="chips">${why.slice(0,3).map(w=>html`<span key=${w} className="lvl" style=${{background:'var(--t-mint)',color:'var(--ink)'}}>${w}</span>`)}</div>`}
-    ${open===l.id&&html`<div className="fl" style=${{gap:8,fontSize:14}}>${l.descr&&html`<p style=${{whiteSpace:'pre-wrap'}}>${l.descr}</p>`}${l.topics&&html`<p className="mut" style=${{fontSize:13}}>Temas: ${l.topics}</p>`}${l.preview&&html`<div style=${{background:'var(--surf)',borderRadius:14,padding:12,fontSize:13,whiteSpace:'pre-wrap',maxHeight:220,overflow:'auto'}}><div className="eyebrow" style=${{marginBottom:4}}>Vista previa</div>${l.preview}</div>`}</div>`}
+    ${open===l.id&&html`<div className="fl" style=${{gap:8,fontSize:14}}>${l.descr&&html`<p style=${{whiteSpace:'pre-wrap'}}>${l.descr}</p>`}${l.topics&&html`<p className="mut" style=${{fontSize:13}}>Temas: ${l.topics}</p>`}${l.has_file&&html`<p className="mut" style=${{fontSize:13}}>📎 Incluye un archivo para descargar después de la compra.</p>`}${l.preview&&html`<div style=${{background:'var(--surf)',borderRadius:14,padding:12,fontSize:13,whiteSpace:'pre-wrap',maxHeight:220,overflow:'auto'}}><div className="eyebrow" style=${{marginBottom:4}}>Vista previa</div>${l.preview}</div>`}</div>`}
+    ${buy===l.id&&html`<div className="alertbox fl" style=${{gap:8,background:'var(--t-blue)'}}><b>Pagás ${money(l.price,l.currency)} con Mercado Pago${a.pay.online?'':' (simulado: modo demo)'}.</b><span style=${{fontSize:13}}>Después de pagar vas a poder descargar el material y ver el contacto de ${l.seller_name.replace(' (ejemplo)','')} en "Mis compras". De ese monto, Nexus se queda con el ${Math.round(PAGOS.comision*100)} % (${money(fee,l.currency)}).</span><div className="row wrap" style=${{gap:8}}><button className="btn btn-s btn-sm" disabled=${busy} onClick=${()=>pay(l)}>${busy?'Abriendo Mercado Pago…':a.pay.online?'Ir a pagar':'Pagar (simulado)'}</button><button className="btn btn-sm btn-g" onClick=${()=>setBuy(null)}>Cancelar</button></div></div>`}
     <div className="row wrap" style=${{gap:8}}><button className="btn btn-sm" onClick=${()=>view(l.id)}>${open===l.id?'Ver menos':'Ver detalle'}</button>
-      ${u?html`<a className="btn btn-sm btn-s" href=${u} target="_blank" rel="noopener noreferrer" onClick=${()=>log(l,'click')}>Contactar ${l.contact_kind==='whatsapp'?'por WhatsApp':l.contact_kind==='instagram'?'por Instagram':l.contact_kind==='email'?'por email':''} ↗</a>`:html`<span className="mut" style=${{fontSize:12.5,alignSelf:'center'}}>Contacto: ${l.contact}</span>`}
-      ${u&&html`<span className="mut" style=${{fontSize:12.5,alignSelf:'center',userSelect:'all',overflowWrap:'anywhere'}}>${l.contact}</span>`}
+      ${free?html`<button className="btn btn-sm btn-s" onClick=${()=>{setTab('compras');setTimeout(()=>getIt(l),0)}}>Obtener gratis</button>`:buy!==l.id&&html`<button className="btn btn-sm btn-s" onClick=${()=>{setBuy(l.id);log(l,'view')}}>Comprar · ${money(l.price,l.currency)}</button>`}
+      <button className="btn btn-sm" onClick=${()=>a.openDM(l.uid,l.seller_name.replace(' (ejemplo)',''),'Vende: '+l.title)}><${Icon} n="msg" s=${14}/> Preguntar</button>
       <button className="btn btn-sm btn-g" style=${{marginLeft:'auto'}} onClick=${()=>{log(l,'report');setHidden(h=>[...h,l.id]);a.toast('Gracias. Ocultamos esta publicación.')}}>Denunciar</button></div></div>`};
+  /* ---- Mis compras ---- */
+  const [pur,setPur]=useState(null),[got,setGot]=useState({});
+  useEffect(()=>{if(tab!=='compras')return;let ok=true;setPur(null);
+    (async()=>{try{if(a.pay.online){const s=await liveSession(a.user.email);if(!s){if(ok)setPur('auth');return}const r=await api.purchases(s.uid,s.access_token);if(ok)setPur(r||[])}else{const r=await api.purchases(me.uid);if(ok)setPur(r||[])}}catch(e){if(ok){setPur([]);setErr('No pude cargar tus compras.')}}})();
+    return()=>{ok=false}},[tab,tick]);
+  const getIt=async l=>{try{const r=a.pay.online?await a.pay.deliver(l):await api.deliverDemo(l.id);setGot(g=>({...g,[l.id]:r||{}}))}catch(e){if(!e||e.code!=='cancelled')setErr(payErr(e))}};
+  const byId=Object.fromEntries((all||[]).map(l=>[l.id,l]));
+  const freeGot=Object.keys(got).filter(id=>byId[id]&&!(+byId[id].price>0)&&!(Array.isArray(pur)&&pur.some(p=>p.listing_id===id)));
+  const delivered=(l,r)=>{if(!r)return null;const u=r.contact?contactUrl({contact_kind:r.contact_kind,contact:r.contact,title:l.title}):null;return html`<div className="fl" style=${{gap:6,background:'var(--surf)',borderRadius:14,padding:12,fontSize:13.5}}>
+    ${r.url&&/^(https:|data:)/.test(r.url)?html`<a className="btn btn-sm btn-s" style=${{alignSelf:'flex-start'}} href=${r.url} download=${r.file_name||'material'} target="_blank" rel="noopener noreferrer">📥 Descargar ${r.file_name||'archivo'}</a>`:html`<span className="mut">Esta publicación no tiene archivo para descargar.</span>`}
+    ${r.contact?html`<span>Contacto de quien vende: <b style=${{userSelect:'all',overflowWrap:'anywhere'}}>${r.contact}</b> ${u&&html`<a href=${u} target="_blank" rel="noopener noreferrer">abrir ↗</a>`}</span>`:null}</div>`};
   return html`<div className="fl" style=${{gap:18}}>
-    <${Head} eyebrow="Tienda de material" title=${tab==='vender'?'Vendé tu material':'Material para vos'} sub=${tab==='vender'?'Publicá resúmenes, cursos o clases y llegá a quienes cursan esa materia.':'Resúmenes, cursos y clases de las materias que estás cursando.'}/>
-    <div className="tabs" role="tablist">${[['para','Para vos'],['todo','Explorar'],['vender','Vender']].map(([k,l])=>html`<button key=${k} role="tab" className="tab" aria-selected=${tab===k} onClick=${()=>setTab(k)}>${l}</button>`)}</div>
-    ${!api.online&&html`<div className="alertbox" style=${{background:'var(--t-cream)'}}><b>Modo demo.</b> Las publicaciones de ejemplo y las tuyas quedan en este navegador. ${STANDALONE?html`Con <b>Grupos en línea</b> conectado en Mi perfil, la tienda es compartida.`:'La tienda compartida funciona en el sitio web de Nexus (con Grupos en línea activado).'}</div>`}
+    <${Head} eyebrow="Tienda de material" title=${tab==='vender'?'Vendé tu material':tab==='compras'?'Mis compras':'Material para vos'} sub=${tab==='vender'?'Publicá resúmenes, cursos o clases y cobrá por Nexus con Mercado Pago.':tab==='compras'?'Lo que compraste: descargas y contacto de quien vende.':'Resúmenes, cursos y clases de las materias que estás cursando.'}/>
+    <div className="tabs" role="tablist">${[['para','Para vos'],['todo','Explorar'],['compras','Mis compras'],['vender','Vender']].map(([k,l])=>html`<button key=${k} role="tab" className="tab" aria-selected=${tab===k} onClick=${()=>{setTab(k);setBuy(null)}}>${l}</button>`)}</div>
+    ${!a.pay.online&&html`<div className="alertbox" style=${{background:'var(--t-cream)'}}><b>Modo demo.</b> Las publicaciones de ejemplo, las compras y los pagos son simulados y quedan en este navegador. ${STANDALONE?'Con Supabase y Mercado Pago configurados (ver README), se cobra de verdad.':'Los pagos reales funcionan en el sitio web de Nexus.'}</div>`}
     ${err&&html`<div className="alertbox" role="alert" style=${{background:'var(--t-rose)'}}>${err}</div>`}
-    ${tab!=='vender'?html`<div className="fl" style=${{gap:12}}>
+    ${tab==='para'||tab==='todo'?html`<div className="fl" style=${{gap:12}}>
       <input aria-label="Buscar en la tienda" placeholder="🔎 Buscar (ej: plexo braquial, parciales)" value=${q} onInput=${e=>setQ(e.target.value)}/>
-      <div className="chips">${[['all','Todo'],...Object.entries(LKIND).map(([k,v])=>[k,v[0]+' '+v[1]])].map(([k,l])=>html`<button key=${k} className="chip" aria-pressed=${fk===k} onClick=${()=>setFk(k)}>${l}</button>`)}</div>
+      <div className="row wrap" style=${{gap:8,justifyContent:'space-between'}}><div className="chips">${[['all','Todo'],...Object.entries(LKIND).map(([k,v])=>[k,v[0]+' '+v[1]])].map(([k,l])=>html`<button key=${k} className="chip" aria-pressed=${fk===k} onClick=${()=>setFk(k)}>${l}</button>`)}</div>
+        <label className="row" style=${{gap:6,fontSize:13}}><span className="mut">Ordenar</span><select id="t-sort" value=${sort} onChange=${e=>setSort(e.target.value)} style=${{width:'auto',minWidth:150,padding:'.4rem .8rem'}}>${SORTS.map(([k,l])=>html`<option key=${k} value=${k}>${l}</option>`)}</select></label></div>
       ${all===null?html`<p className="mut">Cargando…</p>`:items.length===0?html`<div className="card"><p className="mut">${tab==='para'?'Todavía no hay material publicado para tus materias. Mirá en "Explorar" o publicá el tuyo.':'No encontramos publicaciones con ese filtro.'}</p></div>`:items.map(card)}
-      <p className="mut" style=${{fontSize:12.5}}>Nexus no cobra ni intermedia pagos: arreglás directo con quien vende. No pagues por adelantado a desconocidos ni compartas contraseñas.</p></div>`
-    :html`<${Vender} a=${a} api=${api} me=${me} mine=${mine} ev=${ev} onChange=${()=>setTick(t=>t+1)}/>`}
+      <p className="mut" style=${{fontSize:12.5}}>Pagás con Mercado Pago dentro de Nexus. No pagues por fuera ni por adelantado a desconocidos, y nunca compartas contraseñas.</p></div>`
+    :tab==='compras'?html`<div className="fl" style=${{gap:10}}>
+      ${pur==='auth'?html`<div className="card fl" style=${{gap:8}}><span>Para ver tus compras, confirmá tu email.</span><div><button className="btn btn-sm btn-s" onClick=${async()=>{try{await a.ensureAuth();setTick(t=>t+1)}catch(e){}}}>Confirmar email</button></div></div>`
+      :pur===null?html`<p className="mut">Cargando…</p>`
+      :pur.length===0&&freeGot.length===0?html`<div className="card"><p className="mut">Todavía no compraste nada. Mirá "Para vos": ahí está el material de tus materias.</p></div>`
+      :html`${pur.map(p=>{const l=byId[p.listing_id];return html`<div key=${p.mp_payment_id||p.id} className="card fl" style=${{gap:8}}>
+          <div className="row wrap" style=${{justifyContent:'space-between'}}><b>${l?(LKIND[l.kind]||LKIND.otro)[0]+' '+l.title:'Publicación eliminada'}</b><span className="num">${money(p.amount,p.currency)}</span></div>
+          <span className="mut" style=${{fontSize:12.5}}>${l?l.subj_name+' · '+l.seller_name+' · ':''}comprado el ${new Date(p.created_at||p.created).toLocaleDateString('es')}</span>
+          ${l&&(got[l.id]?delivered(l,got[l.id]):html`<div><button className="btn btn-sm btn-s" onClick=${()=>getIt(l)}>Ver descarga y contacto</button></div>`)}</div>`})}
+        ${freeGot.map(id=>{const l=byId[id];return html`<div key=${id} className="card fl" style=${{gap:8}}><b>${l.title}</b><span className="mut" style=${{fontSize:12.5}}>Gratis · ${l.seller_name}</span>${delivered(l,got[id])}</div>`})}`}</div>`
+    :html`<${Vender} a=${a} api=${api} me=${me} mine=${mine} ev=${ev} sold=${sold} onChange=${()=>setTick(t=>t+1)}/>`}
   </div>`;
 }
-function Vender({a,api,me,mine,ev,onChange}){
+function Vender({a,api,me,mine,ev,sold,onChange}){
   const {subjects}=a,first=subjects[0];
-  const blank={title:'',kind:'resumen',subj_name:first?first.name:'',topics:'',years:[],onlyUni:false,price:'',currency:/argent/i.test(a.user.pais||'')?'ARS':'UYU',contact_kind:'whatsapp',contact:'',descr:'',preview:''};
-  const [f,setF]=useState(null),[aud,setAud]=useState(null),[err,setErr]=useState(null),[busy,setBusy]=useState(false),[del,setDel]=useState(null);
+  const blank={title:'',kind:'resumen',subj_name:first?first.name:'',topics:'',years:[],onlyUni:false,price:'',currency:'UYU',contact_kind:'whatsapp',contact:'',descr:'',preview:'',file:null};
+  const [f,setF]=useState(null),[aud,setAud]=useState(null),[err,setErr]=useState(null),[busy,setBusy]=useState(false),[del,setDel]=useState(null),[sales,setSales]=useState(null);
   const set=p=>{setF(x=>({...x,...p}));setErr(null)};
+  useEffect(()=>{if(a.seller)setErr(null)},[a.seller]);
   const k=f?keyOf(f.subj_name):'';
   useEffect(()=>{if(!f||k.length<3){setAud(null);return}let ok=true;const t=setTimeout(()=>{api.students(k).then(ps=>{if(!ok)return;const list=(ps||[]).filter(p=>p.uid!==me.uid&&(!f.onlyUni||p.uni===me.uni)&&(!f.years.length||f.years.includes(+p.anio)));setAud(list.length)}).catch(()=>ok&&setAud(null))},400);return()=>{ok=false;clearTimeout(t)}},[k,f&&f.onlyUni,f&&f.years.join(',')]);
+  useEffect(()=>{let ok=true;(async()=>{try{if(a.pay.online){const s=await liveSession(a.user.email);if(!s){if(ok)setSales([]);return}const r=await api.salesOf(s.uid,s.access_token);if(ok)setSales(r||[])}else{const r=await api.salesOf(me.uid);if(ok)setSales(r||[])}}catch(e){if(ok)setSales([])}})();return()=>{ok=false}},[mine]);
   const matsOf=f?a.mats.filter(m=>m.text&&(subjects.find(s=>s.id===m.subj)||{}).name===f.subj_name):[];
+  const priceNum=f?(f.price===''?0:+String(f.price).replace(',','.')):0,feeNum=Math.round(priceNum*PAGOS.comision*100)/100;
   const publish=async()=>{
     if(f.title.trim().length<5)return setErr('Escribí un título claro (ej: "Resumen completo de Anatomía, parcial 1").');
     if(keyOf(f.subj_name).length<3)return setErr('Elegí la materia: así le aparece a quien la cursa.');
-    const price=f.price===''?0:+String(f.price).replace(',','.');if(!(price>=0))return setErr('El precio tiene que ser un número.');
-    if(!contactUrl({...f,title:f.title})&&f.contact_kind!=='otro')return setErr(f.contact_kind==='whatsapp'?'Poné tu WhatsApp con código de país (ej: 59899123456).':f.contact_kind==='instagram'?'Poné tu usuario de Instagram.':f.contact_kind==='email'?'Ese email no parece válido.':'Poné un link que empiece con https://');
+    if(!(priceNum>=0))return setErr('El precio tiene que ser un número.');
+    if(priceNum>0&&!a.seller)return setErr('Para vender necesitás conectar tu Mercado Pago (arriba). Así cobrás por Nexus y te llega la plata directo.');
+    if(!f.file&&!contactUrl({...f}))return setErr('Agregá un archivo para entregar o un contacto válido ('+(f.contact_kind==='whatsapp'?'WhatsApp con código de país, ej: 59899123456':f.contact_kind==='instagram'?'tu usuario de Instagram':f.contact_kind==='email'?'un email válido':'un link https://')+').');
+    if(f.file&&f.file.size>50e6)return setErr('El archivo pesa más de 50 MB.');
     setBusy(true);
-    const l={id:'l'+gid(),uid:me.uid,seller_name:me.name,seller_uni:me.uni,title:f.title.trim().slice(0,120),kind:f.kind,subj:keyOf(f.subj_name),subj_name:f.subj_name.trim(),topics:f.topics.trim().slice(0,300),unis:f.onlyUni?'|'+keyOf(me.uni)+'|':'',years:f.years.length?'|'+f.years.join('|')+'|':'',carrera:me.carrera,price,currency:f.currency,contact_kind:f.contact_kind==='otro'?'link':f.contact_kind,contact:f.contact.trim().slice(0,200),descr:f.descr.trim().slice(0,1500),preview:f.preview.trim().slice(0,3000),ts:Date.now(),active:true};
-    try{await api.createListing(l);setF(null);onChange();a.toast('Publicado. Ya le aparece a quien cursa '+l.subj_name)}catch(e){setErr('No pude publicar. Probá de nuevo.')}finally{setBusy(false)}
+    try{
+      const id='l'+gid();
+      const l={id,uid:me.uid,seller_name:me.name,seller_uni:me.uni,title:f.title.trim().slice(0,120),kind:f.kind,subj:keyOf(f.subj_name),subj_name:f.subj_name.trim(),topics:f.topics.trim().slice(0,300),unis:f.onlyUni?'|'+keyOf(me.uni)+'|':'',years:f.years.length?'|'+f.years.join('|')+'|':'',carrera:me.carrera,price:priceNum,currency:f.currency,contact_kind:'',contact:'',descr:f.descr.trim().slice(0,1500),preview:f.preview.trim().slice(0,3000),ts:Date.now(),active:true,has_file:!!f.file};
+      const priv={listing_id:id,contact_kind:f.contact.trim()?f.contact_kind:null,contact:f.contact.trim().slice(0,200)||null,file_path:null,file_name:f.file?f.file.name:null};
+      if(a.pay.online){
+        const s=await a.ensureAuth();l.owner_auth=s.uid;
+        if(f.file)priv.file_path=await api.uploadSale(s.uid+'/'+gid()+'-'+f.file.name.replace(/[^\w.\-]+/g,'_').slice(-80),f.file,s.access_token);
+        await api.createListing(l,s.access_token);await api.setPrivate(priv,s.access_token);
+      }else{
+        if(f.file){try{priv.file_url=await api.uploadSale('',f.file)}catch(e){setBusy(false);return setErr('En modo demo el archivo puede pesar hasta 1,5 MB.')}}
+        await api.createListing(l);await api.setPrivate(priv);
+      }
+      setF(null);onChange();a.toast('Publicado. Ya le aparece a quien cursa '+l.subj_name);
+    }catch(e){if(!e||e.code!=='cancelled')setErr('No pude publicar. Probá de nuevo.')}finally{setBusy(false)}
   };
   const stat=(id,kind)=>ev.filter(e=>e.listing_id===id&&e.kind===kind).length;
-  const breakdown=id=>{const vs=ev.filter(e=>e.listing_id===id&&e.kind!=='report'),by={};vs.forEach(e=>{const kk=e.anio?e.anio+'.º año':'otros';by[kk]=(by[kk]||0)+1});return Object.entries(by).sort((x,y)=>y[1]-x[1]).slice(0,3).map(([k2,n])=>n+' de '+k2).join(' · ')};
+  const ok=(sales||[]).filter(x=>x.status==='approved'),gross=ok.reduce((x,y)=>x+(+y.amount||0),0),fees=ok.reduce((x,y)=>x+(+y.fee||0),0);
   const subjOpts=[...new Set([...subjects.map(s=>s.name),...UDELAR_MED.map(c=>c.n)])];
+  const ta={width:'100%',font:'inherit',padding:12,borderRadius:16,border:'1.5px solid var(--line)',background:'var(--card)',color:'var(--ink)',resize:'vertical'};
   return html`<div className="fl" style=${{gap:16}}>
+    <div className="card fl" style=${{gap:8}}><b>💳 Cobrar con Mercado Pago</b>
+      ${a.seller?html`<span style=${{fontSize:13.5}}>✅ Tu cuenta está conectada. Cada venta se cobra por Nexus: te llega el ${100-Math.round(PAGOS.comision*100)} % a tu Mercado Pago y Nexus retiene el ${Math.round(PAGOS.comision*100)} % de comisión.${a.pay.online?'':' (Simulado en modo demo.)'}</span>`
+      :html`<span className="mut" style=${{fontSize:13.5}}>Para vender, conectá tu cuenta de Mercado Pago. Quien compra paga dentro de Nexus; te llega el ${100-Math.round(PAGOS.comision*100)} % directo a tu cuenta y Nexus retiene el ${Math.round(PAGOS.comision*100)} % de cada venta. El material gratis no paga comisión.</span><div><button className="btn btn-s btn-sm" onClick=${a.pay.connect}>Conectar Mercado Pago</button></div>`}</div>
+    ${sales&&sales.length>0&&html`<div className="card fl" style=${{gap:10}}><b>Tus ventas</b>
+      <div className="grid2" style=${{gap:10}}>${[['Ventas',String(ok.length)],['Vendiste',money(gross,ok[0]&&ok[0].currency)],['Comisión Nexus ('+Math.round(PAGOS.comision*100)+' %)',money(fees,ok[0]&&ok[0].currency)],['Te queda',money(gross-fees,ok[0]&&ok[0].currency)]].map(([l,v])=>html`<div key=${l}><div className="eyebrow">${l}</div><b className="num" style=${{fontSize:22}}>${v}</b></div>`)}</div></div>`}
     ${!f&&html`<div className="card fl" style=${{gap:8}}><b>¿Vendés resúmenes, cursos o clases?</b><span className="mut" style=${{fontSize:13.5}}>Tu publicación le aparece primero a quien está cursando esa materia, y todavía más arriba si el tema le cuesta o tiene el parcial cerca. Podés apuntar a tu facultad y a años específicos.</span><div><button className="btn btn-s btn-sm" onClick=${()=>setF(blank)}><${Icon} n="plus" s=${14}/> Nueva publicación</button></div></div>`}
     ${f&&html`<div className="card fl" style=${{gap:12}}>
       <b>Nueva publicación</b>
@@ -1629,20 +1721,23 @@ function Vender({a,api,me,mine,ev,onChange}){
       <div><div style=${{fontWeight:600,fontSize:14,marginBottom:6}}>A quién mostrárselo</div>
         <div className="chips">${[1,2,3,4,5,6].map(y=>html`<button key=${y} className="chip" aria-pressed=${f.years.includes(y)} onClick=${()=>set({years:f.years.includes(y)?f.years.filter(x=>x!==y):[...f.years,y].sort()})}>${y}.º año</button>`)}</div>
         <label className="row" style=${{gap:8,fontSize:13.5,cursor:'pointer',marginTop:8}}><input type="checkbox" checked=${f.onlyUni} onChange=${e=>set({onlyUni:e.target.checked})} style=${{width:18,height:18,flex:'0 0 18px',accentColor:'var(--ink)'}}/> Solo estudiantes de ${me.uni||'mi universidad'}</label>
-        <div className="alertbox" style=${{marginTop:8,background:'var(--t-blue)',fontSize:13.5}}>${aud==null?'Le va a aparecer a quien curse '+(f.subj_name||'esa materia')+(f.years.length?' en '+f.years.join(', ')+'.º año':'')+'.':html`Público estimado: <b>${aud}</b> estudiante${aud===1?'':'s'} cursando ${f.subj_name}${f.years.length?' en '+f.years.join(', ')+'.º año':''}${f.onlyUni?' en tu facultad':''}${api.online?'':' (modo demo)'}.`}</div></div>
-      <div className="grid2" style=${{gap:12}}><div><label htmlFor="v-p" style=${{fontWeight:600,fontSize:14}}>Precio</label><div className="row" style=${{gap:6}}><select aria-label="Moneda" value=${f.currency} onChange=${e=>set({currency:e.target.value})} style=${{width:'auto',minWidth:86,flex:'0 0 auto'}}>${CUR.map(c=>html`<option key=${c}>${c}</option>`)}</select><input id="v-p" inputMode="decimal" placeholder="0 = gratis" value=${f.price} onInput=${e=>set({price:e.target.value})}/></div></div>
-        <div><div style=${{fontWeight:600,fontSize:14,marginBottom:6}}>Contacto</div><div className="row" style=${{gap:6}}><select aria-label="Tipo de contacto" value=${f.contact_kind} onChange=${e=>set({contact_kind:e.target.value})} style=${{width:'auto',minWidth:124,flex:'0 0 auto'}}><option value="whatsapp">WhatsApp</option><option value="instagram">Instagram</option><option value="email">Email</option><option value="link">Link</option></select><input aria-label="Dato de contacto" placeholder=${{whatsapp:'59899123456',instagram:'@tuusuario',email:'tu@email.com',link:'https://…'}[f.contact_kind]} value=${f.contact} onInput=${e=>set({contact:e.target.value})}/></div></div></div>
-      <div><label htmlFor="v-d" style=${{fontWeight:600,fontSize:14}}>Descripción</label><textarea id="v-d" rows="3" placeholder="Qué incluye, cuántas páginas, cómo lo entregás, horarios de las clases…" value=${f.descr} onInput=${e=>set({descr:e.target.value})} style=${{width:'100%',font:'inherit',padding:12,borderRadius:16,border:'1.5px solid var(--line)',background:'var(--card)',color:'var(--ink)',resize:'vertical'}}></textarea></div>
+        <div className="alertbox" style=${{marginTop:8,background:'var(--t-blue)',fontSize:13.5}}>${aud==null?'Le va a aparecer a quien curse '+(f.subj_name||'esa materia')+(f.years.length?' en '+f.years.join(', ')+'.º año':'')+'.':html`Público estimado: <b>${aud}</b> estudiante${aud===1?'':'s'} cursando ${f.subj_name}${f.years.length?' en '+f.years.join(', ')+'.º año':''}${f.onlyUni?' en tu facultad':''}${a.pay.online?'':' (modo demo)'}.`}</div></div>
+      <div><label htmlFor="v-p" style=${{fontWeight:600,fontSize:14}}>Precio</label><div className="row" style=${{gap:6}}><select aria-label="Moneda" value=${f.currency} onChange=${e=>set({currency:e.target.value})} style=${{width:'auto',minWidth:86,flex:'0 0 auto'}}><option>UYU</option><option>USD</option></select><input id="v-p" inputMode="decimal" placeholder="0 = gratis" value=${f.price} onInput=${e=>set({price:e.target.value})}/></div>
+        ${priceNum>0&&html`<div className="row wrap num" style=${{gap:14,marginTop:8,fontSize:13.5}}><span>Precio <b>${money(priceNum,f.currency)}</b></span><span>Comisión Nexus ${Math.round(PAGOS.comision*100)} % <b>${money(feeNum,f.currency)}</b></span><span>Recibís <b>${money(priceNum-feeNum,f.currency)}</b></span></div><span className="mut" style=${{fontSize:12}}>Mercado Pago puede descontar además su propia tarifa por cobro.</span>`}</div>
+      <div><label htmlFor="v-f" style=${{fontWeight:600,fontSize:14}}>Archivo que se entrega (opcional)</label><input id="v-f" type="file" accept=".pdf,.docx,.pptx,.zip,.txt,.md" onChange=${e=>set({file:e.target.files[0]||null})} style=${{padding:'.5rem'}}/><span className="mut" style=${{fontSize:12}}>Se descarga recién después de que se aprueba el pago. Hasta 50 MB.</span></div>
+      <div><div style=${{fontWeight:600,fontSize:14,marginBottom:6}}>Contacto para quien compre</div><div className="row" style=${{gap:6}}><select aria-label="Tipo de contacto" value=${f.contact_kind} onChange=${e=>set({contact_kind:e.target.value})} style=${{width:'auto',minWidth:124,flex:'0 0 auto'}}><option value="whatsapp">WhatsApp</option><option value="instagram">Instagram</option><option value="email">Email</option><option value="link">Link</option></select><input aria-label="Dato de contacto" placeholder=${{whatsapp:'59899123456',instagram:'@tuusuario',email:'tu@email.com',link:'https://…'}[f.contact_kind]} value=${f.contact} onInput=${e=>set({contact:e.target.value})}/></div><span className="mut" style=${{fontSize:12}}>Se muestra solo después del pago (por ejemplo, para coordinar clases). Antes, te pueden escribir por Mensajes.</span></div>
+      <div><label htmlFor="v-d" style=${{fontWeight:600,fontSize:14}}>Descripción</label><textarea id="v-d" rows="3" placeholder="Qué incluye, cuántas páginas, cómo lo entregás, horarios de las clases…" value=${f.descr} onInput=${e=>set({descr:e.target.value})} style=${ta}></textarea></div>
       <div><div className="row wrap" style=${{justifyContent:'space-between'}}><label htmlFor="v-pr" style=${{fontWeight:600,fontSize:14}}>Vista previa (opcional)</label>${matsOf.length>0&&html`<select aria-label="Usar un apunte como vista previa" value="" onChange=${e=>{const m=matsOf.find(x=>x.id===e.target.value);if(m)set({preview:m.text.slice(0,1200)+(m.text.length>1200?'…':'')})}} style=${{width:'auto',fontSize:13,padding:'.3rem .7rem'}}><option value="">Usar un apunte…</option>${matsOf.map(m=>html`<option key=${m.id} value=${m.id}>${m.name}</option>`)}</select>`}</div>
-        <textarea id="v-pr" rows="3" placeholder="Un fragmento o el índice, para que vean cómo es" value=${f.preview} onInput=${e=>set({preview:e.target.value})} style=${{width:'100%',font:'inherit',padding:12,borderRadius:16,border:'1.5px solid var(--line)',background:'var(--card)',color:'var(--ink)',resize:'vertical'}}></textarea></div>
+        <textarea id="v-pr" rows="3" placeholder="Un fragmento o el índice, para que vean cómo es" value=${f.preview} onInput=${e=>set({preview:e.target.value})} style=${ta}></textarea></div>
       ${err&&html`<div className="alertbox" role="alert" style=${{background:'var(--t-rose)'}}>${err}</div>`}
       <div className="row wrap"><button className="btn btn-s" disabled=${busy} onClick=${publish}>${busy?'Publicando…':'Publicar'}</button><button className="btn" onClick=${()=>setF(null)}>Cancelar</button></div>
-      <p className="mut" style=${{fontSize:12}}>Tu nombre, universidad y el contacto que pongas van a ser visibles. Publicá solo material propio o que tengas derecho a vender.</p></div>`}
+      <p className="mut" style=${{fontSize:12}}>Tu nombre y universidad van a ser visibles. Publicá solo material propio o que tengas derecho a vender.</p></div>`}
     <h2 style=${{fontSize:20,fontWeight:600}}>Mis publicaciones</h2>
     ${mine===null?html`<p className="mut">Cargando…</p>`:mine.length===0?html`<p className="mut">Todavía no publicaste nada.</p>`:mine.map(l=>html`<div key=${l.id} className="card fl" style=${{gap:8,opacity:l.active?1:.6}}>
-      <div className="row wrap" style=${{justifyContent:'space-between'}}><b>${(LKIND[l.kind]||LKIND.otro)[0]} ${l.title}</b><span className="mut" style=${{fontSize:12.5}}>${l.subj_name}${l.years?' · '+l.years.split('|').filter(Boolean).join(', ')+'.º año':''}${l.unis?' · tu facultad':''}</span></div>
-      <div className="row wrap" style=${{gap:16}}><span><b className="num" style=${{fontSize:22}}>${stat(l.id,'view')}</b> <span className="mut" style=${{fontSize:13}}>vistas</span></span><span><b className="num" style=${{fontSize:22}}>${stat(l.id,'click')}</b> <span className="mut" style=${{fontSize:13}}>contactos</span></span>${breakdown(l.id)&&html`<span className="mut" style=${{fontSize:12.5,alignSelf:'center'}}>${breakdown(l.id)}</span>`}</div>
-      <div className="row wrap" style=${{gap:8}}><button className="btn btn-sm" onClick=${async()=>{await api.updateListing(l.id,{active:!l.active}).catch(()=>{});onChange()}}>${l.active?'Pausar':'Reactivar'}</button>${del===l.id?html`<button className="btn btn-sm" style=${{background:'var(--t-rose)'}} onClick=${async()=>{setDel(null);await api.deleteListing(l.id).catch(()=>{});onChange()}}>Sí, borrar</button><button className="btn btn-sm btn-g" onClick=${()=>setDel(null)}>No</button>`:html`<button className="btn btn-sm btn-g" onClick=${()=>setDel(l.id)}>Borrar</button>`}</div></div>`)}
+      <div className="row wrap" style=${{justifyContent:'space-between'}}><b>${(LKIND[l.kind]||LKIND.otro)[0]} ${l.title}</b><span className="num">${+l.price>0?money(l.price,l.currency):'Gratis'}</span></div>
+      <span className="mut" style=${{fontSize:12.5}}>${l.subj_name}${l.years?' · '+l.years.split('|').filter(Boolean).join(', ')+'.º año':''}${l.unis?' · tu facultad':''}</span>
+      <div className="row wrap" style=${{gap:16}}><span><b className="num" style=${{fontSize:22}}>${stat(l.id,'view')}</b> <span className="mut" style=${{fontSize:13}}>vistas</span></span><span><b className="num" style=${{fontSize:22}}>${(sold&&sold[l.id])||0}</b> <span className="mut" style=${{fontSize:13}}>ventas</span></span></div>
+      <div className="row wrap" style=${{gap:8}}><button className="btn btn-sm" onClick=${async()=>{const s=a.pay.online?await a.ensureAuth().catch(()=>null):null;if(a.pay.online&&!s)return;await api.updateListing(l.id,{active:!l.active},s&&s.access_token).catch(()=>{});onChange()}}>${l.active?'Pausar':'Reactivar'}</button>${del===l.id?html`<button className="btn btn-sm" style=${{background:'var(--t-rose)'}} onClick=${async()=>{setDel(null);const s=a.pay.online?await a.ensureAuth().catch(()=>null):null;if(a.pay.online&&!s)return;await api.deleteListing(l.id,s&&s.access_token).catch(()=>{});onChange()}}>Sí, borrar</button><button className="btn btn-sm btn-g" onClick=${()=>setDel(null)}>No</button>`:html`<button className="btn btn-sm btn-g" onClick=${()=>setDel(l.id)}>Borrar</button>`}</div></div>`)}
   </div>`;
 }
 
@@ -1656,6 +1751,7 @@ function Match({a}){
   const threads=useMemo(()=>{const rd=readMap.get(),by={};inbox.forEach(m=>{const t=by[m.group_id]||(by[m.group_id]={id:m.group_id,last:m,unread:0,name:''});if(m.uid!==me.uid){if(!t.name)t.name=m.name;if(m.ts>(rd[m.group_id]||0))t.unread++}});
     return Object.values(by).map(t=>({...t,name:t.name||names.current[t.id]||'Compañero/a'})).sort((x,y)=>y.last.ts-x.last.ts)},[inbox]);
   const unread=threads.reduce((x,t)=>x+t.unread,0);
+  useEffect(()=>{if(a.dmInit){const d=a.dmInit;a.clearDm();if(d.uid&&d.uid!==me.uid)dm(d.uid,d.name,d.descr)}},[]);
   const dm=(other,name,descr)=>{const id=dmId(me.uid,other);names.current[id]=name;try{localStorage.setItem('ea-dmnames',JSON.stringify(names.current))}catch(e){}setOpen({id,dm:true,name,descr:descr||''})};
   const s=subjects.find(x=>x.id===sid)||subjects[0],k=keyOf(s.name);
   useEffect(()=>{api.upsertMe(me).catch(()=>{})},[api,me]);
@@ -1774,6 +1870,32 @@ Sinapsis química. El potencial llega al terminal presináptico, entra Ca2+, las
 {id:'ex2',subj:'fis',kind:'examen',name:'Parcial Fisiología 2025-2 (ejemplo)',size:700,status:'ok',example:true,text:`Parcial de Fisiología. 1) Describa las fases del potencial de acción y qué canales participan en cada una. 2) ¿Por qué el período refractario absoluto impide la sumación de potenciales de acción? 3) Explique la sinapsis química y la diferencia entre un PEPS y un PIPS. 4) Verdadero o falso: la bomba Na+/K+ genera por sí sola el potencial de reposo. 5) Calcule el potencial de equilibrio del K+ con la ecuación de Nernst si [K+] interno es 140 mM y externo 5 mM.`}
 ];
 const SECOND=['ejercicios','simulador','logros','match','tienda','rescate'];
+/* Pide el código por email cuando hace falta una sesión (comprar, vender o suscribirse) */
+function AuthModal({email,onOk,onCancel}){
+  const [st,setSt]=useState('idle'),[code,setCode]=useState(''),[err,setErr]=useState(null);
+  const send=async()=>{setSt('sending');setErr(null);try{await sendCode(email);setSt('sent')}catch(e){setErr(codeErr(e));setSt('idle')}};
+  const ok=async e=>{e.preventDefault();const c=code.replace(/\D/g,'');if(c.length<6)return setErr('Escribí el código de 6 dígitos.');setSt('checking');try{const j=await checkCode(email,c);saveSess(email,j);onOk(sessStore.get(email))}catch(x){setErr(codeErr(x));setSt('sent')}};
+  return html`<div className="overlay" role="dialog" aria-modal="true" aria-label="Confirmá tu email"><div className="sheet" style=${{maxWidth:460}}>
+    <div className="row" style=${{justifyContent:'space-between'}}><h2 style=${{fontSize:22,fontWeight:700}}>Confirmá tu email</h2><button className="ibtn" onClick=${onCancel} aria-label="Cerrar"><${Icon} n="x" s=${18}/></button></div>
+    <p className="mut" style=${{fontSize:14}}>Para pagos y ventas necesitamos confirmar que <b style=${{overflowWrap:'anywhere'}}>${email}</b> es tuyo. Te mandamos un código.</p>
+    ${st==='idle'||st==='sending'?html`<button className="btn btn-s" disabled=${st==='sending'} onClick=${send}>${st==='sending'?'Enviando…':'Mandarme el código'}</button>`
+      :html`<form className="fl" style=${{gap:12}} onSubmit=${ok} noValidate><input id="am-code" aria-label="Código" inputMode="numeric" autoComplete="one-time-code" placeholder="123456" maxLength="10" value=${code} onInput=${e=>{setCode(e.target.value.replace(/\D/g,''));setErr(null)}} style=${{fontSize:24,letterSpacing:'.3em',textAlign:'center'}}/><button className="btn btn-s" type="submit" disabled=${st==='checking'}>${st==='checking'?'Verificando…':'Confirmar'}</button><button type="button" className="btn btn-sm btn-g" onClick=${send}>Reenviar código</button></form>`}
+    ${err&&html`<div className="alertbox" role="alert" style=${{background:'var(--t-rose)'}}>${err}</div>`}</div></div>`;
+}
+const money=(v,c)=>(c||'UYU')+' '+(+v||0).toLocaleString('es',{maximumFractionDigits:2});
+const subLocal={k:e=>'ea-sub-'+e,get(e){try{return JSON.parse(localStorage.getItem(this.k(e))||'null')}catch(x){return null}},set(e,v){try{v?localStorage.setItem(this.k(e),JSON.stringify(v)):localStorage.removeItem(this.k(e))}catch(x){}}};
+const daysLeft=iso=>Math.max(0,Math.ceil((new Date(iso).getTime()-Date.now())/864e5));
+function Paywall({a}){
+  const [busy,setBusy]=useState(false);
+  return html`<div className="screen" style=${{padding:0,gap:18,maxWidth:560}}>
+    <div className="hero th-ana"><div className="eyebrow">Suscripción Nexus</div><h1 style=${{fontSize:'clamp(26px,7vw,34px)',fontWeight:700,marginTop:6,color:'#fff'}}>Terminó tu mes gratis</h1>
+      <p style=${{marginTop:8,fontSize:15}}>Para seguir con tu plan, el tutor, tus apuntes y los grupos, suscribite.</p>
+      <div className="num" style=${{fontWeight:800,fontSize:48,marginTop:14,lineHeight:1}}>$${PAGOS.precio}<span style=${{fontSize:18,fontWeight:500}}> por mes</span></div>
+      <p style=${{fontSize:13,opacity:.9,marginTop:6}}>Pagás con Mercado Pago. Podés cancelar cuando quieras desde Mi perfil.</p>
+      <div className="row wrap" style=${{marginTop:16}}><button className="btn btn-i btn-big" disabled=${busy} onClick=${async()=>{setBusy(true);await a.pay.subscribe();setBusy(false)}}>${busy?'Abriendo Mercado Pago…':'Suscribirme'}</button><button className="btn btn-ghost" onClick=${a.pay.refresh}>Ya me suscribí</button></div></div>
+    <div className="row wrap"><button className="btn btn-sm" onClick=${a.openPerfil}>Mi perfil</button><button className="btn btn-sm btn-g" onClick=${a.logout}>Cerrar sesión</button></div></div>`;
+}
+
 function Main({user,isNew,onUser}){
   const sv=useRef(null);if(!sv.current)sv.current=loadData(user.email)||{};const SV=sv.current,warned=useRef(false);
   const [tab,setTab]=useState('ahora'),[onb,setOnb]=useState(!!isNew),[tutorTopic,setTutorTopic]=useState(null),[msg,setMsg]=useState(null);
@@ -1785,6 +1907,34 @@ function Main({user,isNew,onUser}){
   const [stats,setStats]=useState(()=>SV.stats||{streak:6,rests:0,sims:0,rescueUsed:false,credited:false});
   const [mats,setMats]=useState(()=>SV.mats||EX_MATS),[guides,setGuides]=useState(()=>SV.guides||{}),[qv,setQv]=useState(0),[exInit,setExInit]=useState(null),[simInit,setSimInit]=useState(null);
   const [perfil,setPerfil]=useState(false),[editing,setEditing]=useState(false);
+  const [authReq,setAuthReq]=useState(null),[sub,setSub]=useState(null),[seller,setSeller]=useState(null),[dmInit,setDmInit]=useState(null),[shopInit,setShopInit]=useState(null);
+  const online=!!mailCfg();
+  const ensureAuth=async()=>{const s=await liveSession(user.email);if(s)return s;return new Promise((res,rej)=>setAuthReq({res,rej}))};
+  const localStatus=()=>{const te=new Date((user.created||Date.now())+PAGOS.prueba*864e5).toISOString(),l=subLocal.get(user.email),inT=Date.now()<new Date(te).getTime();
+    return {trial_ends_at:te,in_trial:inT,subscription:l,active:inT||!!(l&&l.status==='authorized'),demo:true}};
+  const refreshPay=async(prompt)=>{
+    if(!online){setSub(localStatus());try{setSeller(!!localStorage.getItem('ea-mp-'+user.email))}catch(e){setSeller(false)}return}
+    const s=prompt?await ensureAuth().catch(()=>null):await liveSession(user.email);
+    if(!s){const l=localStatus();setSub({...l,active:l.in_trial,unknown:true});return}
+    try{const j=await callFn({action:'status'},s);setSub(j);setSeller(!!j.seller_connected)}catch(e){setSub(x=>x||{...localStatus(),unknown:true})}
+  };
+  useEffect(()=>{refreshPay(false)},[]);
+  const go=url=>{if(url)window.location.href=url};
+  const pay={
+    online,refresh:()=>refreshPay(true),
+    subscribe:async()=>{if(!online){const te=localStatus().trial_ends_at;subLocal.set(user.email,{status:'authorized',next_payment_date:new Date(Math.max(Date.now(),new Date(te).getTime())).toISOString(),demo:true});setSub(localStatus());toast('Suscripción activada (simulada en modo demo)');return}
+      try{const s=await ensureAuth();const j=await callFn({action:'subscribe'},s);if(j.already){toast('Ya tenés la suscripción activa');refreshPay(false)}else go(j.url)}catch(e){if(e&&e.code!=='cancelled')toast(payErr(e))}},
+    cancel:async()=>{if(!online){subLocal.set(user.email,null);setSub(localStatus());toast('Suscripción cancelada');return}
+      try{const s=await ensureAuth();await callFn({action:'cancel_subscription'},s);toast('Suscripción cancelada');refreshPay(false)}catch(e){if(e&&e.code!=='cancelled')toast(payErr(e))}},
+    connect:async()=>{if(!online){try{localStorage.setItem('ea-mp-'+user.email,'1')}catch(e){}setSeller(true);toast('Mercado Pago conectado (simulado en modo demo)');return}
+      try{const s=await ensureAuth();const j=await callFn({action:'connect'},s);go(j.url)}catch(e){if(e&&e.code!=='cancelled')toast(payErr(e))}},
+    checkout:async l=>{const s=await ensureAuth();const j=await callFn({action:'checkout',listing_id:l.id},s);go(j.url)},
+    deliver:async l=>{const s=await ensureAuth();return callFn({action:'deliver',listing_id:l.id},s)}};
+  /* Vuelta desde Mercado Pago (?r=...) */
+  useEffect(()=>{let r=null;try{r=new URLSearchParams(location.search).get('r')}catch(e){}if(!r)return;
+    try{history.replaceState(null,'',location.pathname+location.hash)}catch(e){}
+    const M={'mp-ok':['Mercado Pago conectado. Ya podés vender.','vender'],'mp-error':['No se pudo conectar Mercado Pago. Probá de nuevo.','vender'],'compra':['¡Pago aprobado! Tu compra está en "Mis compras" (puede tardar unos segundos).','compras'],'compra-pendiente':['Tu pago quedó pendiente. Cuando se acredite, aparece en "Mis compras".','compras'],'compra-error':['El pago no se completó. No se te cobró nada.','todo'],'suscripcion':['Gracias. Estamos confirmando tu suscripción con Mercado Pago.',null]}[r];
+    if(!M)return;toast(M[0]);if(M[1]){setShopInit(M[1]);setTab('tienda')}if(r==='suscripcion'||r==='mp-ok')setTimeout(()=>refreshPay(false),2500)},[]);
   const risk0=useMemo(()=>initSubjects().filter(s=>{const t=s.topics.filter(x=>x.level==='muy');return t.reduce((x,y)=>x+y.m0,0)/t.length<45}).map(s=>s.id),[]);
   const toastT=useRef(null);
   const toast=m=>{setMsg(m);clearTimeout(toastT.current);toastT.current=setTimeout(()=>setMsg(null),3200)};
@@ -1798,7 +1948,7 @@ function Main({user,isNew,onUser}){
   const nudge=(id,dl)=>setMastery(m=>({...m,[id]:clamp((m[id]??50)+dl,0,100)}));
   const tName=id=>(findT(subjects,id)||{t:{name:id}}).t.name;
   const slowTopic=id=>{setSlow(s=>({...s,[id]:(s[id]||0)+1}));nudge(id,-6);toast(`Recalculé tu semana: ${tName(id)} sube de prioridad`)};
-  const A={user,tab,go:setTab,subjects,prefs,mastery,slow,plan,kept,reviews,errors,rescue,stats,run,mats,guides,qv,exInit,simInit,risk0,examOf,toast,nudge,slowTopic,tutorTopic,isDark,
+  const A={user,pay,sub,seller,ensureAuth,dmInit,shopInit,clearDm:()=>setDmInit(null),clearShop:()=>setShopInit(null),openDM:(uid,name,descr)=>{setDmInit({uid,name,descr});setTab('match')},tab,go:setTab,subjects,prefs,mastery,slow,plan,kept,reviews,errors,rescue,stats,run,mats,guides,qv,exInit,simInit,risk0,examOf,toast,nudge,slowTopic,tutorTopic,isDark,
     openPerfil:()=>setPerfil(true),editPerfil:()=>{setPerfil(false);setEditing(true)},
     logout:()=>{sessionEnd();setPerfil(false);onUser(null)},
     flipTheme:flip,openOnb:st=>setOnb(typeof st==='number'?st:true),
@@ -1847,6 +1997,7 @@ function Main({user,isNew,onUser}){
   const NAV=[['ahora','Inicio','home'],['calendario','Plan','calendar'],['materias','Materias','book'],['material','Apuntes','upload']];
   return html`<div className="stage"><div className="phone">
     <main className="pad">
+      ${STANDALONE&&sub&&!sub.active?html`<${Paywall} a=${A}/>`:html`<div>
       ${sec&&html`<button className="back" style=${{marginBottom:16}} onClick=${()=>setTab('ahora')}><${Icon} n="chevL" s=${16}/> Inicio</button>`}
       ${tab==='ahora'&&html`<${Ahora} a=${A}/>`}
       ${tab==='calendario'&&html`<${Calendario} a=${A}/>`}
@@ -1858,12 +2009,13 @@ function Main({user,isNew,onUser}){
       ${tab==='logros'&&html`<div className="sec"><${Logros} a=${A}/></div>`}
       ${tab==='match'&&html`<div className="sec"><${Match} a=${A}/></div>`}
       ${tab==='tienda'&&html`<div className="sec"><${Tienda} a=${A}/></div>`}
-      ${tab==='rescate'&&html`<div className="sec"><${Rescate} a=${A}/></div>`}
+      ${tab==='rescate'&&html`<div className="sec"><${Rescate} a=${A}/></div>`}</div>`}
     </main>
     <nav className="dock" aria-label="Principal"><div className="brand"><span className="logo">N</span>Nexus</div><div className="pill">${NAV.map(([k,l,ic])=>html`<button key=${k} className="dk" aria-current=${cur===k?'page':null} onClick=${()=>setTab(k)}><${Icon} n=${ic} s=${21}/><span>${l}</span></button>`)}</div><div className="round"><button className="dk" aria-current=${cur==='tutor'?'page':null} onClick=${()=>setTab('tutor')}><${Icon} n="msg" s=${21}/><span>Tutor</span></button></div><button className="me" onClick=${A.openPerfil} aria-label="Mi perfil"><span className="av">${initials(user.nombre)}</span><span style=${{minWidth:0}}><b style=${{fontSize:14,display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:130}}>${user.nombre.split(' ')[0]}</b><small>${user.uni.replace(/\s*\(.*\)/,'')}</small></span></button></nav>
     ${perfil&&html`<${Perfil} a=${A} onClose=${()=>setPerfil(false)}/>`}
     ${editing&&html`<${Welcome} edit=${true} initial=${user} onDone=${(p)=>{onUser(p);setPrefs(x=>({...x,carrera:p.carrera,uni:p.uni,anio:p.anio,maxH:p.horas||x.maxH}));setEditing(false);toast('Datos actualizados')}} onClose=${()=>setEditing(false)}/>`}
     ${onb&&html`<${Onboarding} a=${A} start=${typeof onb==='number'?onb:0} onClose=${()=>setOnb(false)}/>`}
+    ${authReq&&html`<${AuthModal} email=${user.email} onOk=${s=>{authReq.res(s);setAuthReq(null)}} onCancel=${()=>{authReq.rej({code:'cancelled'});setAuthReq(null)}}/>`}
     ${msg&&html`<div className="toast" role="status">${msg}</div>`}
   </div></div>`;
 }

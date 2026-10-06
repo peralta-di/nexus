@@ -13,7 +13,7 @@ Hacé doble clic en `index.html` (necesita internet para cargar React, la tipogr
 Tiene que servirse por **HTTPS** (todos los de arriba lo hacen); lo necesita el cifrado de contraseñas del navegador.
 
 ## Qué funciona sin configurar nada
-Ingreso con cuenta, onboarding, plan adaptativo, modo rescate, materias, ejercicios, simulador, logros, Study Match, y **subir apuntes** (PDF, Word, PowerPoint, TXT y fotos, también desde el celular y desde Drive vía el selector de archivos). El tutor funciona en modo guiado.
+Ingreso con cuenta, suscripción y tienda en modo demo (pagos simulados), onboarding, plan adaptativo, modo rescate, materias, ejercicios, simulador, logros, Study Match, y **subir apuntes** (PDF, Word, PowerPoint, TXT y fotos, también desde el celular y desde Drive vía el selector de archivos). El tutor funciona en modo guiado.
 
 ## Activar la IA (opcional)
 El tutor con IA, la guía de estudio, las preguntas desde tus apuntes y la lectura de fotos necesitan una clave de la API de Anthropic. Cada persona la pega en **Mi perfil → IA del tutor**. La clave se guarda solo en su navegador y se envía únicamente a api.anthropic.com. No pongas tu clave dentro del archivo.
@@ -71,6 +71,35 @@ y después ejecutá las líneas de `listings`, `listing_events` y `archivos`.
 - En los grupos y la tienda se comparte nombre, universidad, carrera, año y materias; nunca el email ni la contraseña.
 - En la tienda, además, se ve el contacto que cada persona elige publicar.
 - Nexus no cobra ni intermedia pagos.
+
+## Cobros: suscripción y comisión por ventas (Mercado Pago)
+- **Suscripción:** $400 por mes, con el **primer mes gratis** contado desde que se crea la cuenta (no pide tarjeta para probar). Durante la prueba, Inicio muestra cuántos días quedan; si la persona se suscribe antes, el primer cobro es cuando termina el mes gratis. Al terminar la prueba sin suscripción, la app muestra la pantalla para suscribirse. Se puede cancelar desde Mi perfil.
+- **Tienda:** quien compra paga dentro de Nexus con Mercado Pago. A quien vende le llega el 90 % a su propia cuenta y **Nexus se queda automáticamente con el 10 %** (comisión de Mercado Pago Marketplace). El archivo y el contacto se entregan recién cuando el pago está aprobado, en **Mis compras**. Antes de comprar, se puede preguntar por Mensajes. El material gratis no paga comisión.
+- **Orden de la tienda:** recomendado (según tus materias, temas flojos y parciales), más vendidos, más barato, más caro y más nuevo.
+- **Modo demo:** sin configurar nada, todo esto funciona simulado en el navegador para probarlo.
+
+### Activar los cobros reales
+Hace falta Supabase (ver arriba, con `SUPA` completado) y una cuenta de Mercado Pago.
+1. **Mercado Pago:** en developers.mercadopago.com creá una aplicación (modelo de integración: *Marketplace* / pagos online). Anotá el *Access Token de producción*, el *Client ID* y el *Client Secret*. En la configuración de la aplicación, poné como **Redirect URL** `https://TU-PROYECTO.supabase.co/functions/v1/mp-oauth`.
+2. **Base de datos:** en Supabase → SQL Editor, ejecutá `supabase/migrations/20261006000000_pagos.sql`. Esto también cierra la tabla `listings`: desde ahora solo quien publicó (con su email verificado) puede editar o borrar su publicación.
+3. **Funciones:** con la CLI de Supabase (`npm i -g supabase`, `supabase login`, `supabase link --project-ref TU-PROYECTO`):
+```
+supabase secrets set MP_ACCESS_TOKEN=APP_USR-... MP_CLIENT_ID=... MP_CLIENT_SECRET=... SITE_URL=https://tu-sitio/ STATE_SECRET=una-frase-larga-al-azar
+supabase functions deploy pagos
+supabase functions deploy mp-oauth --no-verify-jwt
+supabase functions deploy mp-webhook --no-verify-jwt
+```
+Opcionales: `COMISION` (0.10), `SUB_PRECIO` (400), `SUB_MONEDA` (UYU), `PRUEBA_DIAS` (30). Si los cambiás, cambiá también `PAGOS` al principio del script de `index.html`, que es lo que se muestra en pantalla.
+4. **Avisos de pago (webhooks):** en tu aplicación de Mercado Pago → Webhooks, poné `https://TU-PROYECTO.supabase.co/functions/v1/mp-webhook` con los eventos *Pagos* y *Planes y suscripciones*. Los pagos de la tienda también avisan solos a esa dirección.
+5. Probá primero con las **credenciales y usuarios de prueba** de Mercado Pago, y después cambiá a las de producción.
+
+**Cómo funciona por dentro (para revisar):** las funciones están en `supabase/functions/`. Ningún precio ni pago sale del navegador: la función toma el precio de la base, y cada aviso de pago se vuelve a consultar a Mercado Pago antes de registrar la venta. Las ventas, los tokens de Mercado Pago de quienes venden y las suscripciones solo las escriben las funciones.
+
+**Límites a tener en cuenta:**
+- La pantalla de suscripción se controla en el navegador: alguien con conocimientos técnicos podría saltearla. Lo que se cobra y se entrega (ventas y descargas) sí lo controla el servidor.
+- Mercado Pago descuenta además su propia tarifa por cada cobro.
+- La comisión de Marketplace se cobra en la moneda de la cuenta de quien vende. Por eso la tienda acepta UYU y USD.
+- Dentro de Claude no se puede pagar (la página no puede salir a Mercado Pago), así que esa versión no tiene pantalla de suscripción.
 
 ## Lo que hay que saber
 - Todo se guarda **en el navegador de cada persona** (no hay servidor): cuenta, contraseña cifrada, plan, progreso, materias, apuntes subidos (el texto leído), guías y preguntas generadas. Se conserva al recargar y al volver otro día. Si cambia de dispositivo, usa otro navegador o borra los datos del sitio, tendrá que registrarse de nuevo.
