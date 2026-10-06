@@ -284,6 +284,8 @@ export async function handlePagos(req: Request): Promise<Response> {
         await del("sellers?auth_id=eq." + enc(u.id));
         await del("subscriptions?auth_id=eq." + enc(u.id));
         await del("legal_acceptances?auth_id=eq." + enc(u.id));
+        // Perfil público, grupos a los que pertenece y sus mensajes (user_data se borra en cascada con la cuenta)
+        for (const t of ["messages", "members", "students", "listing_events"]) await del(t + "?uid=eq." + enc(u.id));
         // Archivos que la persona subió para vender
         try {
           const st = SB() + "/storage/v1/object";

@@ -1492,7 +1492,7 @@ Tratamos tus datos con tu **consentimiento**, que das al registrarte o iniciar s
 
 ## 6. Con quién compartimos datos
 No vendemos ni cedemos tus datos. Solo los compartimos con estos proveedores, que los tratan por cuenta nuestra y únicamente para prestar el servicio:
-- **Supabase Inc.** (base de datos, archivos y verificación del email). Recibe los datos de tu cuenta, tu perfil, tu plan, tus mensajes, tus grupos, tus publicaciones y los archivos que compartís o vendés. **Los datos se guardan en servidores ubicados en São Paulo, Brasil.** La empresa tiene sede en Estados Unidos.
+- **Supabase Inc.** (base de datos, archivos, inicio de sesión y verificación del email). Recibe los datos de tu cuenta, tu perfil, tu plan, tus mensajes, tus grupos, tus publicaciones y los archivos que compartís o vendés. **Los datos se guardan en servidores ubicados en São Paulo, Brasil.** La empresa tiene sede en Estados Unidos.
 - **Mercado Pago** (cobro de la suscripción y de las ventas de la Tienda). Recibe tu email y los datos de cada pago; los datos de tu tarjeta los cargás directamente en Mercado Pago. Opera en **Uruguay** y aplica su propia política de privacidad.
 - **Resend Inc.** (envío de los códigos de verificación y de los recordatorios). Recibe tu email, tu nombre y el contenido de cada email (por ejemplo, tus próximos bloques de estudio). **Estados Unidos.**
 - **Anthropic PBC** (inteligencia artificial Claude), **solo cuando usás el tutor, la guía, los temarios o los ejercicios con IA dentro de Nexus**. Recibe tu pregunta, datos de tu plan (carrera, materias, temas y fechas) y el fragmento de tu material necesario para responder. **Estados Unidos.** Si usás "Seguir en Claude" o Nexus dentro de Claude, usás tu propia cuenta de Claude y se aplica directamente la política de privacidad de Anthropic.
@@ -1508,7 +1508,7 @@ Estos países pueden no contar con un nivel de protección de datos equivalente 
 ## 8. Cuánto tiempo los guardamos
 - Mientras tu cuenta esté activa.
 - Si borrás tu cuenta, eliminamos tus datos en un plazo de hasta 30 días, salvo los registros de pagos, compras y ventas que debemos conservar por obligaciones legales, contables o fiscales, durante el plazo que fijen esas normas.
-- Parte de tus datos se guarda solo en tu dispositivo: si borrás los datos del navegador, se pierden.
+- Para que la página funcione rápido, una copia de tus datos de estudio queda también en el dispositivo donde iniciaste sesión; al cerrar sesión se borra de ese dispositivo.
 
 ## 9. Seguridad
 Usamos conexiones cifradas (HTTPS), contraseñas cifradas, accesos restringidos y reglas que limitan quién puede leer cada dato. Ningún sistema es 100 % seguro: si ocurre un incidente que afecte tus datos, lo comunicaremos a las personas afectadas y a la URCDP conforme a la normativa vigente.
@@ -1584,6 +1584,7 @@ function Welcome({initial,edit,onDone,onClose}){
   const [err,setErr]=useState(null),[lemail,setLemail]=useState(''),[lpass,setLpass]=useState(''),[pass,setPass]=useState(''),[busy,setBusy]=useState(false);
   const [ver,setVer]=useState(null),[code,setCode]=useState(''),[now,setNow]=useState(Date.now());
   const [acc,setAcc]=useState(false),[lacc,setLacc]=useState(false),[doc,setDoc]=useState(null);
+  const online=!edit&&!!mailCfg(),[rs,setRs]=useState(null),[npass,setNpass]=useState('');
   useEffect(()=>{if(!ver)return;const id=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(id)},[ver]);
   const set=p=>{setF({...f,...p});setErr(null)};
   const submit=async e=>{
@@ -1593,7 +1594,7 @@ function Welcome({initial,edit,onDone,onClose}){
     delete p.pass;
     if(p.nombre.length<2)return setErr({k:'nombre',m:'Escribí tu nombre.'});
     if(!EMAIL_RE.test(p.email))return setErr({k:'email',m:'Ese email no parece válido.'});
-    if(!edit&&prev&&prev.ph)return setErr({k:'email',m:'Ya hay una cuenta con ese email. Tocá "Ya tengo cuenta" para entrar.'});
+    if(!edit&&!online&&prev&&prev.ph)return setErr({k:'email',m:'Ya hay una cuenta con ese email. Tocá "Ya tengo cuenta" para entrar.'});
     if(!edit&&pass.length<6)return setErr({k:'pass',m:'La contraseña tiene que tener al menos 6 caracteres.'});
     if(!p.pais)return setErr({k:'pais',m:'Indicá tu país.'});
     if(!edit&&!acc)return setErr({k:'legal',m:CONSENT_ERR});
@@ -1616,12 +1617,44 @@ function Welcome({initial,edit,onDone,onClose}){
     const prev=acctLoad()[p.email];p.created=(prev&&prev.created)||Date.now();
     acctSave(p);onDone(p,!edit);
   };
+  /* En línea: la cuenta vive en Supabase. Con la sesión ya abierta, se trae lo guardado o se crea la ficha nueva. */
+  const enterCloud=async(email,consent,draft)=>{
+    const s=sessStore.get(email);let row=null;
+    try{row=await nube.get(s)}catch(e){}
+    if(row){const p=applyRemote(email,row,s);const p2=consent&&!legalOk(p)?{...p,legal:{v:LEGAL_V,at:Date.now(),how:consent}}:p;acctSave(p2);onDone(p2,false);return true}
+    const loc=acctLoad()[email];
+    if(!draft&&!loc){setTab('new');set({email});setErr({k:'nombre',m:'Tu email ya está confirmado, pero faltan tus datos. Completalos para terminar de crear la cuenta.'});return false}
+    const p={...(loc||{}),...(draft||{}),email,auth_id:s.uid,created:(loc&&loc.created)||Date.now(),verified:Date.now()};delete p.ph;delete p.salt;
+    if(consent&&!legalOk(p))p.legal={v:LEGAL_V,at:Date.now(),how:consent};
+    try{const r=await nube.put(s,{profile:profOf(p),data:null},0);revStore.set(email,r)}catch(e){}
+    acctSave(p);onDone(p,!loc);return true;
+  };
   const confirmCode=async e=>{
     e.preventDefault();if(busy)return;
     const c=code.replace(/\D/g,'');if(c.length<6)return setErr({k:'code',m:'Escribí el código de 6 dígitos que te llegó por email.'});
     setBusy(true);
-    try{const j=await checkCode(ver.p.email,c);saveSess(ver.p.email,j);setBusy(false);await finish(ver.p,true)}
-    catch(e2){setBusy(false);setErr({k:'code',m:codeErr(e2)})}
+    try{const j=await checkCode(ver.p.email,c);saveSess(ver.p.email,j)}
+    catch(e2){setBusy(false);setErr({k:'code',m:codeErr(e2)});return}
+    if(online){
+      try{await setPassword(sessStore.get(ver.p.email),pass)}catch(e2){setBusy(false);setErr({k:'code',m:pwErr(e2)});return}
+      try{await enterCloud(ver.p.email,'registro',ver.p)}finally{setBusy(false)}return;
+    }
+    setBusy(false);await finish(ver.p,true);
+  };
+  const sendRs=async e=>{
+    e&&e.preventDefault();if(busy)return;const em=rs.email.trim().toLowerCase();
+    if(!EMAIL_RE.test(em))return setErr({k:'rs',m:'Escribí el email de tu cuenta.'});
+    setBusy(true);try{await sendReset(em);setRs({...rs,email:em,step:'code',sentAt:Date.now()});setCode('');setNpass('');setErr(null)}catch(e2){setErr({k:'rs',m:resetErr(e2)})}finally{setBusy(false)}
+  };
+  const confirmRs=async e=>{
+    e.preventDefault();if(busy)return;
+    const c=code.replace(/\D/g,'');if(c.length<6)return setErr({k:'rs',m:'Escribí el código de 6 dígitos que te llegó por email.'});
+    if(npass.length<6)return setErr({k:'rs',m:'La contraseña nueva tiene que tener al menos 6 caracteres.'});
+    if(!lacc)return setErr({k:'llegal',m:CONSENT_ERR});
+    setBusy(true);
+    try{const j=await checkCode(rs.email,c);saveSess(rs.email,j);await setPassword(sessStore.get(rs.email),npass)}
+    catch(e2){setBusy(false);setErr({k:'rs',m:e2.status===422||/password/i.test(e2.msg||'')?pwErr(e2):codeErr(e2)});return}
+    try{if(await enterCloud(rs.email,'inicio de sesión'))setRs(null)}finally{setBusy(false)}
   };
   const resend=async()=>{if(busy)return;setBusy(true);try{await sendCode(ver.p.email);setVer({...ver,sentAt:Date.now()});setErr({k:'code',m:'Te mandamos un código nuevo.'})}catch(e2){setErr({k:'code',m:codeErr(e2)})}finally{setBusy(false)}};
   const wait=ver?Math.min(60,Math.max(0,60-Math.floor((now-ver.sentAt)/1000))):0;
@@ -1629,6 +1662,13 @@ function Welcome({initial,edit,onDone,onClose}){
     e.preventDefault();if(busy)return;
     const em=lemail.trim().toLowerCase(),p=acctLoad()[em];
     if(!EMAIL_RE.test(em))return setErr({k:'login',m:'Escribí tu email.'});
+    if(online){
+      if(!lpass)return setErr({k:'lpass',m:'Escribí tu contraseña.'});
+      if(!lacc)return setErr({k:'llegal',m:CONSENT_ERR});
+      setBusy(true);
+      try{const j=await loginPw(em,lpass);saveSess(em,j)}catch(e2){setBusy(false);setErr({k:'lpass',m:loginErr(e2)});return}
+      try{await enterCloud(em,'inicio de sesión')}finally{setBusy(false)}return;
+    }
     if(!p)return setErr({k:'login',m:'No encontré una cuenta con ese email en este navegador. Creá una nueva.'});
     if(!lacc)return setErr({k:'llegal',m:CONSENT_ERR});
     if(p.ph){
@@ -1647,8 +1687,8 @@ function Welcome({initial,edit,onDone,onClose}){
     ${cloud}
     <div className="gate-form"><div className="gate-box">
       ${edit?html`<div className="row" style=${{justifyContent:'space-between'}}><h2 style=${{fontSize:24,fontWeight:700}}>Mis datos</h2><button className="ibtn" onClick=${onClose} aria-label="Cerrar"><${Icon} n="x" s=${18}/></button></div>`
-      :html`<div className="fl" style=${{gap:18}}><div><div className="eyebrow">Bienvenido/a</div><h2 style=${{fontSize:'clamp(26px,6vw,32px)',fontWeight:700,marginTop:4}}>${tab==='new'?'Creá tu cuenta':'Entrá a tu cuenta'}</h2><p className="mut" style=${{fontSize:14,marginTop:4}}>${tab==='new'?'Con tus datos armamos un plan a tu medida. Son 30 segundos.':'Ingresá con el email y la contraseña con los que te registraste en este navegador.'}</p></div>
-      <div className="tabs" role="tablist">${[['new','Crear cuenta'],['login','Ya tengo cuenta']].map(([k,l])=>html`<button key=${k} role="tab" className="tab" aria-selected=${tab===k} onClick=${()=>{setTab(k);setErr(null)}}>${l}</button>`)}</div></div>`}
+      :html`<div className="fl" style=${{gap:18}}><div><div className="eyebrow">Bienvenido/a</div><h2 style=${{fontSize:'clamp(26px,6vw,32px)',fontWeight:700,marginTop:4}}>${tab==='new'?'Creá tu cuenta':'Entrá a tu cuenta'}</h2><p className="mut" style=${{fontSize:14,marginTop:4}}>${tab==='new'?'Con tus datos armamos un plan a tu medida. Son 30 segundos.':online?'Ingresá con tu email y tu contraseña, desde cualquier dispositivo.':'Ingresá con el email y la contraseña con los que te registraste en este navegador.'}</p></div>
+      <div className="tabs" role="tablist">${[['new','Crear cuenta'],['login','Ya tengo cuenta']].map(([k,l])=>html`<button key=${k} role="tab" className="tab" aria-selected=${tab===k} onClick=${()=>{setTab(k);setErr(null);setRs(null)}}>${l}</button>`)}</div></div>`}
       ${ver?html`<form className="fl" style=${{gap:14}} onSubmit=${confirmCode} noValidate>
         <div className="alertbox" style=${{background:'var(--t-lilac)'}}>Te mandamos un código a <b style=${{overflowWrap:'anywhere'}}>${ver.p.email}</b>. Escribilo para confirmar que el email es tuyo. Si no lo ves, revisá Spam o Promociones.</div>
         <div><label htmlFor="au-code" style=${{fontWeight:600,fontSize:14}}>Código de verificación</label><input id="au-code" inputMode="numeric" autoComplete="one-time-code" placeholder="123456" maxLength="10" value=${code} onInput=${e=>{setCode(e.target.value.replace(/\D/g,''));setErr(null)}} style=${{fontSize:24,letterSpacing:'.3em',textAlign:'center',fontVariantNumeric:'tabular-nums'}}/>${E('code')}</div>
@@ -1666,10 +1706,19 @@ function Welcome({initial,edit,onDone,onClose}){
         ${!edit&&html`<${Consent} id="au-legal" checked=${acc} onChange=${v=>{setAcc(v);setErr(null)}} onOpen=${setDoc} err=${err&&err.k==='legal'?err.m:null}/>`}
         <button className="btn btn-s btn-big" type="submit">${busy?'Un momento…':edit?'Guardar cambios':mailCfg()?'Continuar: verificar email':'Crear cuenta y empezar'} <${Icon} n="arrow" s=${18}/></button>
         ${!edit&&mailCfg()&&html`<p className="mut" style=${{fontSize:12.5,marginTop:-6}}>Te vamos a mandar un código por email para confirmar que es tuyo.</p>`}
-        <p className="mut" style=${{fontSize:12.5}}>Tus datos y tu contraseña (guardada cifrada) quedan solo en este navegador, sin servidor. Si borrás los datos del sitio, tendrás que registrarte de nuevo.</p></form>`
+        <p className="mut" style=${{fontSize:12.5}}>${online?'Tu cuenta y tu progreso se guardan en la nube: entrás con tu email y tu contraseña desde el celular o la compu. La contraseña se guarda cifrada.':'Tus datos y tu contraseña (guardada cifrada) quedan solo en este navegador, sin servidor. Si borrás los datos del sitio, tendrás que registrarte de nuevo.'}</p></form>`
+      :rs?html`<form className="fl" style=${{gap:14}} onSubmit=${rs.step==='code'?confirmRs:sendRs} noValidate>
+        <div><b style=${{fontSize:17}}>Recuperar tu contraseña</b><p className="mut" style=${{fontSize:13.5,marginTop:4}}>${rs.step==='code'?html`Te mandamos un código a <b style=${{overflowWrap:'anywhere'}}>${rs.email}</b>. Escribilo y elegí una contraseña nueva. Si no lo ves, revisá Spam o Promociones.`:'Te mandamos un código por email para que elijas una contraseña nueva.'}</p></div>
+        ${rs.step==='code'?html`<div><label htmlFor="rs-code" style=${{fontWeight:600,fontSize:14}}>Código</label><input id="rs-code" inputMode="numeric" autoComplete="one-time-code" placeholder="123456" maxLength="10" value=${code} onInput=${e=>{setCode(e.target.value.replace(/\D/g,''));setErr(null)}} style=${{fontSize:24,letterSpacing:'.3em',textAlign:'center',fontVariantNumeric:'tabular-nums'}}/></div>
+          <div><label htmlFor="rs-pw" style=${{fontWeight:600,fontSize:14}}>Contraseña nueva</label><${PwInput} id="rs-pw" placeholder="Mínimo 6 caracteres" value=${npass} onInput=${e=>{setNpass(e.target.value);setErr(null)}} autoComplete="new-password"/></div>
+          <${Consent} id="rs-legal" checked=${lacc} onChange=${v=>{setLacc(v);setErr(null)}} onOpen=${setDoc} err=${err&&err.k==='llegal'?err.m:null}/>`
+        :html`<div><label htmlFor="rs-e" style=${{fontWeight:600,fontSize:14}}>Email de tu cuenta</label><input id="rs-e" type="email" placeholder="tu@email.com" value=${rs.email} onInput=${e=>{setRs({...rs,email:e.target.value});setErr(null)}} autoComplete="email"/></div>`}
+        ${E('rs')}
+        <button className="btn btn-s btn-big" type="submit">${busy?'Un momento…':rs.step==='code'?'Guardar y entrar':'Mandarme el código'} <${Icon} n="arrow" s=${18}/></button>
+        <div className="row wrap" style=${{gap:8}}>${rs.step==='code'&&html`<button type="button" className="btn btn-sm" disabled=${busy||Date.now()-rs.sentAt<60e3} onClick=${()=>sendRs()}>Reenviar código</button>`}<button type="button" className="btn btn-sm btn-g" onClick=${()=>{setRs(null);setErr(null)}}>Volver</button></div></form>`
       :html`<form className="fl" style=${{gap:14}} onSubmit=${login} noValidate>
         <div><label htmlFor="au-le" style=${{fontWeight:600,fontSize:14}}>Email</label><input id="au-le" type="email" placeholder="tu@email.com" value=${lemail} onInput=${e=>{setLemail(e.target.value);setErr(null)}} autoComplete="email"/>${E('login')}</div>
-        <div><label htmlFor="au-lp" style=${{fontWeight:600,fontSize:14}}>Contraseña</label><${PwInput} id="au-lp" value=${lpass} onInput=${e=>{setLpass(e.target.value);setErr(null)}} autoComplete="current-password"/>${E('lpass')}</div>
+        <div><label htmlFor="au-lp" style=${{fontWeight:600,fontSize:14}}>Contraseña</label><${PwInput} id="au-lp" value=${lpass} onInput=${e=>{setLpass(e.target.value);setErr(null)}} autoComplete="current-password"/>${E('lpass')}${online&&html`<button type="button" className="btn btn-sm btn-g" style=${{marginTop:6,paddingLeft:0}} onClick=${()=>{setRs({email:lemail,step:'email'});setErr(null)}}>Olvidé mi contraseña</button>`}</div>
         <p className="mut" style=${{fontSize:13}}>¿No tenés cuenta? <button type="button" className="btn btn-sm btn-g" onClick=${()=>{setTab('new');setErr(null)}}>Registrate</button></p>
         <${Consent} id="au-llegal" checked=${lacc} onChange=${v=>{setLacc(v);setErr(null)}} onOpen=${setDoc} err=${err&&err.k==='llegal'?err.m:null}/>
         <button className="btn btn-s btn-big" type="submit">${busy?'Un momento…':'Entrar'} <${Icon} n="arrow" s=${18}/></button></form>`}
@@ -1804,7 +1853,7 @@ function BioCard({a}){
       <button className="btn btn-sm btn-s" disabled=${!dirty} onClick=${()=>{a.setBio(bio.trim());a.toast('Descripción guardada')}}>Guardar</button></span></div></div>`;
 }
 function Perfil({a,onClose}){
-  const u=a.user,[k,setK]=useState(''),[has,setHas]=useState(!!aiKey.get()),[gc,setGc]=useState(()=>grpCfg.get()),[gu,setGu]=useState(''),[gk,setGk]=useState('');
+  const u=a.user,[k,setK]=useState(''),[has,setHas]=useState(!!aiKey.get());
   return html`<div className="overlay" role="dialog" aria-modal="true" aria-label="Mi perfil"><div className="sheet">
     <div className="row" style=${{justifyContent:'space-between'}}><h2 style=${{fontSize:24,fontWeight:700}}>Mi perfil</h2><button className="ibtn" onClick=${onClose} aria-label="Cerrar"><${Icon} n="x" s=${18}/></button></div>
     <div className="card row wrap" style=${{gap:14}}><label htmlFor="pf-photo" title="Cambiar foto" style=${{cursor:'pointer',position:'relative'}}><${Av} u=${u} size=${72}/><span aria-hidden="true" style=${{position:'absolute',right:-2,bottom:-2,width:26,height:26,borderRadius:'50%',background:'var(--inv)',color:'var(--invfg)',display:'grid',placeItems:'center',fontSize:13,boxShadow:'0 0 0 3px var(--card)'}}>📷</span></label>
@@ -1820,9 +1869,6 @@ function Perfil({a,onClose}){
     ${STANDALONE&&html`<div className="card fl" style=${{gap:8}}><b>🤖 IA dentro de Nexus con clave de API (avanzado)</b>
       <span className="mut" style=${{fontSize:13}}>${has?'Clave guardada: el tutor, la guía y las preguntas con IA están activos.':'Pegá tu clave de la API de Anthropic para activar el tutor con IA, la guía de estudio y las preguntas desde tu material. Sin clave, todo lo demás funciona igual.'} Se guarda solo en este navegador y se envía únicamente a api.anthropic.com.</span>
       ${has?html`<div><button className="btn btn-sm" onClick=${()=>{aiKey.set('');setHas(false);a.toast('Clave quitada')}}>Quitar clave</button></div>`:html`<div className="row" style=${{gap:8}}><input type="password" aria-label="Clave de la API de Anthropic" placeholder="sk-ant-…" value=${k} onInput=${e=>setK(e.target.value)} autoComplete="off"/><button className="btn btn-s btn-sm" disabled=${k.trim().length<20} onClick=${()=>{aiKey.set(k.trim());setK('');setHas(true);a.toast('IA activada')}}>Guardar</button></div>`}</div>`}
-    ${STANDALONE&&html`<div className="card fl" style=${{gap:8}}><b>🤝 Grupos en línea (opcional)</b>
-      <span className="mut" style=${{fontSize:13}}>${gc?'Conectado: los grupos, el chat y el material compartido son con gente real.':'Sin esto, los grupos de estudio funcionan en modo demo. Para conocer gente real, conectá una base de Supabase (gratis). Los pasos y la tabla están en el README.'} En los grupos se ven tu nombre, universidad, carrera y materias; nunca tu email ni tu contraseña.</span>
-      ${gc?html`<div><button className="btn btn-sm" onClick=${()=>{grpCfg.set(null);setGc(null);a.toast('Grupos en línea desconectados')}}>Desconectar</button></div>`:html`<div className="fl" style=${{gap:8}}><input aria-label="URL del proyecto de Supabase" placeholder="https://xxxx.supabase.co" value=${gu} onInput=${e=>setGu(e.target.value)} autoComplete="off"/><div className="row" style=${{gap:8}}><input type="password" aria-label="Clave pública (anon) de Supabase" placeholder="Clave pública (anon)" value=${gk} onInput=${e=>setGk(e.target.value)} autoComplete="off"/><button className="btn btn-s btn-sm" disabled=${!/^https:\/\/[^\s/]+/.test(gu.trim())||gk.trim().length<20} onClick=${()=>{const c={url:gu.trim(),key:gk.trim()};grpCfg.set(c);setGc(c);a.toast('Grupos en línea conectados')}}>Conectar</button></div></div>`}</div>`}
     <${DatosCard} a=${a}/>
     <div className="fl" style=${{gap:10}}><button className="btn" onClick=${a.editPerfil}>Editar mis datos</button><button className="btn" onClick=${()=>{onClose();a.openOnb()}}>Ajustar materias y horarios</button><button className="btn btn-s" onClick=${a.logout}>Cerrar sesión</button></div>
   </div></div>`;
@@ -1866,7 +1912,7 @@ const SUPA={url:'',key:''};
 /* Cobros: suscripción mensual obligatoria con 1 semana gratis y comisión por cada venta de la tienda (los valores reales los define el servidor). */
 const PAGOS={precio:400,moneda:'UYU',prueba:7,comision:.10};
 const grpCfg={get:()=>{try{const c=JSON.parse(localStorage.getItem('ea-grp')||'null');if(c)return c}catch(e){}return SUPA.url&&SUPA.key?SUPA:null},set:c=>{try{c?localStorage.setItem('ea-grp',JSON.stringify(c)):localStorage.removeItem('ea-grp')}catch(e){}}};
-const uidOf=email=>{const k='ea-uid-'+email;try{let v=localStorage.getItem(k);if(!v){v='u'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);localStorage.setItem(k,v)}return v}catch(e){return 'u'+keyOf(email).replace(/\s/g,'')}};
+const uidOf=email=>{const k='ea-uid-'+email;try{const ac=mailCfg()&&acctLoad()[email];if(ac&&ac.auth_id)return ac.auth_id;let v=localStorage.getItem(k);if(!v){v='u'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);localStorage.setItem(k,v)}return v}catch(e){return 'u'+keyOf(email).replace(/\s/g,'')}};
 /* Verificación del email con código (Supabase Auth: manda un código de 6 dígitos al correo) */
 const mailCfg=()=>{const c=grpCfg.get();return STANDALONE&&c&&c.url&&c.key?c:null};
 async function authCall(path,body){
@@ -1884,9 +1930,48 @@ async function liveSession(email){
   const s=sessStore.get(email);if(!s||!mailCfg())return null;
   if(s.expires_at>Date.now()+60e3&&s.uid)return s;
   if(!s.refresh_token)return null;
-  try{const j=await authCall('token?grant_type=refresh_token',{refresh_token:s.refresh_token});saveSess(email,j);return sessStore.get(email)}
-  catch(e){if(e.status===400||e.status===401)sessStore.set(email,null);return null}
+  if(!refreshing[email])refreshing[email]=(async()=>{
+    try{const j=await authCall('token?grant_type=refresh_token',{refresh_token:s.refresh_token});saveSess(email,j);return sessStore.get(email)}
+    catch(e){if(e.status===400||e.status===401)sessStore.set(email,null);return null}
+    finally{delete refreshing[email]}})();
+  return refreshing[email];
 }
+const refreshing={};
+/* Token de quien tiene la sesión abierta (para grupos, mensajes y perfiles en línea) */
+const curTok=async()=>{try{const e=localStorage.getItem('ea-session');const s=e?await liveSession(e):null;return s?s.access_token:null}catch(x){return null}};
+const sbUrl=p=>mailCfg().url.replace(/\/+$/,'')+p;
+/* Cuenta con contraseña (Supabase Auth): entrar desde cualquier dispositivo, cambiar y recuperar la contraseña */
+const loginPw=(email,password)=>authCall('token?grant_type=password',{email,password});
+const sendReset=email=>authCall('otp',{email,create_user:false});
+async function setPassword(s,password){
+  let r;try{r=await fetch(sbUrl('/auth/v1/user'),{method:'PUT',headers:{apikey:mailCfg().key,Authorization:'Bearer '+s.access_token,'content-type':'application/json'},body:JSON.stringify({password})})}catch(e){throw {status:0}}
+  let j=null;try{j=await r.json()}catch(e){}
+  if(!r.ok)throw {status:r.status,msg:String((j&&(j.msg||j.error_description||j.message||j.error_code))||'')};
+}
+const signOutRemote=s=>fetch(sbUrl('/auth/v1/logout'),{method:'POST',headers:{apikey:mailCfg().key,Authorization:'Bearer '+s.access_token}}).catch(()=>{});
+const loginErr=e=>e.status===0?'No hay conexión. Revisá internet y probá de nuevo.':e.status===429?'Muchos intentos seguidos. Esperá un minuto y probá de nuevo.':/not confirmed/i.test(e.msg||'')?'Ese email todavía no está confirmado. Registrate de nuevo con el mismo email para recibir el código.':e.status===400||e.status===401?'El email o la contraseña no son correctos.':'No pudimos iniciar sesión. Probá de nuevo en un momento.';
+const resetErr=e=>/signups? not allowed|otp_disabled|not found|user/i.test(e.msg||'')&&(e.status===400||e.status===422||e.status===404)?'No hay una cuenta con ese email. Revisalo o creá una cuenta nueva.':codeErr(e);
+const pwErr=e=>e.status===0?'No hay conexión. Probá de nuevo.':/weak|short|characters|length/i.test(e.msg||'')||e.status===422?'Esa contraseña es muy débil. Usá al menos 6 caracteres, mezclando letras y números.':'No pudimos guardar la contraseña. Probá de nuevo.';
+/* Tus datos en la nube: perfil + progreso de estudio, con número de versión para no pisar cambios de otro dispositivo */
+const revStore={k:e=>'ea-rev-'+e,get(e){try{return +localStorage.getItem(this.k(e))||0}catch(x){return 0}},set(e,v){try{localStorage.setItem(this.k(e),String(v))}catch(x){}}};
+const profOf=u=>{const p={...u};delete p.ph;delete p.salt;delete p.auth_id;return p};
+const nube={
+  async get(s){let r;try{r=await fetch(sbUrl('/rest/v1/user_data?select=profile,data,rev&auth_id=eq.'+encodeURIComponent(s.uid)),{headers:{apikey:mailCfg().key,Authorization:'Bearer '+s.access_token}})}catch(e){throw {status:0}}
+    if(!r.ok)throw {status:r.status};const j=await r.json();return (j&&j[0])||null},
+  async put(s,body,rev){const h={apikey:mailCfg().key,Authorization:'Bearer '+s.access_token,'content-type':'application/json'},at=new Date().toISOString();let r;
+    try{
+      if(!rev){r=await fetch(sbUrl('/rest/v1/user_data'),{method:'POST',headers:{...h,Prefer:'return=minimal'},body:JSON.stringify({auth_id:s.uid,...body,rev:1,updated_at:at})});if(r.status===409)throw {conflict:true};if(!r.ok)throw {status:r.status};return 1}
+      r=await fetch(sbUrl('/rest/v1/user_data?auth_id=eq.'+encodeURIComponent(s.uid)+'&rev=eq.'+rev),{method:'PATCH',headers:{...h,Prefer:'return=representation'},body:JSON.stringify({...body,rev:rev+1,updated_at:at})});
+    }catch(e){if(e&&e.conflict)throw e;throw {status:0}}
+    if(!r.ok)throw {status:r.status};const j=await r.json();if(!j||!j.length)throw {conflict:true};return rev+1}};
+const cloudPayload=(u,email)=>{const g=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}};const d=g(dkey(email));return {profile:profOf(u),data:d?{...d,rem:g('ea-rem-'+email)}:null}};
+/* Guarda en este dispositivo lo que vino de la nube y devuelve la cuenta */
+const applyRemote=(email,row,s)=>{
+  const p={...(row.profile||{}),email,auth_id:s.uid};delete p.ph;delete p.salt;acctSave(p);
+  try{if(row.data){const d={...row.data},rem=d.rem;delete d.rem;localStorage.setItem(dkey(email),JSON.stringify(d));if(rem)localStorage.setItem('ea-rem-'+email,JSON.stringify(rem))}}catch(e){}
+  revStore.set(email,row.rev||0);return p};
+const LOCAL_KEYS=['ea-data-','ea-sub-','ea-rem-','ea-sb-','ea-uid-','ea-mp-','ea-rev-'];
+const forgetLocal=email=>{try{const all=acctLoad();delete all[email];localStorage.setItem('ea-accounts',JSON.stringify(all));LOCAL_KEYS.forEach(k=>localStorage.removeItem(k+email))}catch(e){}};
 async function callFn(body,s){
   const c=mailCfg();let r;
   try{r=await fetch(c.url.replace(/\/+$/,'')+'/functions/v1/pagos',{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+s.access_token,'content-type':'application/json'},body:JSON.stringify(body)})}catch(e){throw {status:0,code:'network'}}
@@ -1900,7 +1985,7 @@ const codeErr=e=>e.status===429||/rate|seconds/i.test(e.msg||'')?'Pediste muchos
 const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 function sbApi(c){
   const base=c.url.replace(/\/+$/,'')+'/rest/v1/';
-  const q=async(path,o={})=>{const r=await fetch(base+path,{method:o.method||'GET',headers:{apikey:c.key,Authorization:'Bearer '+(o.token||c.key),'content-type':'application/json',Prefer:o.prefer||'return=minimal'},body:o.body?JSON.stringify(o.body):undefined});if(!r.ok)throw new Error('HTTP '+r.status);const t=await r.text();return t?JSON.parse(t):null};
+  const q=async(path,o={})=>{const tk=o.token||await curTok();if(!tk)throw new Error('no_session');const r=await fetch(base+path,{method:o.method||'GET',headers:{apikey:c.key,Authorization:'Bearer '+tk,'content-type':'application/json',Prefer:o.prefer||'return=minimal'},body:o.body?JSON.stringify(o.body):undefined});if(!r.ok)throw new Error('HTTP '+r.status);const t=await r.text();return t?JSON.parse(t):null};
   const e=encodeURIComponent;
   return {online:true,
     upsertMe:me=>q('students',{method:'POST',prefer:'resolution=merge-duplicates,return=minimal',body:me}),
@@ -1916,7 +2001,7 @@ function sbApi(c){
     messages:(id,since)=>since?q('messages?select=*&group_id=eq.'+e(id)+'&ts=gte.'+since+'&order=ts.asc&limit=200'):q('messages?select=*&group_id=eq.'+e(id)+'&order=ts.desc&limit=200').then(r=>(r||[]).reverse()),
     inbox:uid=>q('messages?select=id,group_id,uid,name,text,file_name,ts&group_id=like.'+e('dm:*'+uid+'*')+'&order=ts.desc&limit=400'),
     send:m=>q('messages',{method:'POST',body:m}),
-    upload:async(path,file)=>{const r=await fetch(c.url.replace(/\/+$/,'')+'/storage/v1/object/archivos/'+path.split('/').map(e).join('/'),{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+c.key,'content-type':file.type||'application/octet-stream','x-upsert':'false'},body:file});if(!r.ok)throw new Error('HTTP '+r.status);return c.url.replace(/\/+$/,'')+'/storage/v1/object/public/archivos/'+path.split('/').map(e).join('/')},
+    upload:async(path,file)=>{const tk=await curTok();if(!tk)throw new Error('no_session');const r=await fetch(c.url.replace(/\/+$/,'')+'/storage/v1/object/archivos/'+path.split('/').map(e).join('/'),{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+tk,'content-type':file.type||'application/octet-stream','x-upsert':'false'},body:file});if(!r.ok)throw new Error('HTTP '+r.status);return c.url.replace(/\/+$/,'')+'/storage/v1/object/public/archivos/'+path.split('/').map(e).join('/')},
     listings:()=>q('listings?select=*&active=eq.true&order=ts.desc&limit=300'),
     myListings:uid=>q('listings?select=*&uid=eq.'+e(uid)+'&order=ts.desc'),
     createListing:(l,t)=>q('listings',{method:'POST',body:l,token:t}),
@@ -2243,7 +2328,7 @@ function Match({a}){
   if(open)return html`<${GroupChat} a=${a} api=${api} me=${me} g=${open} onBack=${()=>{setOpen(null);setTick(t=>t+1)}} onLeave=${leave}/>`;
   return html`<div className="fl" style=${{gap:18}}>
     <${Head} eyebrow="Grupos de estudio" title="Estudiá con otros" sub="Conocé gente que está cursando tu misma materia, armá grupos, chateá y compartí material."/>
-    ${!api.online&&html`<div className="alertbox" style=${{background:'var(--t-cream)'}}><b>Modo demo.</b> Los compañeros y grupos son de ejemplo y todo queda en este navegador. ${STANDALONE?html`Para conocer gente real, activá <b>Grupos en línea</b> en Mi perfil.`:'Los grupos con gente real funcionan en el sitio web de Nexus (con Grupos en línea activado).'}</div>`}
+    ${!api.online&&html`<div className="alertbox" style=${{background:'var(--t-cream)'}}><b>Modo demo.</b> Los compañeros y grupos son de ejemplo y todo queda en este navegador. ${STANDALONE?'Cuando el sitio tenga la base de datos configurada (ver README), los grupos y mensajes son con gente real.':'Los grupos con gente real funcionan en el sitio web de Nexus.'}</div>`}
     <div className="tabs" role="tablist">${[['grupos','Grupos y gente'],['mensajes','Mensajes'+(unread?' ('+unread+')':'')]].map(([k2,l])=>html`<button key=${k2} role="tab" className="tab" aria-selected=${view===k2} onClick=${()=>setView(k2)}>${l}</button>`)}</div>
     ${view==='mensajes'?html`<div className="fl" style=${{gap:8}}>
       ${threads.length===0?html`<div className="card"><p className="mut">Todavía no tenés mensajes. En "Grupos y gente" tocá <b>Mensaje</b> al lado de alguien que cursa tu materia para escribirle.</p></div>`
@@ -2359,7 +2444,7 @@ function AuthModal({email,onOk,onCancel}){
   const ok=async e=>{e.preventDefault();const c=code.replace(/\D/g,'');if(c.length<6)return setErr('Escribí el código de 6 dígitos.');setSt('checking');try{const j=await checkCode(email,c);saveSess(email,j);onOk(sessStore.get(email))}catch(x){setErr(codeErr(x));setSt('sent')}};
   return html`<div className="overlay" role="dialog" aria-modal="true" aria-label="Confirmá tu email"><div className="sheet" style=${{maxWidth:460}}>
     <div className="row" style=${{justifyContent:'space-between'}}><h2 style=${{fontSize:22,fontWeight:700}}>Confirmá tu email</h2><button className="ibtn" onClick=${onCancel} aria-label="Cerrar"><${Icon} n="x" s=${18}/></button></div>
-    <p className="mut" style=${{fontSize:14}}>Para pagos y ventas necesitamos confirmar que <b style=${{overflowWrap:'anywhere'}}>${email}</b> es tuyo. Te mandamos un código.</p>
+    <p className="mut" style=${{fontSize:14}}>Tu sesión venció. Para seguir, confirmá que <b style=${{overflowWrap:'anywhere'}}>${email}</b> es tuyo: te mandamos un código.</p>
     ${st==='idle'||st==='sending'?html`<button className="btn btn-s" disabled=${st==='sending'} onClick=${send}>${st==='sending'?'Enviando…':'Mandarme el código'}</button>`
       :html`<form className="fl" style=${{gap:12}} onSubmit=${ok} noValidate><input id="am-code" aria-label="Código" inputMode="numeric" autoComplete="one-time-code" placeholder="123456" maxLength="10" value=${code} onInput=${e=>{setCode(e.target.value.replace(/\D/g,''));setErr(null)}} style=${{fontSize:24,letterSpacing:'.3em',textAlign:'center'}}/><button className="btn btn-s" type="submit" disabled=${st==='checking'}>${st==='checking'?'Verificando…':'Confirmar'}</button><button type="button" className="btn btn-sm btn-g" onClick=${send}>Reenviar código</button></form>`}
     ${err&&html`<div className="alertbox" role="alert" style=${{background:'var(--t-rose)'}}>${err}</div>`}</div></div>`;
@@ -2519,17 +2604,34 @@ function Main({user,isNew,onUser}){
   const deleteAccount=async()=>{
     const uid=uidOf(user.email);
     try{
-      if(online){const s=await ensureAuth();await callFn({action:'delete_account'},s);const c=mailCfg(),h={apikey:c.key,Authorization:'Bearer '+c.key};
-        await Promise.all(['students','members','messages'].map(t=>fetch(c.url.replace(/\/+$/,'')+'/rest/v1/'+t+'?uid=eq.'+encodeURIComponent(uid),{method:'DELETE',headers:h}).catch(()=>{})));}
+      if(online){const s=await ensureAuth();await callFn({action:'delete_account'},s)}
       else{try{const d=JSON.parse(localStorage.getItem('ea-grp-demo')||'null');if(d){['students','members','messages','listings'].forEach(k=>{d[k]=(d[k]||[]).filter(x=>x.uid!==uid)});localStorage.setItem('ea-grp-demo',JSON.stringify(d))}}catch(e){}}
     }catch(e){if(e&&e.code==='cancelled')return false;toast('No pudimos borrar tu cuenta en el servidor. Probá de nuevo o escribinos a '+LEGAL.email+'.');return false}
-    try{const all=acctLoad();delete all[user.email];localStorage.setItem('ea-accounts',JSON.stringify(all));['ea-data-','ea-sub-','ea-rem-','ea-sb-','ea-uid-','ea-mp-'].forEach(k=>localStorage.removeItem(k+user.email))}catch(e){}
+    forgetLocal(user.email);
     sessionEnd();onUser(null);return true;
   };
+  /* Nube: cada cambio se sube a los pocos segundos; si otro dispositivo guardó algo más nuevo, se trae eso */
+  const lastPush=useRef(''),pushing=useRef(null);
+  const pullRemote=async s=>{try{const row=await nube.get(s);if(row){applyRemote(user.email,row,s);try{sessionStorage.setItem('ea-synced','1')}catch(e){}location.reload()}}catch(e){}};
+  const pushNow=()=>{if(!online)return Promise.resolve(true);if(pushing.current)return pushing.current.then(()=>pushNow());
+    const run=(async()=>{const s=await liveSession(user.email);if(!s)return false;const body=cloudPayload(user,user.email),key=JSON.stringify(body);if(key===lastPush.current)return true;
+      try{const r=await nube.put(s,body,revStore.get(user.email));revStore.set(user.email,r);lastPush.current=key;return true}
+      catch(e){if(e&&e.conflict){await pullRemote(s)}return false}})();
+    pushing.current=run;run.finally(()=>{if(pushing.current===run)pushing.current=null});return run};
+  useEffect(()=>{if(!online)return;const t=setTimeout(pushNow,3000);return()=>clearTimeout(t)},[user,prefs,subjects,mastery,slow,kept,reviews,errors,rescue,stats,mats,guides,events,hist,qv,rem]);
+  useEffect(()=>{if(!online)return;const f=()=>{if(document.visibilityState==='hidden')pushNow()};document.addEventListener('visibilitychange',f);
+    try{if(sessionStorage.getItem('ea-synced')){sessionStorage.removeItem('ea-synced');setTimeout(()=>toast('Había cambios más nuevos desde otro dispositivo y los trajimos. Si recién cambiaste algo acá, revisalo.'),300)}}catch(e){}
+    return()=>document.removeEventListener('visibilitychange',f)},[]);
+  const logout=async()=>{
+    if(online){await new Promise(r=>setTimeout(r,600));/* deja que se guarde lo último en este dispositivo */
+      const s=await liveSession(user.email);
+      if(s){const ok=await pushNow();if(!ok){toast('No pudimos guardar tus últimos cambios en la nube. Revisá tu conexión y probá de nuevo.');return}signOutRemote(s);forgetLocal(user.email)}
+      else sessStore.set(user.email,null)}
+    sessionEnd();setPerfil(false);onUser(null)};
   const streak=streakOf(hist);
   const A={streak,acceptLegal,showLegal:setLegalDoc,downloadData,deleteAccount,setPhoto,setBio,showProfile:setPubP,hist,events,addEvent,delEvent,user,pay,sub,seller,ensureAuth,rem,setRem,sendTestReminder,remPreview,dmInit,shopInit,clearDm:()=>setDmInit(null),clearShop:()=>setShopInit(null),openDM:(uid,name,descr)=>{setDmInit({uid,name,descr});setTab('match')},tab,go:setTab,subjects,prefs,mastery,slow,plan,kept,reviews,errors,rescue,stats,run,mats,guides,qv,exInit,simInit,risk0,examOf,toast,nudge,slowTopic,tutorTopic,isDark,
     openPerfil:()=>setPerfil(true),editPerfil:()=>{setPerfil(false);setEditing(true)},
-    logout:()=>{sessionEnd();setPerfil(false);onUser(null)},
+    logout,
     flipTheme:flip,openOnb:st=>setOnb(typeof st==='number'?st:true),
     flagged:reviews.map(r=>r.topic),
     clearTutorTopic:()=>setTutorTopic(null),
@@ -2615,12 +2717,20 @@ function loadData(email){
   }catch(e){return null}
 }
 function Root(){
-  const [user,setUser]=useState(sessionLoad),[isNew,setNew]=useState(false);
+  const [user,setUser]=useState(()=>{const u=sessionLoad();return u&&mailCfg()&&!u.auth_id?null:u}),[isNew,setNew]=useState(false);
+  const [boot,setBoot]=useState(()=>!!(user&&mailCfg()));
+  useEffect(()=>{if(!boot)return;(async()=>{const u=user;
+    try{const s=await liveSession(u.email);
+      if(!s){if(!sessStore.get(u.email)){sessionEnd();setUser(null)}/* sin sesión válida: hay que entrar de nuevo */setBoot(false);return}
+      const row=await nube.get(s);if(row&&row.rev>revStore.get(u.email))setUser(applyRemote(u.email,row,s));
+    }catch(e){/* sin conexión: se sigue con lo guardado en este dispositivo */}
+    setBoot(false)})()},[]);
   const hashDoc=()=>{const h=(location.hash||'').replace('#','');return h==='terminos'||h==='privacidad'?h:null};
   const [hd,setHd]=useState(hashDoc);
   useEffect(()=>{const f=()=>setHd(hashDoc());window.addEventListener('hashchange',f);return()=>window.removeEventListener('hashchange',f)},[]);
   const closeHd=()=>{try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}setHd(null)};
   const legal=hd&&html`<${LegalDoc} which=${hd} onSwitch=${k=>{try{history.replaceState(null,'','#'+k)}catch(e){}setHd(k)}} onClose=${closeHd}/>`;
+  if(boot)return html`<div className="gate" style=${{display:'grid',placeItems:'center'}}><p className="mut" role="status">Cargando tu cuenta…</p></div>`;
   if(!user)return html`<div><${Welcome} onDone=${(p,n)=>{setNew(n);setUser(p)}}/>${legal}</div>`;
   return html`<div><${Main} key=${user.email} user=${user} isNew=${isNew} onUser=${p=>{setNew(false);setUser(p)}}/>${legal}</div>`;
 }

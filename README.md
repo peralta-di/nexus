@@ -29,48 +29,41 @@ En la configuración (o en **Materias → + Materias**) podés elegir las materi
 - **Seguir en Claude:** en el sitio publicado aparte, los botones "Seguir en Claude ↗" y "Estudiar este material en Claude ↗" abren claude.ai con la sesión de la persona y un pedido ya armado con su carrera, sus parciales, sus temas flojos, sus errores y su material.
 - **Clave de API (avanzado):** sigue estando en Mi perfil, para usar la IA dentro del sitio publicado aparte.
 
-## Verificación del email al registrarse
-Cuando el sitio tiene Supabase configurado, al crear la cuenta se manda un **código de 6 dígitos** al email, y la cuenta se crea recién cuando la persona lo escribe. Tiene reenvío (cada 60 segundos) y opción de cambiar el email. Sin Supabase configurado, el registro sigue funcionando sin verificar. Dentro de Claude no se pide código, porque ahí la persona ya entró con su cuenta.
+## Cuentas en la nube (entrar desde cualquier dispositivo)
+Cuando el sitio tiene Supabase configurado:
+- **Registro:** nombre, email, contraseña y datos de la carrera. Se manda un **código de 6 dígitos** al email y la cuenta se crea recién cuando la persona lo escribe (con reenvío cada 60 segundos y opción de cambiar el email).
+- **Inicio de sesión:** email y contraseña, desde el celular, la compu o cualquier navegador. El perfil y todo el progreso (materias, plan, apuntes, calendario, racha, recordatorios) se guardan en la nube unos segundos después de cada cambio y se traen al entrar.
+- **Olvidé mi contraseña:** manda un código al email y permite elegir una contraseña nueva.
+- **Dos dispositivos a la vez:** cada guardado lleva un número de versión. Si un dispositivo quedó desactualizado, en vez de pisar lo más nuevo trae los cambios del otro y avisa.
+- **Cerrar sesión** sube lo último y borra la copia de ese dispositivo (útil en compus compartidas).
+- Sin Supabase configurado (o dentro de Claude), las cuentas siguen funcionando como antes: solo en ese navegador.
 
-Para activarla:
-1. Hacé los pasos 1 y 2 de la sección de abajo (proyecto de Supabase y tablas).
-2. Escribí la URL y la clave `anon` del proyecto en el código, al principio del script: `const SUPA={url:'https://xxxx.supabase.co',key:'…'};`. Así funciona para todos desde el registro, sin que nadie tenga que pegar nada.
-3. En Supabase, **Authentication → Email Templates → Magic Link**, cambiá el cuerpo para que muestre el código, por ejemplo: `<h2>Tu código de Nexus</h2><p>Escribí este código en Nexus: <b>{{ .Token }}</b></p><p>Vence en 1 hora.</p>`
-4. **Importante:** el correo que trae Supabase por defecto solo envía a los emails del equipo del proyecto, y pocos por hora. Para que les llegue a todos, en **Authentication → SMTP Settings** conectá un servicio de correo (por ejemplo Resend o Brevo, que tienen plan gratis) con un remitente propio.
+## Configurar Supabase (cuentas, grupos, mensajes y tienda)
+1. Creá un proyecto en supabase.com y **elegí la región South America (São Paulo)**, que es la que figura en la Política de privacidad.
+2. En **SQL Editor**, ejecutá **en orden** todos los archivos de `supabase/migrations/` (el nombre empieza con la fecha, así que el orden alfabético es el correcto). El primero, `20261005000000_tablas_base.sql`, crea las tablas; el último, `20261006060000_cuentas_y_seguridad.sql`, crea la tabla de cuentas y las reglas de seguridad.
+   - **Si ya tenías las tablas de una versión anterior** (con las reglas "abierto"), ejecutá igual los archivos que te falten: `20261006060000_cuentas_y_seguridad.sql` borra las reglas abiertas y pone las nuevas.
+3. En **Project Settings → API**, copiá la URL y la clave `anon` (pública) y escribilas al principio del script: `const SUPA={url:'https://xxxx.supabase.co',key:'…'};`. La clave `anon` puede estar en la página: lo que protege los datos son las reglas del paso 2. **Nunca** pongas la clave `service_role` en la página.
+4. En **Authentication → Sign In / Providers → Email**: dejá activado el proveedor Email y "Allow new users to sign up". La longitud mínima de contraseña de Nexus es 6; si en Supabase ponés más, avisale a la gente en el registro.
+5. En **Authentication → Email Templates → Magic Link**, cambiá el cuerpo para que muestre el código (se usa para el registro y para recuperar la contraseña), por ejemplo: `<h2>Tu código de Nexus</h2><p>Escribí este código en Nexus: <b>{{ .Token }}</b></p><p>Vence en 1 hora.</p>`
+6. **Importante:** el correo que trae Supabase por defecto solo envía a los emails del equipo del proyecto, y pocos por hora. Para que les llegue a todos, en **Authentication → SMTP Settings** conectá un servicio de correo (por ejemplo Resend) con un remitente propio.
+7. En **Authentication → URL Configuration**, poné como *Site URL* la dirección pública de Nexus.
 
-## Grupos de estudio y tienda en línea (opcional)
-Sin configurar nada, los grupos, los mensajes directos y la tienda funcionan en **modo demo**: hay compañeros y publicaciones de ejemplo, y todo queda en tu navegador. Para que se conozca gente real, se chatee, se compartan archivos y se publique material:
-1. Creá un proyecto gratis en supabase.com y **elegí la región South America (São Paulo)**, que es la que figura en la Política de privacidad.
-2. En **SQL Editor**, ejecutá:
-```sql
-create table students (uid text primary key, name text, uni text, carrera text, anio int, slot text, note text, subjects text, ts bigint);
-create table groups (id text primary key, subj text, subj_name text, name text, descr text, slot text, uni text, owner text, owner_name text, ts bigint);
-create table members (group_id text, uid text, name text, uni text, carrera text, ts bigint, primary key (group_id, uid));
-create table messages (id text primary key, group_id text, uid text, name text, text text, file_name text, file_text text, file_url text, file_type text, file_size bigint, ts bigint);
-create table listings (id text primary key, uid text, seller_name text, seller_uni text, title text, kind text, subj text, subj_name text, topics text, unis text, years text, carrera text, price numeric, currency text, contact_kind text, contact text, descr text, preview text, ts bigint, active boolean default true);
-create table listing_events (id text primary key, listing_id text, kind text, uid text, anio int, uni text, subj text, ts bigint);
-do $$ declare t text; begin
-  foreach t in array array['students','groups','members','messages','listings','listing_events'] loop
-    execute format('alter table %I enable row level security', t);
-    execute format('create policy "abierto" on %I for all using (true) with check (true)', t);
-  end loop; end $$;
--- Archivos del chat (PDF, Word): espacio público "archivos"
-insert into storage.buckets (id, name, public, file_size_limit) values ('archivos', 'archivos', true, 10485760);
-create policy "subir archivos" on storage.objects for insert to anon with check (bucket_id = 'archivos');
-```
-Si ya habías creado las tablas antes, agregá solo lo nuevo:
-```sql
-alter table messages add column file_url text, add column file_type text, add column file_size bigint;
-```
-y después ejecutá las líneas de `listings`, `listing_events` y `archivos`.
+Sin Supabase, los grupos, los mensajes directos y la tienda funcionan en **modo demo**: compañeros y publicaciones de ejemplo, todo en el navegador.
 
-3. En **Project Settings → API**, copiá la URL y la clave `anon` (pública) y escribilas en `SUPA`, al principio del script, para que valga para todos. Para probar en tu navegador, también podés pegarlas en **Mi perfil → Grupos en línea**.
+### Quién puede ver y hacer qué (reglas de seguridad)
+Probadas con 51 casos en una base PostgreSQL:
+- Sin sesión iniciada no se puede leer ni escribir nada (perfiles, grupos, mensajes, cuentas).
+- Cada persona solo lee y modifica **sus propios datos de cuenta y progreso**.
+- Los perfiles públicos y la lista de grupos los ve cualquiera con cuenta; cada uno edita solo el suyo.
+- **Mensajes de grupo:** solo los leen y escriben sus integrantes. Quien se va del grupo deja de verlos.
+- **Mensajes directos:** solo las dos personas de la conversación.
+- Nadie puede escribir a nombre de otro: el nombre de cada mensaje sale del perfil de quien lo manda.
+- **Archivos del chat:** solo los sube quien está en esa conversación. Se descargan por un link con nombre al azar, que solo ven quienes pueden leer el mensaje.
+- Las estadísticas de una publicación solo las ve quien la publicó.
+- **Borrar mi cuenta** borra también el perfil, los mensajes, los grupos a los que pertenece y el progreso guardado.
 
-**Importante:** con estas reglas, cualquiera que tenga la clave pública puede leer y escribir en los grupos y en la tienda, y los archivos subidos quedan públicos para quien tenga el link. Alcanza para un grupo de compañeros. Para abrirlo al público conviene sumar el inicio de sesión de Supabase, reglas más estrictas y moderación de la tienda.
-- Los **mensajes directos** (botón *Mensaje* al lado de cada persona, y la pestaña *Mensajes*) se guardan en la misma tabla `messages` que los chats de grupo, así que tampoco son privados frente a quien tenga la clave.
 - **Perfil público:** en Grupos, Mensajes y la Tienda se ven el nombre, la foto (versión chica), la descripción "Sobre mí" (hasta 160 caracteres), la carrera, el año, la facultad y las materias. Nunca el email ni la contraseña. Tocando a una persona se abre su perfil, con las materias en común y un botón para escribirle.
-- En la tienda, además, se ve el contacto que cada persona elige publicar.
-- Nexus no cobra ni intermedia pagos.
+- En la tienda, el contacto de quien vende solo lo ve quien le compró.
 
 ## Cobros: suscripción y comisión por ventas (Mercado Pago)
 - **Suscripción obligatoria con 1 semana gratis:** apenas alguien se registra o inicia sesión, antes de usar la app, tiene que activar la suscripción en Mercado Pago. Ahí carga su tarjeta de crédito, débito o su cuenta de Mercado Pago, y **hoy no se le cobra nada**: el primer cobro de **$400** es a los 7 días, y después todos los meses. Si cancela durante la semana, no se le cobra y sigue usando Nexus hasta que termina la semana. La semana gratis se da una sola vez por persona. Todo el dinero va **directo a tu cuenta de Mercado Pago** (la del `MP_ACCESS_TOKEN`).
@@ -83,7 +76,7 @@ y después ejecutá las líneas de `listings`, `listing_events` y `archivos`.
 ### Activar los cobros reales
 Hace falta Supabase (ver arriba, con `SUPA` completado) y una cuenta de Mercado Pago.
 1. **Mercado Pago:** en developers.mercadopago.com creá una aplicación (modelo de integración: *Marketplace* / pagos online). Anotá el *Access Token de producción*, el *Client ID* y el *Client Secret*. En la configuración de la aplicación, poné como **Redirect URL** `https://TU-PROYECTO.supabase.co/functions/v1/mp-oauth`.
-2. **Base de datos:** en Supabase → SQL Editor, ejecutá en orden los archivos de `supabase/migrations/`: `20261006000000_pagos.sql`, `20261006010000_suscripcion_y_recordatorios.sql`, `20261006020000_recordatorios_4_por_dia.sql`, `20261006030000_semana_gratis.sql`, `20261006040000_perfil_publico.sql` y `20261006050000_terminos.sql`. Esto también cierra la tabla `listings`: desde ahora solo quien publicó (con su email verificado) puede editar o borrar su publicación.
+2. **Base de datos:** ejecutá en orden todos los archivos de `supabase/migrations/` (ver *Configurar Supabase*). Esto también cierra la tabla `listings`: solo quien publicó puede editar o borrar su publicación.
 3. **Funciones:** con la CLI de Supabase (`npm i -g supabase`, `supabase login`, `supabase link --project-ref TU-PROYECTO`):
 ```
 supabase secrets set MP_ACCESS_TOKEN=APP_USR-... MP_CLIENT_ID=... MP_CLIENT_SECRET=... SITE_URL=https://tu-sitio/ STATE_SECRET=una-frase-larga-al-azar
@@ -142,9 +135,8 @@ Nexus incluye **Términos y condiciones** y **Política de privacidad** pensados
 1. Los datos del titular están en `LEGAL`, en `index.html`: hoy figura **Diana Peralta (nombre comercial: Nexus)** con su email. Si querés, agregá la cédula o el RUT, el domicilio, el departamento y, cuando lo tengas, el número de inscripción ante la URCDP. Los campos vacíos no se muestran.
 2. Inscribí la base de datos ante la **URCDP**, la Unidad Reguladora y de Control de Datos Personales (trámite en línea en gub.uy).
 3. Hacé **revisar los textos por un abogado** y consultá con un **contador** cómo facturar la suscripción y las comisiones.
-4. En Supabase ejecutá `supabase/migrations/20261006050000_terminos.sql` y volvé a subir la función `pagos`, que ahora borra cuentas.
+4. En Supabase ejecutá las migraciones que falten (ver *Configurar Supabase*) y volvé a subir la función `pagos`, que borra cuentas completas.
 
 ## Lo que hay que saber
-- Todo se guarda **en el navegador de cada persona** (no hay servidor): cuenta, contraseña cifrada, plan, progreso, materias, apuntes subidos (el texto leído), guías y preguntas generadas. Se conserva al recargar y al volver otro día. Si cambia de dispositivo, usa otro navegador o borra los datos del sitio, tendrá que registrarse de nuevo.
+- **Con Supabase configurado**, la cuenta y el progreso se guardan en la nube y se sincronizan entre dispositivos; cada dispositivo guarda además una copia para funcionar rápido. **Sin Supabase**, todo queda en el navegador de cada persona: si cambia de dispositivo o borra los datos del sitio, tendrá que registrarse de nuevo.
 - Las fotos o PDF escaneados se leen con la IA en el momento; después de recargar se conserva el texto ya leído, pero no el archivo original.
-- Para cuentas que se compartan entre dispositivos hace falta un backend (por ejemplo Supabase o Firebase); el sitio está preparado para sumarlo después.
