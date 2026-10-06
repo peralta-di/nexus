@@ -6,9 +6,9 @@
 //   RESEND_API_KEY   clave de resend.com (servicio de envío de emails)
 //   MAIL_FROM        remitente verificado en Resend, por ejemplo "Nexus <recordatorios@tudominio.com>"
 //   CRON_SECRET      frase al azar; pg_cron la manda en el encabezado x-cron-secret
-//   SITE_URL, STATE_SECRET (las mismas que para pagos)
+//   SITE_URL, STATE_SECRET (las mismas que para la función "cuenta")
 
-import { authUser, CORS, db, env, hmac, json, SB } from "./pagos.ts";
+import { authUser, CORS, db, env, hmac, json, SB } from "./comun.ts";
 
 type Block = { start: string; topic: string; subject: string; review?: boolean };
 type Row = {

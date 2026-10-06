@@ -13,7 +13,7 @@ Hacé doble clic en `index.html`. React, la letra (DM Sans) y las librerías par
 Tiene que servirse por **HTTPS** (todos los de arriba lo hacen); lo necesita el cifrado de contraseñas del navegador.
 
 ## Qué funciona sin configurar nada
-Ingreso con cuenta, uso gratuito, tienda en modo demo (pagos simulados), onboarding, plan adaptativo, modo rescate, materias, ejercicios, simulador, logros, Study Match, y **subir apuntes** (PDF, Word, PowerPoint, TXT y fotos, también desde el celular y desde Drive vía el selector de archivos). El tutor funciona en modo guiado.
+Ingreso con cuenta, uso gratuito, tienda tipo vitrina (en modo demo, con publicaciones de ejemplo), onboarding, plan adaptativo, modo rescate, materias, ejercicios, simulador, logros, Study Match, y **subir apuntes** (PDF, Word, PowerPoint, TXT y fotos, también desde el celular y desde Drive vía el selector de archivos). El tutor funciona en modo guiado.
 
 ## Activar la IA (opcional)
 El tutor con IA, la guía de estudio, las preguntas desde tus apuntes y la lectura de fotos necesitan una clave de la API de Anthropic. Cada persona la pega en **Mi perfil → IA del tutor**. La clave se guarda solo en su navegador y se envía únicamente a api.anthropic.com. No pongas tu clave dentro del archivo.
@@ -51,7 +51,7 @@ Cuando el sitio tiene Supabase configurado:
 Sin Supabase, los grupos, los mensajes directos y la tienda funcionan en **modo demo**: compañeros y publicaciones de ejemplo, todo en el navegador.
 
 ### Quién puede ver y hacer qué (reglas de seguridad)
-Probadas con 51 casos en una base PostgreSQL:
+Probadas con 55 casos en una base PostgreSQL:
 - Sin sesión iniciada no se puede leer ni escribir nada (perfiles, grupos, mensajes, cuentas).
 - Cada persona solo lee y modifica **sus propios datos de cuenta y progreso**.
 - Los perfiles públicos y la lista de grupos los ve cualquiera con cuenta; cada uno edita solo el suyo.
@@ -63,36 +63,23 @@ Probadas con 51 casos en una base PostgreSQL:
 - **Borrar mi cuenta** borra también el perfil, los mensajes, los grupos a los que pertenece y el progreso guardado.
 
 - **Perfil público:** en Grupos, Mensajes y la Tienda se ven el nombre, la foto (versión chica), la descripción "Sobre mí" (hasta 160 caracteres), la carrera, el año, la facultad y las materias. Nunca el email ni la contraseña. Tocando a una persona se abre su perfil, con las materias en común y un botón para escribirle.
-- En la tienda, el contacto de quien vende solo lo ve quien le compró.
+- En la Tienda, el contacto de cada publicación lo ve cualquier estudiante con cuenta (sin sesión no se ve nada).
 
-## Nexus es gratuito
-- **Sin suscripción:** cualquiera se registra y usa todo Nexus sin pagar. No hay período de prueba ni cobros automáticos.
-- **Sin comisión:** en la Tienda, quien compra paga con Mercado Pago y la plata le llega **completa** a quien vende (Mercado Pago le descuenta su propia tarifa). Nexus no cobra nada. El archivo y el contacto se entregan recién cuando el pago está aprobado, en **Mis compras**. Antes de comprar, se puede preguntar por Mensajes.
-- **Orden de la tienda:** recomendado (según tus materias, temas flojos y parciales), más vendidos, más barato, más caro y más nuevo.
-- **Modo demo:** sin configurar nada, todo esto funciona simulado en el navegador para probarlo.
+## Nexus es gratuito y no acepta pagos
+- **Sin suscripción:** cualquiera se registra y usa todo Nexus sin pagar.
+- **Tienda = vitrina:** cada estudiante publica su material (resúmenes, cursos, clases) con un precio de referencia y un contacto (WhatsApp, Instagram, email o link). Quien está interesado toca **Contactar** o le escribe por **Mensajes**, y el pago y la entrega se arreglan entre ellos, **fuera de Nexus**. Nexus no cobra, no procesa pagos ni se queda con comisión, así que no hace falta Mercado Pago.
+- **Orden de la tienda:** recomendado (según tus materias, temas flojos y parciales), más barato, más caro y más nuevo.
+- **Quien publica** ve cuántas personas vieron su publicación y cuántas pidieron su contacto.
 
-### Activar los pagos reales de la Tienda
-Solo hace falta si querés que en la Tienda se pueda pagar dentro de Nexus. Necesitás Supabase (ver arriba, con `SUPA` completado) y una cuenta de Mercado Pago (no recibe dinero: solo identifica tu aplicación).
-1. **Mercado Pago:** en developers.mercadopago.com creá una aplicación (modelo de integración: *Marketplace* / pagos online). Anotá el *Client ID* y el *Client Secret*. En la configuración de la aplicación, poné como **Redirect URL** `https://TU-PROYECTO.supabase.co/functions/v1/mp-oauth`.
-2. **Base de datos:** ejecutá en orden todos los archivos de `supabase/migrations/` (ver *Configurar Supabase*). Esto también cierra la tabla `listings`: solo quien publicó puede editar o borrar su publicación.
-3. **Funciones:** con la CLI de Supabase (`npm i -g supabase`, `supabase login`, `supabase link --project-ref TU-PROYECTO`):
+## Funciones del servidor
+Están en `supabase/functions/`. Con la CLI de Supabase (`npm i -g supabase`, `supabase login`, `supabase link --project-ref TU-PROYECTO`):
 ```
-supabase secrets set MP_CLIENT_ID=... MP_CLIENT_SECRET=... SITE_URL=https://tu-sitio/ STATE_SECRET=una-frase-larga-al-azar
-supabase functions deploy pagos
-supabase functions deploy mp-oauth --no-verify-jwt
-supabase functions deploy mp-webhook --no-verify-jwt
+supabase secrets set SITE_URL=https://tu-sitio/ STATE_SECRET=una-frase-larga-al-azar
+supabase functions deploy cuenta
 supabase functions deploy recordatorios --no-verify-jwt
 ```
-Opcional: `COMISION` (por defecto 0, sin comisión). Si algún día querés cobrar una, tendrías que cambiar también `PAGOS` en `index.html` y los Términos y condiciones.
-4. **Avisos de pago (webhooks):** en tu aplicación de Mercado Pago → Webhooks, poné `https://TU-PROYECTO.supabase.co/functions/v1/mp-webhook` con el evento *Pagos*. Los pagos de la tienda también avisan solos a esa dirección.
-5. Probá primero con las **credenciales y usuarios de prueba** de Mercado Pago, y después cambiá a las de producción.
-
-**Cómo funciona por dentro (para revisar):** las funciones están en `supabase/functions/`. Ningún precio ni pago sale del navegador: la función toma el precio de la base, y cada aviso de pago se vuelve a consultar a Mercado Pago antes de registrar la venta. Las ventas y los tokens de Mercado Pago de quienes venden solo los escriben las funciones.
-
-**Límites a tener en cuenta:**
-- Lo que se cobra y se entrega (ventas y descargas) lo controla el servidor.
-- Mercado Pago descuenta además su propia tarifa por cada cobro.
-- Dentro de Claude no se puede pagar en la Tienda (la página no puede salir a Mercado Pago).
+- **cuenta:** borra la cuenta completa cuando la persona lo pide desde Mi perfil (perfil, mensajes, grupos, publicaciones, progreso y acceso).
+- **recordatorios:** los emails de estudio (ver abajo).
 
 ## Recordatorios por email (Gmail o cualquier correo)
 En **Mi perfil → Recordatorios por email** cada persona activa **4 emails por día**, en su hora local (por defecto 08:00, 13:00, 17:00 y 21:00; puede cambiarlas) y los días que elige:
@@ -107,7 +94,7 @@ Cada email trae un link para darse de baja. La página manda al servidor solo lo
 Para que se envíen de verdad:
 1. Creá una cuenta en **resend.com** (tiene plan gratis), verificá tu dominio y creá una API key. Con Gmail como remitente no se puede: hace falta un dominio propio. Los emails sí llegan a casillas de Gmail.
 2. `supabase secrets set RESEND_API_KEY=re_... MAIL_FROM="Nexus <recordatorios@tudominio.com>" CRON_SECRET=otra-frase-al-azar`
-3. Subí la función: `supabase functions deploy recordatorios --no-verify-jwt`.
+3. Subí la función (ver *Funciones del servidor*).
 4. Programala cada hora: en Supabase → **Database → Extensions** activá `pg_cron` y `pg_net`, y en SQL Editor ejecutá (con tu proyecto y tu `CRON_SECRET`):
 ```sql
 select cron.schedule('nexus-recordatorios', '0 * * * *', $$
@@ -124,14 +111,14 @@ Nexus incluye **Términos y condiciones** y **Política de privacidad** pensados
 - **Aceptación obligatoria:** para **registrarse** y para **iniciar sesión** hay que marcar la casilla de aceptación. Se guarda la versión aceptada y la fecha; con Supabase también se guarda en la tabla `legal_acceptances`.
 - **Cambios en los textos:** si los cambiás, subí `LEGAL_V` y a todas las personas se les pide aceptar la nueva versión antes de seguir.
 - **Links directos:** `…/nexus/#terminos` y `…/nexus/#privacidad`.
-- **Mi perfil → Legal y tus datos:** links a los textos, **Descargar mis datos** (archivo JSON) y **Borrar mi cuenta** (borra los datos; se conservan solo los registros de compras y ventas que pueda exigir la ley).
-- **Tienda:** para publicar hay que declarar que el material es propio o que se tiene derecho a venderlo.
+- **Mi perfil → Legal y tus datos:** links a los textos, **Descargar mis datos** (archivo JSON) y **Borrar mi cuenta** (borra todos los datos de la cuenta).
+- **Tienda:** para publicar hay que declarar que el material es propio o que se tiene derecho a ofrecerlo. Los Términos aclaran que Nexus es solo una vitrina y no participa de los acuerdos ni de los pagos.
 
 **Antes de abrir al público:**
 1. Los datos del titular están en `LEGAL`, en `index.html`: hoy figura **Diana Peralta (nombre comercial: Nexus)** con su email. Si querés, agregá la cédula o el RUT, el domicilio, el departamento y, cuando lo tengas, el número de inscripción ante la URCDP. Los campos vacíos no se muestran.
 2. Inscribí la base de datos ante la **URCDP**, la Unidad Reguladora y de Control de Datos Personales (trámite en línea en gub.uy).
 3. Hacé **revisar los textos por un abogado** y consultá con un **contador** si necesitás registrarte de alguna forma aunque Nexus sea gratuito.
-4. En Supabase ejecutá las migraciones que falten (ver *Configurar Supabase*) y volvé a subir la función `pagos`, que borra cuentas completas.
+4. En Supabase ejecutá las migraciones que falten (ver *Configurar Supabase*) y subí las funciones `cuenta` y `recordatorios`.
 
 ## Lo que hay que saber
 - **Con Supabase configurado**, la cuenta y el progreso se guardan en la nube y se sincronizan entre dispositivos; cada dispositivo guarda además una copia para funcionar rápido. **Sin Supabase**, todo queda en el navegador de cada persona: si cambia de dispositivo o borra los datos del sitio, tendrá que registrarse de nuevo.
