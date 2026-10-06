@@ -83,7 +83,7 @@ y después ejecutá las líneas de `listings`, `listing_events` y `archivos`.
 ### Activar los cobros reales
 Hace falta Supabase (ver arriba, con `SUPA` completado) y una cuenta de Mercado Pago.
 1. **Mercado Pago:** en developers.mercadopago.com creá una aplicación (modelo de integración: *Marketplace* / pagos online). Anotá el *Access Token de producción*, el *Client ID* y el *Client Secret*. En la configuración de la aplicación, poné como **Redirect URL** `https://TU-PROYECTO.supabase.co/functions/v1/mp-oauth`.
-2. **Base de datos:** en Supabase → SQL Editor, ejecutá en orden los archivos de `supabase/migrations/`: `20261006000000_pagos.sql`, `20261006010000_suscripcion_y_recordatorios.sql`, `20261006020000_recordatorios_4_por_dia.sql`, `20261006030000_semana_gratis.sql` y `20261006040000_perfil_publico.sql`. Esto también cierra la tabla `listings`: desde ahora solo quien publicó (con su email verificado) puede editar o borrar su publicación.
+2. **Base de datos:** en Supabase → SQL Editor, ejecutá en orden los archivos de `supabase/migrations/`: `20261006000000_pagos.sql`, `20261006010000_suscripcion_y_recordatorios.sql`, `20261006020000_recordatorios_4_por_dia.sql`, `20261006030000_semana_gratis.sql`, `20261006040000_perfil_publico.sql` y `20261006050000_terminos.sql`. Esto también cierra la tabla `listings`: desde ahora solo quien publicó (con su email verificado) puede editar o borrar su publicación.
 3. **Funciones:** con la CLI de Supabase (`npm i -g supabase`, `supabase login`, `supabase link --project-ref TU-PROYECTO`):
 ```
 supabase secrets set MP_ACCESS_TOKEN=APP_USR-... MP_CLIENT_ID=... MP_CLIENT_SECRET=... SITE_URL=https://tu-sitio/ STATE_SECRET=una-frase-larga-al-azar
@@ -128,6 +128,21 @@ select cron.schedule('nexus-recordatorios', '0 * * * *', $$
 $$);
 ```
 5. Probalo desde Mi perfil con **Mandarme uno de prueba**.
+
+## Términos y condiciones y privacidad
+Nexus incluye **Términos y condiciones** y **Política de privacidad** pensados para Uruguay: Ley 18.331 de protección de datos, Ley 17.250 de defensa del consumidor (incluidos los 5 días de arrepentimiento) y Ley 9.739 de derechos de autor.
+- **Aceptación obligatoria:** para **registrarse** y para **iniciar sesión** hay que marcar la casilla de aceptación. Se guarda la versión aceptada y la fecha; con Supabase también se guarda en la tabla `legal_acceptances`.
+- **Cambios en los textos:** si los cambiás, subí `LEGAL_V` y a todas las personas se les pide aceptar la nueva versión antes de seguir.
+- **Links directos:** `…/nexus/#terminos` y `…/nexus/#privacidad`.
+- **Mi perfil → Legal y tus datos:** links a los textos, **Descargar mis datos** (archivo JSON) y **Borrar mi cuenta** (cancela la suscripción y borra los datos; se conservan solo los registros de pagos que exige la ley).
+- **Tienda:** para publicar hay que declarar que el material es propio o que se tiene derecho a venderlo.
+- **Mi suscripción:** explica cómo pedir el arrepentimiento.
+
+**Antes de abrir al público:**
+1. Completá `LEGAL` al principio del bloque "TÉRMINOS Y CONDICIONES" en `index.html`: titular, cédula o RUT, domicilio, email, departamento y número de inscripción ante la URCDP. Hoy dice "[a completar]".
+2. Inscribí la base de datos ante la **URCDP**, la Unidad Reguladora y de Control de Datos Personales (trámite en línea en gub.uy).
+3. Hacé **revisar los textos por un abogado** y consultá con un **contador** cómo facturar la suscripción y las comisiones.
+4. En Supabase ejecutá `supabase/migrations/20261006050000_terminos.sql` y volvé a subir la función `pagos`, que ahora borra cuentas.
 
 ## Lo que hay que saber
 - Todo se guarda **en el navegador de cada persona** (no hay servidor): cuenta, contraseña cifrada, plan, progreso, materias, apuntes subidos (el texto leído), guías y preguntas generadas. Se conserva al recargar y al volver otro día. Si cambia de dispositivo, usa otro navegador o borra los datos del sitio, tendrá que registrarse de nuevo.

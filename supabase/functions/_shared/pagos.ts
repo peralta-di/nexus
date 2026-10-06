@@ -271,6 +271,34 @@ export async function handlePagos(req: Request): Promise<Response> {
         }
         return json({ url, file_name: p?.file_name || null, contact_kind: p?.contact_kind || null, contact: p?.contact || null });
       }
+      case "delete_account": {
+        // Derecho de supresión (Ley 18.331): se cancela la suscripción y se borran los datos de la persona.
+        // Se conservan solo los registros de pagos (sales, sub_payments) que exigen las normas contables y fiscales.
+        const sub = await one("subscriptions?select=*&auth_id=eq." + enc(u.id));
+        if (sub && sub.mp_preapproval_id && sub.status !== "cancelled") {
+          try { await mp("/preapproval/" + enc(sub.mp_preapproval_id), env("MP_ACCESS_TOKEN"), { method: "PUT", body: { status: "cancelled" } }); } catch (e) { console.error(e); }
+        }
+        const del = (path: string) => db(path, { method: "DELETE", prefer: "return=minimal" });
+        await del("reminders?auth_id=eq." + enc(u.id));
+        await del("listings?owner_auth=eq." + enc(u.id)); // listing_private se borra en cascada
+        await del("sellers?auth_id=eq." + enc(u.id));
+        await del("subscriptions?auth_id=eq." + enc(u.id));
+        await del("legal_acceptances?auth_id=eq." + enc(u.id));
+        // Archivos que la persona subió para vender
+        try {
+          const st = SB() + "/storage/v1/object";
+          const h = { apikey: SR(), Authorization: "Bearer " + SR(), "content-type": "application/json" };
+          const lr = await fetch(st + "/list/ventas", { method: "POST", headers: h, body: JSON.stringify({ prefix: u.id + "/", limit: 1000 }) });
+          const files = lr.ok ? await lr.json() : [];
+          if (Array.isArray(files) && files.length) {
+            await fetch(st + "/ventas", { method: "DELETE", headers: h, body: JSON.stringify({ prefixes: files.map((f: Json) => u.id + "/" + f.name) }) });
+          }
+        } catch (e) { console.error(e); }
+        // Por último, la cuenta de acceso
+        const dr = await fetch(SB() + "/auth/v1/admin/users/" + enc(u.id), { method: "DELETE", headers: { apikey: SR(), Authorization: "Bearer " + SR() } });
+        if (!dr.ok && dr.status !== 404) throw new Error("auth delete " + dr.status);
+        return json({ ok: true });
+      }
       default:
         return json({ error: "unknown_action" }, 400);
     }
