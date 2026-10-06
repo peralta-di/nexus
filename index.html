@@ -181,6 +181,15 @@ textarea{resize:vertical;min-height:96px;border-radius:18px}
 /* ---------- IA propia (solo fuera de claude.ai): clave de Anthropic de la persona ---------- */
 const STANDALONE=!(window.claude&&window.claude.use);
 const aiKey={get:()=>{try{return localStorage.getItem('ea-key')||''}catch(e){return ''}},set:k=>{try{k?localStorage.setItem('ea-key',k):localStorage.removeItem('ea-key')}catch(e){}window.dispatchEvent(new Event('ea-ai'))}};
+/* Nexus dentro de Claude: el link del artifact publicado en claude.ai. Ahí la IA usa la cuenta de Claude de cada persona. */
+const CLAUDE_APP_URL='';
+/* Abre claude.ai con un pedido ya armado con el perfil y el material de la persona (usa su propia cuenta de Claude). */
+function openInClaude(prompt,toast){
+  const p=String(prompt).slice(0,6500);
+  try{navigator.clipboard&&navigator.clipboard.writeText(prompt).catch(()=>{})}catch(e){}
+  window.open('https://claude.ai/new?q='+encodeURIComponent(p),'_blank','noopener');
+  toast&&toast(prompt.length>6500?'Abrí Claude. El pedido completo quedó copiado: si aparece cortado, pegalo.':'Abrí Claude con tu pedido listo');
+}
 const AI_MODELS={quick:'claude-haiku-4-5-20251001',default:'claude-sonnet-5-5',complex:'claude-opus-5-5'};
 const blobB64=blob=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=()=>rej(r.error);r.readAsDataURL(blob)});
 function makeSample(){
@@ -257,6 +266,14 @@ const SUBJ0=[
 ];
 function initSubjects(){return SUBJ0.map(s=>({...s,topics:s.topics.map(t=>{const c=s.past.filter(p=>p.t.includes(t.id)).length,f=Math.round(100*c/s.past.length);return {...t,sid:s.id,count:c,total:s.past.length,freq:f,level:f>=70?'muy':f>=40?'imp':'comp'}})}))}
 function genSubject(name,diff,exam){const id='x'+Math.random().toString(36).slice(2,6);const lv=[['muy',80],['imp',50],['comp',20]];return {id,name,emoji:'📘',diff,exam,past:[],topics:lv.map((l,i)=>({id:id+i,sid:id,name:'Unidad '+(i+1),m0:45,pts:['Contenido central de la unidad.','Ejercicios típicos de parciales.','Resumen cargado desde tus materiales.'],ana:'Una pieza del rompecabezas de la materia.',tec:'Contenido a cargar desde tus materiales.',count:0,total:0,freq:l[1],level:l[0]}))}}
+function perfilTxt(a,sid){
+  const p=a.prefs,subs=sid?a.subjects.filter(s=>s.id===sid):a.subjects;
+  const weak=subs.flatMap(s=>visT(s).map(t=>({s,t}))).filter(x=>(a.mastery[x.t.id]??50)<55).sort((x,y)=>a.mastery[x.t.id]-a.mastery[y.t.id]).slice(0,6).map(x=>x.t.name+' ('+x.s.name+', '+a.mastery[x.t.id]+'%)');
+  const fails=a.errors.slice(-8).map(e=>(findT(a.subjects,e.topic)||{t:{name:''}}).t.name).filter(Boolean);
+  return 'Soy estudiante de '+p.carrera+', '+p.anio+'.º año, en '+p.uni+'. Estudio hasta '+p.maxH+' h por día. '
+    +'Materias y parciales: '+subs.map(s=>s.name+' en '+a.examOf(s)+' días (temas: '+visT(s).map(t=>t.name).join(', ')+')').join('; ')+'. '
+    +(weak.length?'Lo que más me cuesta: '+weak.join('; ')+'. ':'')+(fails.length?'Últimos errores en: '+[...new Set(fails)].join(', ')+'. ':'');
+}
 const visT=s=>s.onlyMat?s.topics.filter(t=>t.fromMat):s.topics;
 const findT=(subs,id)=>{for(const s of subs){const t=s.topics.find(x=>x.id===id);if(t)return {s,t}}return null};
 
@@ -534,7 +551,7 @@ function Ahora({a}){
   const d0=dateOf(0);
   const ts=[...visT(cs)].sort((x,y)=>LV[y.level].w-LV[x.level].w).filter(t=>showC||t.level!=='comp');
   const nComp=cs.topics.filter(t=>t.level==='comp').length;
-  const tools=[['ejercicios','Practicar',reviews.length?`${reviews.length} repaso${reviews.length>1?'s':''} pendiente${reviews.length>1?'s':''}`:'Preguntas por tema','✏️','th-fis'],['simulador','Simulacro','Ensayá un parcial','⏱️','th-bio'],['logros','Logros',`Racha de ${stats.streak} días`,'🔥','th-x'],['match','Grupos de estudio','Chateá y compartí material','🤝','th-ana']];
+  const tools=[['ejercicios','Practicar',reviews.length?`${reviews.length} repaso${reviews.length>1?'s':''} pendiente${reviews.length>1?'s':''}`:'Preguntas por tema','✏️','th-fis'],['simulador','Simulacro','Ensayá un parcial','⏱️','th-bio'],['logros','Logros',`Racha de ${stats.streak} días`,'🔥','th-x'],['match','Grupos de estudio','Chateá y compartí material','🤝','th-ana'],['tienda','Tienda de material','Resúmenes y cursos para tus materias','🛍️','th-bio']];
   return html`<div className="screen" style=${{padding:0,gap:22}}>
     <div className="row" style=${{justifyContent:'space-between',alignItems:'flex-start'}}>
       <div className="grow"><h1 style=${{fontSize:'clamp(28px,8vw,34px)',fontWeight:700}}>${DNF[d0.getDay()]} ${d0.getDate()}</h1><p className="mut" style=${{fontSize:14,marginTop:2}}>${todayS.length?`${todayS.filter(b=>!b.done).length} de ${todayS.length} bloques pendientes`:'Tus próximos bloques'}</p></div>
@@ -683,6 +700,14 @@ Si en este mensaje corregís la respuesta del estudiante a un ejercicio, termin�
     setMsgs(x=>x.map((y,i)=>i===idx?{...y,sel:val}:y).concat([{k:'fb',ok,correct,ex:q.ex,due:info&&info.due,tid:m.tid},{k:'next',tid:m.tid}]));
   };
   const quick=(txt,tid)=>{if(tid)focus.current=tid;push({k:'u',text:txt});askAI(txt)};
+  const toClaude=()=>{
+    const fs=focus.current?subjects.find(s=>s.topics.some(t=>t.id===focus.current)):null;
+    const conv=msgs.filter(m=>m.k==='u'||m.k==='ai'||m.k==='t').slice(-6).map(m=>(m.k==='u'?'Yo: ':'Tutor: ')+m.text).join('\n');
+    const ctx=fs?a.matContext(fs.id,3500):'';
+    openInClaude('Quiero que seas mi tutor personal de estudio. '+perfilTxt(a,fs&&fs.id)+(focus.current?'\nAhora estoy con: '+tname(focus.current)+'.':'')
+      +'\nEnseñame con método socrático, de a un paso: analogía, explicación a nivel universitario y una pregunta para que piense; corregime con detalle. Usá español rioplatense.'
+      +(conv?'\n\nVeníamos hablando así:\n'+conv:'')+(ctx?'\n\nMi material (usalo como fuente principal):\n'+ctx:''),a.toast);
+  };
   const send=()=>{
     const text=inp.trim();if(!text||busy)return;setInp('');
     const pi=msgs.map((m,i)=>[m,i]).filter(([m])=>m.k==='ex'&&m.sel===null).pop();
@@ -718,6 +743,7 @@ Si en este mensaje corregís la respuesta del estudiante a un ejercicio, termin�
   };
   return html`<div className="fl" style=${{gap:16,minHeight:'calc(100vh - 150px)'}}>
     <${Head} eyebrow="Tutor" title="Aprendé de a un paso" right=${html`<span className="lvl" style=${{background:ai?'var(--t-mint)':'var(--surf2)',color:'var(--ink)',alignSelf:'center'}}>${ai===null?'Conectando…':ai?'IA conectada':'Modo guiado'}</span>`}/>
+    ${STANDALONE&&html`<div className="alertbox row wrap" style=${{justifyContent:'space-between',gap:10,background:'var(--t-lilac)'}}><span style=${{fontSize:13.5}}><b>Estudiá con tu cuenta de Claude.</b> ${CLAUDE_APP_URL?'Abrí Nexus dentro de Claude o seguí esta charla allá, con tu perfil y tu material.':'Seguí esta charla en Claude con tu perfil, tus temas flojos y tu material ya cargados.'}</span><span className="row" style=${{gap:6}}>${CLAUDE_APP_URL&&html`<a className="btn btn-sm" href=${CLAUDE_APP_URL} target="_blank" rel="noopener">Nexus en Claude ↗</a>`}<button className="btn btn-sm btn-s" onClick=${toClaude}>Seguir en Claude ↗</button></span></div>`}
     <div className="chips" role="group" aria-label="Nivel de explicación"><button className="chip" aria-pressed=${mode==='cero'} onClick=${()=>setMode('cero')}>Explicámelo desde cero</button><button className="chip" aria-pressed=${mode==='examen'} onClick=${()=>setMode('examen')}>Explicámelo a nivel examen universitario</button></div>
     ${ai&&hasMat&&html`<div className="chips" role="group" aria-label="Tu material"><button className="chip" aria-pressed=${onlyMat} onClick=${()=>setOnlyMat(!onlyMat)}>📎 Responder solo según mi material</button><button className="chip" disabled=${busy} onClick=${()=>{setOnlyMat(true);focus.current=null;push({k:'u',text:'Haceme una pregunta sobre mi material.'});setTimeout(()=>askAI('Haceme una pregunta sobre mi material, sin darme la respuesta. Cuando te responda, corregime según el material.'),0)}}><${Icon} n="sparkle" s=${13}/> Preguntame sobre mi material</button></div>`}
     ${!ai&&ai!==null&&hasMat&&html`<div className="chips"><button className="chip" onClick=${()=>a.go('material')}>📎 Preguntas y ejercicios sobre mi material</button></div>`}
@@ -991,6 +1017,7 @@ function MatChat({a,s,ai,setAi,usable,ids}){
     push({k:'t',text:(ok?'**Correcto.** ':'**Todavía no.** La palabra era **'+q.a[0]+'**. ')+q.ex,next:true});
   };
   const startQuiz=()=>{if(ai)send('Empezá: haceme la primera pregunta sobre mi material.');else nextLocal()};
+  const toClaude=()=>openInClaude('Quiero estudiar '+s.name+' con mi propio material. '+perfilTxt(a,s.id)+'\nUsá SOLO este material como fuente y citá el archivo. Empezá con un resumen corto de los temas y después tomame examen de a una pregunta, corrigiéndome según el material. Español rioplatense.\n\nMATERIAL:\n'+a.matContext(s.id,5000,null,ids),a.toast);
   const SUG=['Resumime lo más importante','¿Cuáles son los conceptos clave?','Explicame la parte más difícil','¿Qué me podrían tomar en el parcial?'];
   return html`<div className="card fl" style=${{gap:10}}>
     <b>💬 Preguntá sobre tu material</b>
@@ -1001,6 +1028,7 @@ function MatChat({a,s,ai,setAi,usable,ids}){
         ${m.next&&i===msgs.length-1&&html`<div className="chips" style=${{marginTop:10}}><button className="chip" onClick=${nextLocal}><${Icon} n="refresh" s=${13}/> Otra pregunta</button></div>`}</div>`)}<div ref=${endRef}></div></div>`}
     ${mode==='ask'&&msgs.length===0&&html`<div className="chips">${SUG.slice(0,ai?4:2).map(x=>html`<button key=${x} className="chip" onClick=${()=>send(x)}>${x}</button>`)}</div>`}
     ${mode==='quiz'&&msgs.length===0&&html`<div><button className="btn btn-s btn-sm" onClick=${startQuiz}><${Icon} n="play" s=${14}/> Empezar preguntas</button></div>`}
+    ${STANDALONE&&html`<div><button className="btn btn-sm" onClick=${toClaude}>Estudiar este material en Claude ↗</button></div>`}
     <form className="row" onSubmit=${e=>{e.preventDefault();send()}}><input aria-label="Pregunta sobre tu material" placeholder=${mode==='ask'?'Preguntá algo de tu material…':'Escribí tu respuesta…'} value=${inp} onInput=${e=>setInp(e.target.value)}/>${busy?html`<button className="ibtn" type="button" style=${{background:'var(--inv)',color:'var(--invfg)'}} aria-label="Frenar" onClick=${()=>ctl.current&&ctl.current.abort()}><${Icon} n="x" s=${18}/></button>`:html`<button className="ibtn" type="submit" style=${{background:'var(--inv)',color:'var(--invfg)'}} aria-label="Enviar"><${Icon} n="send" s=${18}/></button>`}</form>
   </div>`;
 }
@@ -1297,7 +1325,10 @@ function Perfil({a,onClose}){
     <div className="row" style=${{justifyContent:'space-between'}}><h2 style=${{fontSize:24,fontWeight:700}}>Mi perfil</h2><button className="ibtn" onClick=${onClose} aria-label="Cerrar"><${Icon} n="x" s=${18}/></button></div>
     <div className="card row" style=${{gap:14}}><span className="av" style=${{width:56,height:56,flexBasis:56,fontSize:20}}>${initials(u.nombre)}</span><div className="grow" style=${{minWidth:0}}><b style=${{fontSize:17,display:'block'}}>${u.nombre}</b><span className="mut" style=${{fontSize:13,overflowWrap:'anywhere'}}>${u.email}</span></div></div>
     <div className="card fl" style=${{gap:8,fontSize:14}}><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Universidad</span><b style=${{textAlign:'right'}}>${u.uni}</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Carrera</span><b>${u.carrera}</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Año</span><b>${u.anio}.º</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">País</span><b>${u.pais}</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Estudio por día</span><b>${u.horas||3} h</b></div></div>
-    ${STANDALONE&&html`<div className="card fl" style=${{gap:8}}><b>🤖 IA del tutor (opcional)</b>
+    ${STANDALONE&&html`<div className="card fl" style=${{gap:8}}><b>✳️ Tu cuenta de Claude</b>
+      <span className="mut" style=${{fontSize:13}}>${CLAUDE_APP_URL?'Abrí Nexus dentro de claude.ai: el tutor, la guía, los temas y los ejercicios usan tu propia cuenta de Claude, sin clave. Tu progreso de este navegador no se pasa solo: volvé a subir tus apuntes allá.':'Desde el tutor y tus apuntes podés tocar "Seguir en Claude": se abre claude.ai con tu cuenta y un pedido armado con tu carrera, tus parciales, tus temas flojos y tu material.'}</span>
+      <div className="row wrap" style=${{gap:8}}>${CLAUDE_APP_URL&&html`<a className="btn btn-s btn-sm" href=${CLAUDE_APP_URL} target="_blank" rel="noopener">Abrir Nexus en Claude ↗</a>`}<button className="btn btn-sm" onClick=${()=>openInClaude('Quiero que seas mi tutor personal de estudio. '+perfilTxt(a)+'\nArmame un plan para esta semana priorizando lo que más me cuesta y lo que rindo antes, y después empecemos por el primer tema con método socrático. Español rioplatense.',a.toast)}>Estudiar en Claude ↗</button></div></div>`}
+    ${STANDALONE&&html`<div className="card fl" style=${{gap:8}}><b>🤖 IA dentro de Nexus con clave de API (avanzado)</b>
       <span className="mut" style=${{fontSize:13}}>${has?'Clave guardada: el tutor, la guía y las preguntas con IA están activos.':'Pegá tu clave de la API de Anthropic para activar el tutor con IA, la guía de estudio y las preguntas desde tu material. Sin clave, todo lo demás funciona igual.'} Se guarda solo en este navegador y se envía únicamente a api.anthropic.com.</span>
       ${has?html`<div><button className="btn btn-sm" onClick=${()=>{aiKey.set('');setHas(false);a.toast('Clave quitada')}}>Quitar clave</button></div>`:html`<div className="row" style=${{gap:8}}><input type="password" aria-label="Clave de la API de Anthropic" placeholder="sk-ant-…" value=${k} onInput=${e=>setK(e.target.value)} autoComplete="off"/><button className="btn btn-s btn-sm" disabled=${k.trim().length<20} onClick=${()=>{aiKey.set(k.trim());setK('');setHas(true);a.toast('IA activada')}}>Guardar</button></div>`}</div>`}
     <div className="card fl" style=${{gap:8}}><b>🤝 Grupos en línea (opcional)</b>
@@ -1355,7 +1386,15 @@ function sbApi(c){
     join:m=>q('members',{method:'POST',prefer:'resolution=ignore-duplicates,return=minimal',body:m}),
     leave:(id,uid)=>q('members?group_id=eq.'+e(id)+'&uid=eq.'+e(uid),{method:'DELETE'}),
     messages:(id,since)=>q('messages?select=*&group_id=eq.'+e(id)+'&ts=gt.'+(since||0)+'&order=ts.asc&limit=200'),
-    send:m=>q('messages',{method:'POST',body:m})};
+    send:m=>q('messages',{method:'POST',body:m}),
+    upload:async(path,file)=>{const r=await fetch(c.url.replace(/\/+$/,'')+'/storage/v1/object/archivos/'+path.split('/').map(e).join('/'),{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+c.key,'content-type':file.type||'application/octet-stream','x-upsert':'false'},body:file});if(!r.ok)throw new Error('HTTP '+r.status);return c.url.replace(/\/+$/,'')+'/storage/v1/object/public/archivos/'+path.split('/').map(e).join('/')},
+    listings:()=>q('listings?select=*&active=eq.true&order=ts.desc&limit=300'),
+    myListings:uid=>q('listings?select=*&uid=eq.'+e(uid)+'&order=ts.desc'),
+    createListing:l=>q('listings',{method:'POST',body:l}),
+    updateListing:(id,p)=>q('listings?id=eq.'+e(id),{method:'PATCH',body:p}),
+    deleteListing:id=>q('listings?id=eq.'+e(id),{method:'DELETE'}),
+    logEvent:ev=>q('listing_events',{method:'POST',body:ev}),
+    events:ids=>ids.length?q('listing_events?select=*&listing_id=in.('+ids.map(e).join(',')+')&limit=5000'):Promise.resolve([])};
 }
 const DEMO_P=[['Camila R.','Universidad de la República (UdelaR)','Tarde','Hace esquemas y comparte resúmenes'],['Mateo G.','Universidad de la República (UdelaR)','Noche','Busca grupo para casos clínicos'],['Joaquín P.','Universidad de la República (UdelaR)','Mañana','Prefiere repasar con preguntas'],['Lucía F.','Universidad de la República (UdelaR)','Tarde','Estudia con cronómetro, 45 + 10'],['Valentina S.','Universidad de Buenos Aires (UBA)','Tarde','Arma tarjetas de repaso'],['Bruno T.','Universidad de la República (UdelaR)','Noche','Ejercicios y parciales viejos'],['Martina D.','Universidad de la República (UdelaR)','Mañana','Sala silenciosa, cámara apagada']];
 function demoApi(subjects){
@@ -1370,6 +1409,11 @@ function demoApi(subjects){
     [[g1,[0,2,3]],[g2,[1,4]]].forEach(([g,ix])=>ix.forEach(i=>db.members.push({group_id:g.id,uid:'demo'+keyOf(ppl[i][0]).replace(/\s/g,''),name:ppl[i][0],uni:ppl[i][1],carrera:'Medicina',ts:now})));
     db.messages.push({id:gid(),group_id:g1.id,uid:'demox',name:ppl[0][0],text:'¡Hola! Armé este grupo para repasar '+s.name+'. ¿Qué tema les cuesta más?',ts:now-36e5*5},{id:gid(),group_id:g1.id,uid:'demoy',name:ppl[2][0],text:'Yo tengo un resumen, después lo subo acá 🙌',ts:now-36e5*4});
   });
+  if(!db.seededL){db.seededL=true;db.listings=db.listings||[];
+    const kinds=[['resumen','Resumen completo de ','con esquemas y lo que más toman',250],['parciales','Parciales resueltos de ','2019 a 2025, explicados paso a paso',400],['clases','Clases de apoyo de ','individuales o en grupo, por Zoom',600]];
+    const pool=[...subjects.map(x=>({n:x.name,t:visT(x).slice(0,3).map(t=>t.name)})),...UDELAR_MED.filter(c=>!subjects.some(x=>keyOf(x.name)===keyOf(c.n))).slice(0,3).map(c=>({n:c.n,t:c.t.slice(0,3)}))];
+    pool.forEach((x,i)=>{const k=kinds[i%kinds.length],p=DEMO_P[(i+3)%DEMO_P.length];db.listings.push({id:'dl'+gid(),uid:'demo'+keyOf(p[0]).replace(/\s/g,''),seller_name:p[0]+' (ejemplo)',seller_uni:p[1],title:k[1]+x.n,kind:k[0],subj:keyOf(x.n),subj_name:x.n,topics:x.t.join(', '),unis:'',years:'',carrera:'Medicina',price:k[3],currency:'UYU',contact_kind:'email',contact:'ejemplo@nexus.demo',descr:'Material '+k[2]+'. Ideal para el parcial. (Publicación de ejemplo)',preview:'Vista previa: índice de '+x.t.join(', ')+'.',ts:Date.now()-i*36e5*7,active:true,demo:true})});
+  }
   save(db);
   const w=f=>{db=load()||db;const r=f(db);save(db);return Promise.resolve(r)};
   return {online:false,
@@ -1386,7 +1430,15 @@ function demoApi(subjects){
       const others=d.members.filter(x=>x.group_id===m.group_id&&x.uid!==m.uid&&x.uid.startsWith('demo'));
       if(others.length&&Math.random()<.8){const o=others[Math.floor(Math.random()*others.length)];
         const txt=m.file_name?['¡Gracias por compartir '+m.file_name+'! Lo leo esta noche.','Buenísimo el material 🙌 ¿Lo repasamos juntos mañana?']:['¡Dale! Me sumo.','Buenísimo, ¿lo vemos en el próximo bloque?','Yo lo tengo flojo también, repasemos juntos.','👍'];
-        d.messages.push({id:gid(),group_id:m.group_id,uid:o.uid,name:o.name,text:txt[Math.floor(Math.random()*txt.length)],ts:m.ts+1500+Math.floor(Math.random()*2000),demo:true})}})};
+        d.messages.push({id:gid(),group_id:m.group_id,uid:o.uid,name:o.name,text:txt[Math.floor(Math.random()*txt.length)],ts:m.ts+1500+Math.floor(Math.random()*2000),demo:true})}}),
+    upload:(path,file)=>file.size>1.5e6?Promise.resolve(null):new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result));r.onerror=()=>rej(r.error);r.readAsDataURL(file)}),
+    listings:()=>w(d=>(d.listings||[]).filter(l=>l.active).sort((x,y)=>y.ts-x.ts)),
+    myListings:uid=>w(d=>(d.listings||[]).filter(l=>l.uid===uid).sort((x,y)=>y.ts-x.ts)),
+    createListing:l=>w(d=>{d.listings=[...(d.listings||[]),l]}),
+    updateListing:(id,p)=>w(d=>{d.listings=(d.listings||[]).map(l=>l.id===id?{...l,...p}:l)}),
+    deleteListing:id=>w(d=>{d.listings=(d.listings||[]).filter(l=>l.id!==id)}),
+    logEvent:ev=>w(d=>{d.events=[...(d.events||[]),ev].slice(-3000)}),
+    events:ids=>w(d=>(d.events||[]).filter(ev=>ids.includes(ev.listing_id)))};
 }
 const fmtT=ts=>{const d=new Date(ts),t=d.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});return Date.now()-ts<864e5&&d.getDate()===new Date().getDate()?t:d.toLocaleDateString('es',{day:'numeric',month:'short'})+' '+t};
 
@@ -1397,6 +1449,21 @@ function GroupChat({a,api,me,g,onBack,onLeave}){
   useEffect(()=>{last.current=0;setMsgs([]);pull();api.members(g.id).then(setMem).catch(()=>{});const id=setInterval(pull,api.online?4000:1500);return()=>clearInterval(id)},[g.id]);
   useEffect(()=>{if(endRef.current)endRef.current.scrollIntoView({block:'nearest'})},[msgs.length]);
   const post=async extra=>{const t=txt.trim();if(!t&&!extra)return;const m={id:gid(),group_id:g.id,uid:me.uid,name:me.name,text:t||'',ts:Date.now(),...(extra||{})};setTxt('');try{await api.send(m);pull()}catch(e){setErr('No se pudo enviar. Probá de nuevo.');setTxt(t)}};
+  const [up,setUp]=useState(null),fileIn=useRef(null);
+  const sendFile=async f=>{
+    if(!f)return;const n=(f.name||'').toLowerCase();
+    if(!/\.(pdf|docx|pptx|txt|md)$/.test(n)){setErr('Podés compartir PDF, Word (.docx), PowerPoint (.pptx) o texto.');return}
+    if(f.size>10e6){setErr('El archivo pesa más de 10 MB. Comprimilo o compartí solo una parte.');return}
+    setUp(f.name);setErr(null);
+    try{
+      let text='';try{const r=await extractText(f);text=(r.text||'').replace(/\u0000/g,'').replace(/\n{3,}/g,'\n\n').trim().slice(0,20000)}catch(e){}
+      const safe=f.name.replace(/[^\w.\-]+/g,'_').slice(-80);
+      const url=await api.upload(g.id+'/'+gid()+'-'+safe,f).catch(()=>null);
+      if(!url&&!text){setErr(api.online?'No pude subir el archivo. Revisá que exista el espacio "archivos" en Supabase (ver README).':'En modo demo solo se guardan archivos de hasta 1,5 MB o con texto legible.');return}
+      await post({file_name:f.name,file_text:text,file_url:url||'',file_type:f.type||'',file_size:f.size});
+      if(!url)setErr('Compartí el texto del archivo, pero no el archivo original'+(api.online?'.':' (en modo demo solo hasta 1,5 MB).'));
+    }finally{setUp(null)}
+  };
   const myMats=a.mats.filter(m=>m.text&&m.text.trim().length>20);
   const mySub=a.subjects.find(s=>keyOf(s.name)===g.subj);
   const saveMat=(m,sid)=>{a.addMat({id:'mt'+gid(),subj:sid,kind:'resumen',name:m.file_name+' (de '+m.name.split(' ')[0]+')',size:m.file_text.length,text:m.file_text.slice(0,MAXCH),status:'ok',words:wordsOf(m.file_text)});a.toast('Guardado en tus apuntes')};
@@ -1410,24 +1477,131 @@ function GroupChat({a,api,me,g,onBack,onLeave}){
         ${!mine&&html`<div style=${{fontSize:12,fontWeight:600,marginBottom:2}}>${m.name}</div>`}
         ${m.text&&html`<div style=${{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>${m.text}</div>`}
         ${m.file_name&&html`<div style=${{marginTop:m.text?8:0,background:mine?'rgba(255,255,255,.15)':'var(--card)',borderRadius:14,padding:'8px 10px'}}>
-          <b style=${{fontSize:13.5}}>📎 ${m.file_name}</b> <span style=${{fontSize:12,opacity:.75}}>· ${wordsOf(m.file_text||'')} palabras</span>
-          <div className="row wrap" style=${{gap:6,marginTop:6}}><button className="chip" style=${{padding:'.2rem .7rem',fontSize:12}} onClick=${()=>setOpen(open===m.id?null:m.id)}>${open===m.id?'Cerrar':'Leer'}</button>
-            ${!mine&&html`<select aria-label="Materia donde guardar" value=${saveTo[m.id]||(mySub||a.subjects[0]).id} onChange=${e=>setSaveTo({...saveTo,[m.id]:e.target.value})} style=${{width:'auto',padding:'.2rem .6rem',fontSize:12,borderRadius:999}}>${a.subjects.map(s=>html`<option key=${s.id} value=${s.id}>${s.name}</option>`)}</select><button className="chip" style=${{padding:'.2rem .7rem',fontSize:12}} onClick=${()=>saveMat(m,saveTo[m.id]||(mySub||a.subjects[0]).id)}>Guardar en mis apuntes</button>`}</div>
+          <b style=${{fontSize:13.5,overflowWrap:'anywhere'}}>${/\.pdf$/i.test(m.file_name)?'📕':/\.docx$/i.test(m.file_name)?'📘':/\.pptx$/i.test(m.file_name)?'📙':'📎'} ${m.file_name}</b> <span style=${{fontSize:12,opacity:.75}}>· ${m.file_size?(m.file_size<1e6?Math.max(1,Math.round(m.file_size/1e3))+' KB':(m.file_size/1e6).toFixed(1)+' MB')+' · ':''}${wordsOf(m.file_text||'')} palabras</span>
+          <div className="row wrap" style=${{gap:6,marginTop:6}}>${m.file_url&&/^(https:|data:)/.test(m.file_url)&&html`<a className="chip" style=${{padding:'.2rem .7rem',fontSize:12,textDecoration:'none'}} href=${m.file_url} download=${m.file_name} target="_blank" rel="noopener noreferrer">Descargar</a>`}${m.file_text&&html`<button className="chip" style=${{padding:'.2rem .7rem',fontSize:12}} onClick=${()=>setOpen(open===m.id?null:m.id)}>${open===m.id?'Cerrar':'Leer'}</button>`}
+            ${!mine&&m.file_text&&html`<select aria-label="Materia donde guardar" value=${saveTo[m.id]||(mySub||a.subjects[0]).id} onChange=${e=>setSaveTo({...saveTo,[m.id]:e.target.value})} style=${{width:'auto',padding:'.2rem .6rem',fontSize:12,borderRadius:999}}>${a.subjects.map(s=>html`<option key=${s.id} value=${s.id}>${s.name}</option>`)}</select><button className="chip" style=${{padding:'.2rem .7rem',fontSize:12}} onClick=${()=>saveMat(m,saveTo[m.id]||(mySub||a.subjects[0]).id)}>Guardar en mis apuntes</button>`}</div>
           ${open===m.id&&html`<div style=${{marginTop:8,fontSize:13,whiteSpace:'pre-wrap',maxHeight:220,overflow:'auto'}}>${(m.file_text||'').slice(0,6000)}</div>`}</div>`}
         <div style=${{fontSize:11,opacity:.6,marginTop:4,textAlign:'right'}}>${fmtT(m.ts)}</div></div>`})}
       <div ref=${endRef}></div></div>
     ${err&&html`<div className="alertbox" role="alert" style=${{background:'var(--t-rose)'}}>${err}</div>`}
-    ${share&&html`<div className="card fl" style=${{gap:8}}><b>Compartir material</b>${myMats.length===0?html`<p className="mut" style=${{fontSize:13}}>Todavía no tenés apuntes con texto. Subilos en "Apuntes".</p>`:myMats.map(m=>html`<button key=${m.id} className="opt" onClick=${()=>{post({file_name:m.name,file_text:m.text.slice(0,20000)});setShare(false)}}><span>${KIND[m.kind].e}</span><span className="grow" style=${{textAlign:'left'}}>${m.name}<span className="mut" style=${{fontSize:12,display:'block'}}>${(a.subjects.find(s=>s.id===m.subj)||{}).name||''} · ${wordsOf(m.text)} palabras</span></span></button>`)}</div>`}
+    ${up&&html`<div className="alertbox" role="status">Subiendo ${up}…</div>`}
+    ${share&&html`<div className="card fl" style=${{gap:8}}><b>Compartir material</b>
+      <input ref=${fileIn} type="file" accept=".pdf,.docx,.pptx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style=${{position:'absolute',width:1,height:1,opacity:0}} onChange=${e=>{const f=e.target.files[0];e.target.value='';setShare(false);sendFile(f)}}/>
+      <button className="btn btn-s btn-sm" style=${{alignSelf:'flex-start'}} disabled=${!!up} onClick=${()=>fileIn.current&&fileIn.current.click()}>📄 Subir PDF o Word</button>
+      <div className="eyebrow" style=${{marginTop:4}}>O uno de tus apuntes</div>${myMats.length===0?html`<p className="mut" style=${{fontSize:13}}>Todavía no tenés apuntes con texto. Subilos en "Apuntes".</p>`:myMats.map(m=>html`<button key=${m.id} className="opt" onClick=${()=>{post({file_name:m.name,file_text:m.text.slice(0,20000)});setShare(false)}}><span>${KIND[m.kind].e}</span><span className="grow" style=${{textAlign:'left'}}>${m.name}<span className="mut" style=${{fontSize:12,display:'block'}}>${(a.subjects.find(s=>s.id===m.subj)||{}).name||''} · ${wordsOf(m.text)} palabras</span></span></button>`)}</div>`}
     <form className="row" onSubmit=${e=>{e.preventDefault();post()}}><button type="button" className="ibtn" aria-label="Compartir material" aria-pressed=${share} onClick=${()=>setShare(!share)}><${Icon} n="file" s=${18}/></button><input aria-label="Mensaje al grupo" placeholder="Escribile al grupo…" value=${txt} onInput=${e=>setTxt(e.target.value)} maxLength="2000"/><button className="ibtn" type="submit" style=${{background:'var(--inv)',color:'var(--invfg)'}} aria-label="Enviar"><${Icon} n="send" s=${18}/></button></form>
     <div><button className="btn btn-sm btn-g" onClick=${()=>onLeave(g)}>Salir del grupo</button></div>
   </div>`;
 }
 
+function useApi(subjects){const cfg=grpCfg.get();return useMemo(()=>cfg&&cfg.url&&cfg.key?sbApi(cfg):demoApi(subjects),[cfg&&cfg.url,cfg&&cfg.key,subjects.length])}
+function useMe(a){const {user,prefs,subjects}=a;return useMemo(()=>({uid:uidOf(user.email),name:user.nombre,uni:prefs.uni||user.uni,carrera:prefs.carrera,anio:prefs.anio,slot:prefs.from<12?'Mañana':prefs.from<18?'Tarde':'Noche',note:'',subjects:'|'+subjects.map(s=>keyOf(s.name)).join('|')+'|',ts:Date.now()}),[user.email,subjects])}
+
+/* ---------- TIENDA DE MATERIAL: cada publicación le aparece a quien cursa esa materia ---------- */
+const LKIND={resumen:['📄','Resumen'],parciales:['🧾','Parciales resueltos'],curso:['🎓','Curso'],clases:['👩‍🏫','Clases de apoyo'],tarjetas:['🗂️','Tarjetas o esquemas'],otro:['📦','Otro']};
+const CUR=['UYU','ARS','USD','CLP','MXN','COP','EUR'];
+const contactUrl=l=>{const c=String(l.contact||'').trim();
+  if(l.contact_kind==='whatsapp'){const d=c.replace(/\D/g,'');return d.length>=8?'https://wa.me/'+d+'?text='+encodeURIComponent('Hola! Vi en Nexus tu publicación "'+l.title+'". ¿Me pasás más info?'):null}
+  if(l.contact_kind==='instagram'){const u=c.replace(/^@/,'').replace(/[^\w.]/g,'');return u?'https://instagram.com/'+u:null}
+  if(l.contact_kind==='email')return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c)?'mailto:'+c+'?subject='+encodeURIComponent('Consulta: '+l.title):null;
+  return /^https:\/\/[^\s]+$/.test(c)?c:null};
+/* Qué tan relevante es una publicación para esta persona, con los motivos */
+function scoreListing(l,a,me){
+  const sub=a.subjects.find(s=>keyOf(s.name)===l.subj);let sc=0;const why=[];
+  if(sub){sc+=50;why.push('Cursás '+sub.name);
+    const d=a.examOf(sub);if(d<=14){sc+=12;why.push('Tu parcial es en '+d+' días')}
+    const tk=keyWords(l.topics+' '+l.title),weak=visT(sub).filter(t=>(a.mastery[t.id]??50)<55&&keyWords(t.name).some(w=>tk.some(k=>k.startsWith(w.slice(0,5))||w.startsWith(k.slice(0,5)))));
+    if(weak.length){sc+=15*Math.min(2,weak.length);why.push('Te cuesta '+weak[0].name)}}
+  if(l.years&&l.years.includes('|'+me.anio+'|')){sc+=8;why.push('Para '+me.anio+'.º año')}
+  if(l.seller_uni&&l.seller_uni===me.uni){sc+=8;why.push('De tu facultad')}
+  if(l.carrera&&keyOf(l.carrera)===keyOf(me.carrera))sc+=4;
+  const fits=(!l.unis||l.unis.includes('|'+keyOf(me.uni)+'|'))&&(!l.years||l.years.includes('|'+me.anio+'|'));
+  return {sc:fits?sc:sc-30,why,mine:!!sub};
+}
+function Tienda({a}){
+  const {subjects}=a,api=useApi(subjects),me=useMe(a);
+  const [tab,setTab]=useState('para'),[all,setAll]=useState(null),[mine,setMine]=useState(null),[ev,setEv]=useState([]),[open,setOpen]=useState(null),[fk,setFk]=useState('all'),[q,setQ]=useState(''),[err,setErr]=useState(null),[tick,setTick]=useState(0),[hidden,setHidden]=useState([]);
+  useEffect(()=>{let ok=true;setErr(null);
+    Promise.all([api.listings(),api.myListings(me.uid)]).then(async([l,m])=>{if(!ok)return;setAll(l||[]);setMine(m||[]);const e=await api.events((m||[]).map(x=>x.id)).catch(()=>[]);if(ok)setEv(e||[])}).catch(()=>{if(ok){setErr('No pude cargar la tienda en línea. Revisá la conexión en Mi perfil.');setAll([]);setMine([])}});
+    return()=>{ok=false}},[api,tick]);
+  const log=(l,kind)=>{if(l.uid===me.uid)return;api.logEvent({id:gid(),listing_id:l.id,kind,uid:me.uid,anio:me.anio,uni:me.uni,subj:l.subj,ts:Date.now()}).catch(()=>{})};
+  const view=id=>{const l=(all||[]).find(x=>x.id===id);if(open!==id&&l)log(l,'view');setOpen(open===id?null:id)};
+  const items=(all||[]).filter(l=>l.uid!==me.uid&&!hidden.includes(l.id)).map(l=>({l,...scoreListing(l,a,me)}))
+    .filter(x=>(tab==='para'?x.mine&&x.sc>0:true)&&(fk==='all'||x.l.kind===fk)&&(!q.trim()||fold(x.l.title+' '+x.l.subj_name+' '+x.l.topics+' '+x.l.descr).includes(fold(q.trim()))))
+    .sort((x,y)=>tab==='para'?y.sc-x.sc:y.l.ts-x.l.ts);
+  const card=({l,why})=>{const u=contactUrl(l);return html`<div key=${l.id} className="card fl" style=${{gap:8}}>
+    <div className="row" style=${{gap:12,alignItems:'flex-start'}}><span className="tile" style=${{width:46,height:46,fontSize:22,flex:'0 0 46px'}}>${LKIND[l.kind]?LKIND[l.kind][0]:'📦'}</span>
+      <div className="grow" style=${{minWidth:0}}><b style=${{fontSize:16,display:'block',overflowWrap:'anywhere'}}>${l.title}</b><span className="mut" style=${{fontSize:12.5}}>${(LKIND[l.kind]||LKIND.otro)[1]} · ${l.subj_name} · ${l.seller_name}${l.seller_uni?' · '+l.seller_uni:''}</span></div>
+      <b className="num" style=${{whiteSpace:'nowrap',fontSize:16}}>${+l.price?l.currency+' '+(+l.price).toLocaleString('es'):'Gratis'}</b></div>
+    ${why&&why.length>0&&html`<div className="chips">${why.slice(0,3).map(w=>html`<span key=${w} className="lvl" style=${{background:'var(--t-mint)',color:'var(--ink)'}}>${w}</span>`)}</div>`}
+    ${open===l.id&&html`<div className="fl" style=${{gap:8,fontSize:14}}>${l.descr&&html`<p style=${{whiteSpace:'pre-wrap'}}>${l.descr}</p>`}${l.topics&&html`<p className="mut" style=${{fontSize:13}}>Temas: ${l.topics}</p>`}${l.preview&&html`<div style=${{background:'var(--surf)',borderRadius:14,padding:12,fontSize:13,whiteSpace:'pre-wrap',maxHeight:220,overflow:'auto'}}><div className="eyebrow" style=${{marginBottom:4}}>Vista previa</div>${l.preview}</div>`}</div>`}
+    <div className="row wrap" style=${{gap:8}}><button className="btn btn-sm" onClick=${()=>view(l.id)}>${open===l.id?'Ver menos':'Ver detalle'}</button>
+      ${u?html`<a className="btn btn-sm btn-s" href=${u} target="_blank" rel="noopener noreferrer" onClick=${()=>log(l,'click')}>Contactar ${l.contact_kind==='whatsapp'?'por WhatsApp':l.contact_kind==='instagram'?'por Instagram':l.contact_kind==='email'?'por email':''} ↗</a>`:html`<span className="mut" style=${{fontSize:12.5,alignSelf:'center'}}>Contacto: ${l.contact}</span>`}
+      <button className="btn btn-sm btn-g" style=${{marginLeft:'auto'}} onClick=${()=>{log(l,'report');setHidden(h=>[...h,l.id]);a.toast('Gracias. Ocultamos esta publicación.')}}>Denunciar</button></div></div>`};
+  return html`<div className="fl" style=${{gap:18}}>
+    <${Head} eyebrow="Tienda de material" title=${tab==='vender'?'Vendé tu material':'Material para vos'} sub=${tab==='vender'?'Publicá resúmenes, cursos o clases y llegá a quienes cursan esa materia.':'Resúmenes, cursos y clases de las materias que estás cursando.'}/>
+    <div className="tabs" role="tablist">${[['para','Para vos'],['todo','Explorar'],['vender','Vender']].map(([k,l])=>html`<button key=${k} role="tab" className="tab" aria-selected=${tab===k} onClick=${()=>setTab(k)}>${l}</button>`)}</div>
+    ${!api.online&&html`<div className="alertbox" style=${{background:'var(--t-cream)'}}><b>Modo demo.</b> Las publicaciones de ejemplo y las tuyas quedan en este navegador. Con <b>Grupos en línea</b> conectado en Mi perfil, la tienda es compartida.</div>`}
+    ${err&&html`<div className="alertbox" role="alert" style=${{background:'var(--t-rose)'}}>${err}</div>`}
+    ${tab!=='vender'?html`<div className="fl" style=${{gap:12}}>
+      <input aria-label="Buscar en la tienda" placeholder="🔎 Buscar (ej: plexo braquial, parciales)" value=${q} onInput=${e=>setQ(e.target.value)}/>
+      <div className="chips">${[['all','Todo'],...Object.entries(LKIND).map(([k,v])=>[k,v[0]+' '+v[1]])].map(([k,l])=>html`<button key=${k} className="chip" aria-pressed=${fk===k} onClick=${()=>setFk(k)}>${l}</button>`)}</div>
+      ${all===null?html`<p className="mut">Cargando…</p>`:items.length===0?html`<div className="card"><p className="mut">${tab==='para'?'Todavía no hay material publicado para tus materias. Mirá en "Explorar" o publicá el tuyo.':'No encontramos publicaciones con ese filtro.'}</p></div>`:items.map(card)}
+      <p className="mut" style=${{fontSize:12.5}}>Nexus no cobra ni intermedia pagos: arreglás directo con quien vende. No pagues por adelantado a desconocidos ni compartas contraseñas.</p></div>`
+    :html`<${Vender} a=${a} api=${api} me=${me} mine=${mine} ev=${ev} onChange=${()=>setTick(t=>t+1)}/>`}
+  </div>`;
+}
+function Vender({a,api,me,mine,ev,onChange}){
+  const {subjects}=a,first=subjects[0];
+  const blank={title:'',kind:'resumen',subj_name:first?first.name:'',topics:'',years:[],onlyUni:false,price:'',currency:/argent/i.test(a.user.pais||'')?'ARS':'UYU',contact_kind:'whatsapp',contact:'',descr:'',preview:''};
+  const [f,setF]=useState(null),[aud,setAud]=useState(null),[err,setErr]=useState(null),[busy,setBusy]=useState(false);
+  const set=p=>{setF(x=>({...x,...p}));setErr(null)};
+  const k=f?keyOf(f.subj_name):'';
+  useEffect(()=>{if(!f||k.length<3){setAud(null);return}let ok=true;const t=setTimeout(()=>{api.students(k).then(ps=>{if(!ok)return;const list=(ps||[]).filter(p=>p.uid!==me.uid&&(!f.onlyUni||p.uni===me.uni)&&(!f.years.length||f.years.includes(+p.anio)));setAud(list.length)}).catch(()=>ok&&setAud(null))},400);return()=>{ok=false;clearTimeout(t)}},[k,f&&f.onlyUni,f&&f.years.join(',')]);
+  const matsOf=f?a.mats.filter(m=>m.text&&(subjects.find(s=>s.id===m.subj)||{}).name===f.subj_name):[];
+  const publish=async()=>{
+    if(f.title.trim().length<5)return setErr('Escribí un título claro (ej: "Resumen completo de Anatomía, parcial 1").');
+    if(keyOf(f.subj_name).length<3)return setErr('Elegí la materia: así le aparece a quien la cursa.');
+    const price=f.price===''?0:+String(f.price).replace(',','.');if(!(price>=0))return setErr('El precio tiene que ser un número.');
+    if(!contactUrl({...f,title:f.title})&&f.contact_kind!=='otro')return setErr(f.contact_kind==='whatsapp'?'Poné tu WhatsApp con código de país (ej: 59899123456).':f.contact_kind==='instagram'?'Poné tu usuario de Instagram.':f.contact_kind==='email'?'Ese email no parece válido.':'Poné un link que empiece con https://');
+    setBusy(true);
+    const l={id:'l'+gid(),uid:me.uid,seller_name:me.name,seller_uni:me.uni,title:f.title.trim().slice(0,120),kind:f.kind,subj:keyOf(f.subj_name),subj_name:f.subj_name.trim(),topics:f.topics.trim().slice(0,300),unis:f.onlyUni?'|'+keyOf(me.uni)+'|':'',years:f.years.length?'|'+f.years.join('|')+'|':'',carrera:me.carrera,price,currency:f.currency,contact_kind:f.contact_kind==='otro'?'link':f.contact_kind,contact:f.contact.trim().slice(0,200),descr:f.descr.trim().slice(0,1500),preview:f.preview.trim().slice(0,3000),ts:Date.now(),active:true};
+    try{await api.createListing(l);setF(null);onChange();a.toast('Publicado. Ya le aparece a quien cursa '+l.subj_name)}catch(e){setErr('No pude publicar. Probá de nuevo.')}finally{setBusy(false)}
+  };
+  const stat=(id,kind)=>ev.filter(e=>e.listing_id===id&&e.kind===kind).length;
+  const breakdown=id=>{const vs=ev.filter(e=>e.listing_id===id&&e.kind!=='report'),by={};vs.forEach(e=>{const kk=e.anio?e.anio+'.º año':'otros';by[kk]=(by[kk]||0)+1});return Object.entries(by).sort((x,y)=>y[1]-x[1]).slice(0,3).map(([k2,n])=>n+' de '+k2).join(' · ')};
+  const subjOpts=[...new Set([...subjects.map(s=>s.name),...UDELAR_MED.map(c=>c.n)])];
+  return html`<div className="fl" style=${{gap:16}}>
+    ${!f&&html`<div className="card fl" style=${{gap:8}}><b>¿Vendés resúmenes, cursos o clases?</b><span className="mut" style=${{fontSize:13.5}}>Tu publicación le aparece primero a quien está cursando esa materia, y todavía más arriba si el tema le cuesta o tiene el parcial cerca. Podés apuntar a tu facultad y a años específicos.</span><div><button className="btn btn-s btn-sm" onClick=${()=>setF(blank)}><${Icon} n="plus" s=${14}/> Nueva publicación</button></div></div>`}
+    ${f&&html`<div className="card fl" style=${{gap:12}}>
+      <b>Nueva publicación</b>
+      <div><label htmlFor="v-t" style=${{fontWeight:600,fontSize:14}}>Título</label><input id="v-t" placeholder="Ej: Resumen completo de Anatomía · Parcial 1" value=${f.title} onInput=${e=>set({title:e.target.value})} maxLength="120"/></div>
+      <div><div style=${{fontWeight:600,fontSize:14,marginBottom:6}}>Qué vendés</div><div className="chips">${Object.entries(LKIND).map(([kk,v])=>html`<button key=${kk} className="chip" aria-pressed=${f.kind===kk} onClick=${()=>set({kind:kk})}>${v[0]} ${v[1]}</button>`)}</div></div>
+      <div><label htmlFor="v-s" style=${{fontWeight:600,fontSize:14}}>Materia</label><input id="v-s" list="dl-vsub" value=${f.subj_name} onInput=${e=>set({subj_name:e.target.value})} placeholder="Ej: Anatomía Clínica y Bioética"/><datalist id="dl-vsub">${subjOpts.map(x=>html`<option key=${x} value=${x}/>`)}</datalist></div>
+      <div><label htmlFor="v-tp" style=${{fontWeight:600,fontSize:14}}>Temas que incluye</label><input id="v-tp" placeholder="Ej: plexo braquial, corazón, miembro inferior" value=${f.topics} onInput=${e=>set({topics:e.target.value})}/><span className="mut" style=${{fontSize:12}}>Sirven para mostrárselo a quien tiene esos temas flojos.</span></div>
+      <div><div style=${{fontWeight:600,fontSize:14,marginBottom:6}}>A quién mostrárselo</div>
+        <div className="chips">${[1,2,3,4,5,6].map(y=>html`<button key=${y} className="chip" aria-pressed=${f.years.includes(y)} onClick=${()=>set({years:f.years.includes(y)?f.years.filter(x=>x!==y):[...f.years,y].sort()})}>${y}.º año</button>`)}</div>
+        <label className="row" style=${{gap:8,fontSize:13.5,cursor:'pointer',marginTop:8}}><input type="checkbox" checked=${f.onlyUni} onChange=${e=>set({onlyUni:e.target.checked})} style=${{width:18,height:18,flex:'0 0 18px',accentColor:'var(--ink)'}}/> Solo estudiantes de ${me.uni||'mi universidad'}</label>
+        <div className="alertbox" style=${{marginTop:8,background:'var(--t-blue)',fontSize:13.5}}>${aud==null?'Le va a aparecer a quien curse '+(f.subj_name||'esa materia')+(f.years.length?' en '+f.years.join(', ')+'.º año':'')+'.':html`Público estimado: <b>${aud}</b> estudiante${aud===1?'':'s'} cursando ${f.subj_name}${f.years.length?' en '+f.years.join(', ')+'.º año':''}${f.onlyUni?' en tu facultad':''}${api.online?'':' (modo demo)'}.`}</div></div>
+      <div className="grid2" style=${{gap:12}}><div><label htmlFor="v-p" style=${{fontWeight:600,fontSize:14}}>Precio</label><div className="row" style=${{gap:6}}><select aria-label="Moneda" value=${f.currency} onChange=${e=>set({currency:e.target.value})} style=${{width:'auto',minWidth:86,flex:'0 0 auto'}}>${CUR.map(c=>html`<option key=${c}>${c}</option>`)}</select><input id="v-p" inputMode="decimal" placeholder="0 = gratis" value=${f.price} onInput=${e=>set({price:e.target.value})}/></div></div>
+        <div><div style=${{fontWeight:600,fontSize:14,marginBottom:6}}>Contacto</div><div className="row" style=${{gap:6}}><select aria-label="Tipo de contacto" value=${f.contact_kind} onChange=${e=>set({contact_kind:e.target.value})} style=${{width:'auto',minWidth:124,flex:'0 0 auto'}}><option value="whatsapp">WhatsApp</option><option value="instagram">Instagram</option><option value="email">Email</option><option value="link">Link</option></select><input aria-label="Dato de contacto" placeholder=${{whatsapp:'59899123456',instagram:'@tuusuario',email:'tu@email.com',link:'https://…'}[f.contact_kind]} value=${f.contact} onInput=${e=>set({contact:e.target.value})}/></div></div></div>
+      <div><label htmlFor="v-d" style=${{fontWeight:600,fontSize:14}}>Descripción</label><textarea id="v-d" rows="3" placeholder="Qué incluye, cuántas páginas, cómo lo entregás, horarios de las clases…" value=${f.descr} onInput=${e=>set({descr:e.target.value})} style=${{width:'100%',font:'inherit',padding:12,borderRadius:16,border:'1.5px solid var(--line)',background:'var(--card)',color:'var(--ink)',resize:'vertical'}}></textarea></div>
+      <div><div className="row wrap" style=${{justifyContent:'space-between'}}><label htmlFor="v-pr" style=${{fontWeight:600,fontSize:14}}>Vista previa (opcional)</label>${matsOf.length>0&&html`<select aria-label="Usar un apunte como vista previa" value="" onChange=${e=>{const m=matsOf.find(x=>x.id===e.target.value);if(m)set({preview:m.text.slice(0,1200)+(m.text.length>1200?'…':'')})}} style=${{width:'auto',fontSize:13,padding:'.3rem .7rem'}}><option value="">Usar un apunte…</option>${matsOf.map(m=>html`<option key=${m.id} value=${m.id}>${m.name}</option>`)}</select>`}</div>
+        <textarea id="v-pr" rows="3" placeholder="Un fragmento o el índice, para que vean cómo es" value=${f.preview} onInput=${e=>set({preview:e.target.value})} style=${{width:'100%',font:'inherit',padding:12,borderRadius:16,border:'1.5px solid var(--line)',background:'var(--card)',color:'var(--ink)',resize:'vertical'}}></textarea></div>
+      ${err&&html`<div className="alertbox" role="alert" style=${{background:'var(--t-rose)'}}>${err}</div>`}
+      <div className="row wrap"><button className="btn btn-s" disabled=${busy} onClick=${publish}>${busy?'Publicando…':'Publicar'}</button><button className="btn" onClick=${()=>setF(null)}>Cancelar</button></div>
+      <p className="mut" style=${{fontSize:12}}>Tu nombre, universidad y el contacto que pongas van a ser visibles. Publicá solo material propio o que tengas derecho a vender.</p></div>`}
+    <h2 style=${{fontSize:20,fontWeight:600}}>Mis publicaciones</h2>
+    ${mine===null?html`<p className="mut">Cargando…</p>`:mine.length===0?html`<p className="mut">Todavía no publicaste nada.</p>`:mine.map(l=>html`<div key=${l.id} className="card fl" style=${{gap:8,opacity:l.active?1:.6}}>
+      <div className="row wrap" style=${{justifyContent:'space-between'}}><b>${(LKIND[l.kind]||LKIND.otro)[0]} ${l.title}</b><span className="mut" style=${{fontSize:12.5}}>${l.subj_name}${l.years?' · '+l.years.split('|').filter(Boolean).join(', ')+'.º año':''}${l.unis?' · tu facultad':''}</span></div>
+      <div className="row wrap" style=${{gap:16}}><span><b className="num" style=${{fontSize:22}}>${stat(l.id,'view')}</b> <span className="mut" style=${{fontSize:13}}>vistas</span></span><span><b className="num" style=${{fontSize:22}}>${stat(l.id,'click')}</b> <span className="mut" style=${{fontSize:13}}>contactos</span></span>${breakdown(l.id)&&html`<span className="mut" style=${{fontSize:12.5,alignSelf:'center'}}>${breakdown(l.id)}</span>`}</div>
+      <div className="row wrap" style=${{gap:8}}><button className="btn btn-sm" onClick=${async()=>{await api.updateListing(l.id,{active:!l.active}).catch(()=>{});onChange()}}>${l.active?'Pausar':'Reactivar'}</button><button className="btn btn-sm btn-g" onClick=${async()=>{if(!confirm('¿Borrar "'+l.title+'"?'))return;await api.deleteListing(l.id).catch(()=>{});onChange()}}>Borrar</button></div></div>`)}
+  </div>`;
+}
+
 function Match({a}){
   const {subjects,prefs,user}=a;
-  const cfg=grpCfg.get();
-  const api=useMemo(()=>cfg&&cfg.url&&cfg.key?sbApi(cfg):demoApi(subjects),[cfg&&cfg.url,cfg&&cfg.key,subjects.length]);
-  const me=useMemo(()=>({uid:uidOf(user.email),name:user.nombre,uni:prefs.uni||user.uni,carrera:prefs.carrera,anio:prefs.anio,slot:prefs.from<12?'Mañana':prefs.from<18?'Tarde':'Noche',note:'',subjects:'|'+subjects.map(s=>keyOf(s.name)).join('|')+'|',ts:Date.now()}),[user.email,subjects]);
+  const api=useApi(subjects),me=useMe(a);
   const [sid,setSid]=useState(subjects[0].id),[ppl,setPpl]=useState(null),[grs,setGrs]=useState(null),[mine,setMine]=useState([]),[open,setOpen]=useState(null),[form,setForm]=useState(null),[err,setErr]=useState(null),[tick,setTick]=useState(0);
   const s=subjects.find(x=>x.id===sid)||subjects[0],k=keyOf(s.name);
   useEffect(()=>{api.upsertMe(me).catch(()=>{})},[api,me]);
@@ -1536,7 +1710,7 @@ Período refractario. Durante el período refractario absoluto no se genera otro
 Sinapsis química. El potencial llega al terminal presináptico, entra Ca2+, las vesículas hacen exocitosis y el neurotransmisor se une al receptor postsináptico. Puede ser excitatoria (PEPS) o inhibitoria (PIPS). Importante: la sumación temporal y espacial decide si se dispara el potencial en la neurona postsináptica.`},
 {id:'ex2',subj:'fis',kind:'examen',name:'Parcial Fisiología 2025-2 (ejemplo)',size:700,status:'ok',example:true,text:`Parcial de Fisiología. 1) Describa las fases del potencial de acción y qué canales participan en cada una. 2) ¿Por qué el período refractario absoluto impide la sumación de potenciales de acción? 3) Explique la sinapsis química y la diferencia entre un PEPS y un PIPS. 4) Verdadero o falso: la bomba Na+/K+ genera por sí sola el potencial de reposo. 5) Calcule el potencial de equilibrio del K+ con la ecuación de Nernst si [K+] interno es 140 mM y externo 5 mM.`}
 ];
-const SECOND=['ejercicios','simulador','logros','match','rescate'];
+const SECOND=['ejercicios','simulador','logros','match','tienda','rescate'];
 function Main({user,isNew,onUser}){
   const sv=useRef(null);if(!sv.current)sv.current=loadData(user.email)||{};const SV=sv.current,warned=useRef(false);
   const [tab,setTab]=useState('ahora'),[onb,setOnb]=useState(!!isNew),[tutorTopic,setTutorTopic]=useState(null),[msg,setMsg]=useState(null);
@@ -1620,6 +1794,7 @@ function Main({user,isNew,onUser}){
       ${tab==='simulador'&&html`<div className="sec"><${Simulador} a=${A}/></div>`}
       ${tab==='logros'&&html`<div className="sec"><${Logros} a=${A}/></div>`}
       ${tab==='match'&&html`<div className="sec"><${Match} a=${A}/></div>`}
+      ${tab==='tienda'&&html`<div className="sec"><${Tienda} a=${A}/></div>`}
       ${tab==='rescate'&&html`<div className="sec"><${Rescate} a=${A}/></div>`}
     </main>
     <nav className="dock" aria-label="Principal"><div className="brand"><span className="logo">N</span>Nexus</div><div className="pill">${NAV.map(([k,l,ic])=>html`<button key=${k} className="dk" aria-current=${cur===k?'page':null} onClick=${()=>setTab(k)}><${Icon} n=${ic} s=${21}/><span>${l}</span></button>`)}</div><div className="round"><button className="dk" aria-current=${cur==='tutor'?'page':null} onClick=${()=>setTab('tutor')}><${Icon} n="msg" s=${21}/><span>Tutor</span></button></div><button className="me" onClick=${A.openPerfil} aria-label="Mi perfil"><span className="av">${initials(user.nombre)}</span><span style=${{minWidth:0}}><b style=${{fontSize:14,display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:130}}>${user.nombre.split(' ')[0]}</b><small>${user.uni.replace(/\s*\(.*\)/,'')}</small></span></button></nav>
