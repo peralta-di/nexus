@@ -1,17 +1,13 @@
-// Lógica de cobros de Nexus con Mercado Pago (Marketplace + suscripciones).
+// Lógica de pagos de la Tienda de Nexus con Mercado Pago. Nexus es gratuito: no hay suscripción ni comisión.
 // Sin dependencias: solo fetch y Web Crypto, para que corra en Supabase Edge Functions (Deno).
 //
 // Variables de entorno (supabase secrets set ...):
-//   MP_ACCESS_TOKEN    access token de producción de TU cuenta de Mercado Pago (cobra suscripciones y recibe comisiones)
 //   MP_CLIENT_ID       client id de tu aplicación de Mercado Pago (para conectar cuentas de vendedores)
 //   MP_CLIENT_SECRET   client secret de esa aplicación
 //   SITE_URL           dirección pública de Nexus, por ejemplo https://nexus.netlify.app/
 //   STATE_SECRET       una frase larga al azar (firma el pedido de conexión de Mercado Pago)
-//   COMISION           opcional, por defecto 0.10 (10 %)
-//   SUB_PRECIO         opcional, por defecto 400
-//   SUB_MONEDA         opcional, por defecto UYU
-//   PRUEBA_DIAS        opcional, por defecto 7 (días gratis desde que se suscribe; el primer cobro es al terminar)
-//   (La suscripción se cobra con MP_ACCESS_TOKEN: el dinero va directo a esa cuenta de Mercado Pago.)
+//   COMISION           opcional, por defecto 0 (sin comisión). Si algún día querés cobrar una, por ejemplo 0.10 = 10 %
+// Cada venta va entera a la cuenta de Mercado Pago de quien vende.
 // SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY las pone Supabase solo.
 
 type Json = Record<string, any>;
@@ -26,10 +22,7 @@ const num = (k: string, d: number) => {
   return Number.isFinite(v) ? v : d;
 };
 export const cfg = () => ({
-  comision: num("COMISION", 0.1),
-  precio: num("SUB_PRECIO", 400),
-  moneda: env("SUB_MONEDA", "UYU"),
-  prueba: num("PRUEBA_DIAS", 7),
+  comision: num("COMISION", 0),
   site: env("SITE_URL").replace(/\/?$/, "/"),
 });
 
@@ -128,37 +121,6 @@ async function sellerToken(authId: string): Promise<string | null> {
   return s.access_token;
 }
 
-/* ---------- Suscripción ---------- */
-/* Para usar la app hay que suscribirse. La primera suscripción trae una semana gratis:
-   se carga el medio de pago en Mercado Pago y el primer cobro es a los PRUEBA_DIAS días. */
-async function subStatus(u: User) {
-  const sub = await one("subscriptions?select=*&auth_id=eq." + enc(u.id));
-  const now = Date.now();
-  const paidUntil = sub && sub.paid_until ? new Date(sub.paid_until).getTime() : 0;
-  const auto = !!sub && sub.status === "authorized";
-  const te = sub && sub.trial_ends_at ? new Date(sub.trial_ends_at).getTime() : 0;
-  return {
-    trial_available: !sub || !sub.trial_used,
-    trial_ends_at: te ? new Date(te).toISOString() : null,
-    in_trial: auto && te > now,
-    subscription: sub ? { status: sub.status, next_payment_date: sub.next_payment_date, paid_until: sub.paid_until || null } : null,
-    active: auto || paidUntil > now,
-  };
-}
-async function syncPreapproval(id: string) {
-  const p = await mp("/preapproval/" + enc(id), env("MP_ACCESS_TOKEN"));
-  if (!p || !p.external_reference) return;
-  await db("subscriptions?on_conflict=auth_id", {
-    method: "POST", prefer: "resolution=merge-duplicates,return=minimal",
-    body: {
-      auth_id: p.external_reference, email: p.payer_email || null, status: p.status, mp_preapproval_id: String(p.id),
-      next_payment_date: p.next_payment_date || null, updated_at: new Date().toISOString(),
-      // La semana gratis se usa una sola vez: cuenta desde que Mercado Pago autoriza la suscripción.
-      ...(p.status === "authorized" ? { trial_used: true } : {}),
-    },
-  });
-}
-
 /* ---------- Función "pagos": la llama la página con la sesión de la persona ---------- */
 export async function handlePagos(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -172,58 +134,7 @@ export async function handlePagos(req: Request): Promise<Response> {
     switch (b.action) {
       case "status": {
         const seller = await one("sellers?select=auth_id&auth_id=eq." + enc(u.id));
-        return json({ ...(await subStatus(u)), seller_connected: !!seller, comision: c.comision, precio: c.precio, moneda: c.moneda, prueba: c.prueba });
-      }
-      case "subscribe": {
-        const st = await subStatus(u);
-        if (st.subscription && st.subscription.status === "authorized") return json({ already: true });
-        // Primera vez: semana gratis y el primer cobro al terminarla. Si ya la usó: se cobra al terminar lo ya pagado (o enseguida).
-        const paidUntil = st.subscription && st.subscription.paid_until ? new Date(st.subscription.paid_until).getTime() : 0;
-        const trialEnd = st.trial_available ? Date.now() + c.prueba * 864e5 : 0;
-        const start = new Date(Math.max(trialEnd, paidUntil, Date.now() + 10 * 60e3));
-        const p = await mp("/preapproval", env("MP_ACCESS_TOKEN"), {
-          method: "POST",
-          body: {
-            reason: "Suscripción mensual a Nexus", external_reference: u.id, payer_email: u.email,
-            back_url: c.site + "?r=suscripcion", status: "pending",
-            auto_recurring: { frequency: 1, frequency_type: "months", transaction_amount: c.precio, currency_id: c.moneda, start_date: start.toISOString() },
-          },
-        });
-        await db("subscriptions?on_conflict=auth_id", {
-          method: "POST", prefer: "resolution=merge-duplicates,return=minimal",
-          body: {
-            auth_id: u.id, email: u.email, status: p.status || "pending", mp_preapproval_id: String(p.id), updated_at: new Date().toISOString(),
-            ...(trialEnd ? { trial_ends_at: new Date(trialEnd).toISOString() } : {}),
-          },
-        });
-        return json({ url: p.init_point, trial_ends_at: trialEnd ? new Date(trialEnd).toISOString() : null, first_charge: start.toISOString() });
-      }
-      case "cancel_subscription": {
-        const sub = await one("subscriptions?select=*&auth_id=eq." + enc(u.id));
-        if (!sub || !sub.mp_preapproval_id || sub.status === "cancelled") return json({ ok: true, nothing: true });
-        // Lo ya pagado se respeta: sigue con acceso hasta la fecha del próximo cobro, que ya no se hace.
-        const keep = [sub.paid_until, sub.status === "authorized" ? sub.next_payment_date : null]
-          .map((d) => (d ? new Date(d).getTime() : 0)).reduce((a, b) => Math.max(a, b), 0);
-        await mp("/preapproval/" + enc(sub.mp_preapproval_id), env("MP_ACCESS_TOKEN"), { method: "PUT", body: { status: "cancelled" } });
-        await syncPreapproval(sub.mp_preapproval_id);
-        if (keep > Date.now()) await db("subscriptions?auth_id=eq." + enc(u.id), { method: "PATCH", prefer: "return=minimal", body: { paid_until: new Date(keep).toISOString() } });
-        return json({ ok: true, access_until: keep > Date.now() ? new Date(keep).toISOString() : null });
-      }
-      case "pay_month": {
-        // Un mes por adelantado: tarjeta de crédito, débito o dinero en Mercado Pago (sin efectivo). Va a la cuenta de MP_ACCESS_TOKEN.
-        const pref = await mp("/checkout/preferences", env("MP_ACCESS_TOKEN"), {
-          method: "POST",
-          body: {
-            items: [{ id: "nexus-mes", title: "Nexus · 1 mes de suscripción", quantity: 1, unit_price: c.precio, currency_id: c.moneda }],
-            external_reference: "sub|" + u.id,
-            payer: { email: u.email },
-            payment_methods: { excluded_payment_types: [{ id: "ticket" }, { id: "atm" }], installments: 1 },
-            back_urls: { success: c.site + "?r=suscripcion", pending: c.site + "?r=suscripcion", failure: c.site + "?r=compra-error" },
-            auto_return: "approved",
-            notification_url: SB() + "/functions/v1/mp-webhook?kind=sub",
-          },
-        });
-        return json({ url: pref.init_point });
+        return json({ active: true, seller_connected: !!seller, comision: c.comision });
       }
       case "connect": {
         const url = "https://auth.mercadopago.com/authorization?client_id=" + enc(env("MP_CLIENT_ID")) +
@@ -242,7 +153,7 @@ export async function handlePagos(req: Request): Promise<Response> {
           method: "POST",
           body: {
             items: [{ id: l.id, title: String(l.title).slice(0, 250), quantity: 1, unit_price: price, currency_id: l.currency || "UYU" }],
-            marketplace_fee: round2(price * c.comision),
+            ...(c.comision > 0 ? { marketplace_fee: round2(price * c.comision) } : {}),
             // Tarjeta de crédito, débito o dinero en Mercado Pago; sin efectivo (tarda días y demoraría la entrega).
             payment_methods: { excluded_payment_types: [{ id: "ticket" }, { id: "atm" }] },
             external_reference: l.id + "|" + u.id,
@@ -272,12 +183,8 @@ export async function handlePagos(req: Request): Promise<Response> {
         return json({ url, file_name: p?.file_name || null, contact_kind: p?.contact_kind || null, contact: p?.contact || null });
       }
       case "delete_account": {
-        // Derecho de supresión (Ley 18.331): se cancela la suscripción y se borran los datos de la persona.
-        // Se conservan solo los registros de pagos (sales, sub_payments) que exigen las normas contables y fiscales.
-        const sub = await one("subscriptions?select=*&auth_id=eq." + enc(u.id));
-        if (sub && sub.mp_preapproval_id && sub.status !== "cancelled") {
-          try { await mp("/preapproval/" + enc(sub.mp_preapproval_id), env("MP_ACCESS_TOKEN"), { method: "PUT", body: { status: "cancelled" } }); } catch (e) { console.error(e); }
-        }
+        // Derecho de supresión (Ley 18.331): se borran los datos de la persona.
+        // Se conservan solo los registros de compras y ventas (sales) que pueden exigir las normas contables y fiscales.
         const del = (path: string) => db(path, { method: "DELETE", prefer: "return=minimal" });
         await del("reminders?auth_id=eq." + enc(u.id));
         await del("listings?owner_auth=eq." + enc(u.id)); // listing_private se borra en cascada
@@ -340,28 +247,6 @@ export async function handleWebhook(req: Request): Promise<Response> {
   if (!id) return json({ ok: true });
   const c = cfg();
   try {
-    if (topic === "payment" && !u.searchParams.get("seller")) {
-      // Pago de "1 mes" de suscripción, cobrado con la cuenta de Nexus.
-      const p = await mp("/v1/payments/" + enc(id), env("MP_ACCESS_TOKEN"));
-      const [k, authId] = String(p.external_reference || "").split("|");
-      if (k !== "sub" || !authId) return json({ ok: true, ignored: "reference" });
-      if (p.status !== "approved" || round2(Number(p.transaction_amount) || 0) + 0.01 < c.precio || (p.currency_id && p.currency_id !== c.moneda)) return json({ ok: true, ignored: "status" });
-      // Cada pago suma un mes una sola vez, aunque Mercado Pago repita el aviso.
-      const ins = await db("sub_payments?on_conflict=mp_payment_id", {
-        method: "POST", prefer: "resolution=ignore-duplicates,return=representation",
-        body: { mp_payment_id: String(p.id), auth_id: authId, amount: Number(p.transaction_amount), currency: p.currency_id || c.moneda },
-      });
-      if (!ins || !ins.length) return json({ ok: true, duplicate: true });
-      const sub = await one("subscriptions?select=*&auth_id=eq." + enc(authId));
-      let base = Date.now();
-      if (sub && sub.paid_until) base = Math.max(base, new Date(sub.paid_until).getTime());
-      const until = new Date(base); until.setMonth(until.getMonth() + 1);
-      await db("subscriptions?on_conflict=auth_id", {
-        method: "POST", prefer: "resolution=merge-duplicates,return=minimal",
-        body: { auth_id: authId, email: p.payer?.email || sub?.email || null, status: sub?.status === "authorized" ? "authorized" : "paid", paid_until: until.toISOString(), updated_at: new Date().toISOString() },
-      });
-      return json({ ok: true });
-    }
     if (topic === "payment") {
       const seller = u.searchParams.get("seller") || "";
       const token = seller ? await sellerToken(seller) : null;
@@ -381,15 +266,6 @@ export async function handleWebhook(req: Request): Promise<Response> {
           status: okAmount ? p.status : "amount_mismatch", updated_at: new Date().toISOString(),
         },
       });
-      return json({ ok: true });
-    }
-    if (topic === "subscription_preapproval" || topic === "preapproval") {
-      await syncPreapproval(id);
-      return json({ ok: true });
-    }
-    if (topic === "subscription_authorized_payment") {
-      const ap = await mp("/authorized_payments/" + enc(id), env("MP_ACCESS_TOKEN"));
-      if (ap && ap.preapproval_id) await syncPreapproval(ap.preapproval_id);
       return json({ ok: true });
     }
     return json({ ok: true, ignored: topic });

@@ -241,7 +241,7 @@ h1,h2,h3{font-family:'DM Sans',sans-serif}
 <script>
 /* ---------- IA propia (solo fuera de claude.ai): clave de Anthropic de la persona ---------- */
 const STANDALONE=!(window.claude&&window.claude.use);
-/* Vista previa en Claude: muestra suscripción y recordatorios en modo demo (pagos y emails simulados) */
+/* Vista previa en Claude: muestra recordatorios y Tienda en modo demo (pagos y emails simulados) */
 const PREVIEW=false;
 const SHOW_PAY=STANDALONE||PREVIEW;
 const aiKey={get:()=>{try{return localStorage.getItem('ea-key')||''}catch(e){return ''}},set:k=>{try{k?localStorage.setItem('ea-key',k):localStorage.removeItem('ea-key')}catch(e){}window.dispatchEvent(new Event('ea-ai'))}};
@@ -630,7 +630,6 @@ function Ahora({a}){
     <div className="row" style=${{justifyContent:'space-between',alignItems:'flex-start'}}>
       <div className="grow"><h1 style=${{fontSize:'clamp(28px,8vw,34px)',fontWeight:700}}>${DNF[d0.getDay()]} ${d0.getDate()}</h1><p className="mut" style=${{fontSize:14,marginTop:2}}>${todayS.length?`${todayS.filter(b=>!b.done).length} de ${todayS.length} bloques pendientes`:'Tus próximos bloques'}</p></div>
       <div className="row" style=${{gap:8}}><button className="ibtn meav" onClick=${a.openPerfil} aria-label="Mi perfil" style=${{padding:0,background:'transparent',overflow:'hidden'}}><${Av} u=${a.user} size=${42}/></button><button className="ibtn monly" onClick=${a.openOnb} aria-label="Configuración"><${Icon} n="settings" s=${19}/></button><button className="ibtn" onClick=${a.flipTheme} aria-label=${a.isDark?'Modo claro':'Modo oscuro'}><${Icon} n=${a.isDark?'sun':'moon'} s=${19}/></button></div></div>
-    ${SHOW_PAY&&a.sub&&a.sub.in_trial&&html`<button className="alertbox" onClick=${a.openPerfil} style=${{textAlign:'left',border:0,width:'100%',color:'var(--ink)',background:'var(--t-mint)',fontSize:13.5}}>Semana gratis: te quedan <b>${daysLeft(a.sub.trial_ends_at)} días</b>. El primer cobro de $${PAGOS.precio} es el ${fdate(a.sub.trial_ends_at)}.</button>`}
     ${a.rescue&&html`<div className="alertbox row wrap" style=${{justifyContent:'space-between'}}><span className="row"><${Icon} n="alert"/> <b>Modo Rescate activo</b></span><button className="btn btn-sm" onClick=${a.stopRescue}>Desactivar</button></div>`}
     ${hero}
     <div className="donly fl" style=${{gap:14}}>
@@ -1365,7 +1364,7 @@ const LEGAL={
 };
 const LEGAL_V='2026-10-06';
 const LEGAL_FECHA='6 de octubre de 2026';
-const legalDocs=()=>{const L=LEGAL,P=PAGOS;
+const legalDocs=()=>{const L=LEGAL;
   const quien=L.titular+(L.comercial?' (nombre comercial: '+L.comercial+')':'')+(L.documento?', '+L.documento:'');
   const dom=L.domicilio?L.domicilio:'Uruguay';
   const trib=L.departamento?'los tribunales de '+L.departamento:'los tribunales de la República Oriental del Uruguay';
@@ -1377,7 +1376,7 @@ Nexus es una plataforma web de apoyo al estudio universitario. Su titular es ${q
 Estos Términos y condiciones regulan el uso de Nexus. Al crear una cuenta o al iniciar sesión, y marcar la casilla de aceptación, declarás que los leíste, que los entendés y que los aceptás, junto con la **Política de privacidad**. Si no estás de acuerdo, no uses Nexus.
 
 ## 2. Quién puede usar Nexus
-- Tenés que tener **18 años o más**. Si tenés entre 13 y 17 años, solo podés usar Nexus con la autorización de tu madre, padre o tutor, que acepta estos términos en tu nombre y es responsable de los pagos.
+- Tenés que tener **18 años o más**. Si tenés entre 13 y 17 años, solo podés usar Nexus con la autorización de tu madre, padre o tutor, que acepta estos términos en tu nombre y es responsable de las compras que hagas en la Tienda.
 - Los datos que ingresás tienen que ser verdaderos y estar actualizados.
 - La cuenta es personal: no la compartas ni la vendas. Sos responsable de cuidar tu contraseña y de lo que se haga con tu cuenta. Si creés que alguien entró sin permiso, avisanos.
 
@@ -1387,23 +1386,17 @@ Nexus ofrece, entre otras funciones: un plan de estudio y calendario, un tutor c
 - No garantizamos resultados académicos: tu rendimiento depende de tu estudio.
 - Algunas funciones pueden estar en etapa de prueba o "modo demo" y se indican así en la página.
 
-## 4. Suscripción, semana gratis y pagos
-- **Para usar Nexus hay que tener una suscripción activa.** El precio es de **$${P.precio} (pesos uruguayos) por mes**. Los precios publicados son precios finales.
-- **Semana gratis:** la primera vez que te suscribís tenés ${P.prueba} días gratis. Para activarla cargás un medio de pago en Mercado Pago, pero **ese día no se te cobra nada**. El primer cobro se hace al terminar la semana gratis y después se **renueva automáticamente cada mes** en la misma fecha, hasta que canceles. La semana gratis se da una sola vez por persona.
-- **Medios de pago:** los pagos se procesan a través de Mercado Pago (tarjeta de crédito, tarjeta de débito o dinero en cuenta, según lo que Mercado Pago habilite). Nexus **no ve ni guarda** los datos de tu tarjeta. También podés pagar un mes por adelantado sin renovación automática ("Pagar 1 mes").
-- **Cancelación:** podés cancelar en cualquier momento desde **Mi perfil → Mi suscripción**. Si cancelás durante la semana gratis no se te cobra nada. Si cancelás después, no se te vuelve a cobrar y mantenés el acceso hasta el final del período que ya pagaste. Salvo lo previsto en el punto 5 o en la ley, no se devuelven proporcionalmente los días no usados.
-- **Cambios de precio:** si cambiamos el precio te avisamos por email y en la página con al menos 30 días de anticipación. Si no estás de acuerdo podés cancelar antes de que se aplique.
-- **Falta de pago:** si Mercado Pago no puede cobrar la renovación, la suscripción queda suspendida hasta que se regularice.
+## 4. Nexus es gratuito
+- **Usar Nexus no tiene costo:** no hay suscripción, ni período de prueba, ni cobros automáticos.
+- Nexus **no cobra comisión** por las ventas de la Tienda: lo que paga quien compra va entero a quien vende.
+- Si en el futuro decidimos cobrar por alguna función, te avisaremos con al menos 30 días de anticipación, te mostraremos el precio antes de cobrarte nada y solo se te cobrará si lo aceptás expresamente.
 
 ## 5. Derecho de arrepentimiento (Ley 17.250)
-De acuerdo con el artículo 16 de la Ley 17.250 de Defensa del Consumidor, en las contrataciones hechas por internet tenés derecho a **arrepentirte dentro de los 5 días hábiles** siguientes a la contratación o al primer cobro, a tu elección, sin dar explicaciones y sin costo.
-- **Cómo hacerlo:** escribinos a ${L.email} con el asunto "Arrepentimiento", indicando el email de tu cuenta. También cancelá la suscripción desde Mi perfil.
-- Te devolvemos lo cobrado por el mismo medio de pago dentro de los 10 días hábiles siguientes a tu pedido.
-- Para las compras de la **Tienda** rige el punto 6.
+De acuerdo con el artículo 16 de la Ley 17.250 de Defensa del Consumidor, en las compras hechas por internet tenés derecho a **arrepentirte dentro de los 5 días hábiles** siguientes a la compra, sin dar explicaciones y sin costo. En la Tienda, este derecho lo ejercés frente al vendedor (ver punto 6); si no te responde, escribinos a ${L.email} con el asunto "Arrepentimiento" y colaboramos para resolverlo.
 
 ## 6. Tienda de material
-- **Rol de Nexus:** la Tienda permite que estudiantes ("vendedores") ofrezcan resúmenes, cursos, clases y otro material a otros estudiantes ("compradores"). Nexus **no es el vendedor**: brinda el espacio y el sistema de cobro. El contrato de compraventa o de servicio es entre el vendedor y el comprador.
-- **Comisión:** por cada venta pagada a través de Nexus, Nexus retiene una comisión del **${Math.round(P.comision*100)} %** del precio. Mercado Pago la separa automáticamente al momento del cobro y el resto se acredita en la cuenta de Mercado Pago del vendedor. Mercado Pago puede cobrar además sus propias tarifas. El material gratis no paga comisión.
+- **Rol de Nexus:** la Tienda permite que estudiantes ("vendedores") ofrezcan resúmenes, cursos, clases y otro material a otros estudiantes ("compradores"). Nexus **no es el vendedor**: brinda el espacio de forma gratuita y el acceso al cobro con Mercado Pago. El contrato de compraventa o de servicio es entre el vendedor y el comprador.
+- **Sin comisión:** Nexus no cobra comisión. El pago se acredita completo en la cuenta de Mercado Pago del vendedor; Mercado Pago puede cobrarle sus propias tarifas.
 - **Obligaciones del vendedor:** publicar solo material **propio o sobre el que tenga derecho a vender**; describirlo de forma veraz (contenido, extensión, formato, fecha de entrega o de las clases); entregar lo vendido; responder consultas y reclamos; y cumplir con sus propias obligaciones fiscales. El vendedor es el único responsable por lo que publica y vende.
 - **Está prohibido publicar:** material de terceros sin autorización (por ejemplo, libros, diapositivas, apuntes o grabaciones de docentes); evaluaciones, parciales o exámenes que no hayan sido publicados oficialmente o que estén en curso; datos personales de otras personas, incluidos datos de pacientes; contenido ilegal, engañoso, ofensivo o que facilite el fraude académico.
 - **Compras:** el pago se hace dentro de Nexus con Mercado Pago. El archivo y el contacto del vendedor se habilitan cuando el pago queda aprobado, en "Mis compras". No pagues por fuera de Nexus.
@@ -1434,16 +1427,16 @@ Podés denunciar conductas inadecuadas escribiéndonos. Podemos eliminar conteni
 - Cuando usás la opción "Seguir en Claude" o Nexus dentro de Claude, también se aplican los términos de Anthropic y usás tu propia cuenta de Claude.
 
 ## 11. Recordatorios y comunicaciones
-Los recordatorios por email son opcionales: los activás y desactivás desde Mi perfil o con el enlace incluido en cada email. Además podemos enviarte emails necesarios sobre tu cuenta, tus pagos o cambios en estos términos.
+Los recordatorios por email son opcionales: los activás y desactivás desde Mi perfil o con el enlace incluido en cada email. Además podemos enviarte emails necesarios sobre tu cuenta, tus compras o ventas, o cambios en estos términos.
 
 ## 12. Disponibilidad del servicio
-Hacemos lo posible para que Nexus funcione bien y sin interrupciones, pero puede haber fallas, mantenimientos o cambios. Podemos agregar, modificar o quitar funciones. Si eliminamos una función paga esencial, te avisamos y podés cancelar.
+Hacemos lo posible para que Nexus funcione bien y sin interrupciones, pero puede haber fallas, mantenimientos o cambios. Podemos agregar, modificar o quitar funciones.
 
 ## 13. Responsabilidad
 En la medida permitida por la ley y **sin afectar los derechos que te reconoce la Ley 17.250 de Defensa del Consumidor**, Nexus no es responsable por: el contenido que publican otros usuarios; las compras, ventas y servicios entre usuarios de la Tienda; decisiones que tomes en base a respuestas del tutor con IA; ni fallas de servicios de terceros (Mercado Pago, proveedores de internet o de alojamiento) ajenas a nuestro control.
 
 ## 14. Baja de la cuenta
-- Podés borrar tu cuenta cuando quieras desde **Mi perfil → Borrar mi cuenta**. Antes cancelá la suscripción si está activa.
+- Podés borrar tu cuenta cuando quieras desde **Mi perfil → Borrar mi cuenta**.
 - Podemos suspender o dar de baja una cuenta que incumpla gravemente estos términos, avisándote los motivos.
 
 ## 15. Cambios en estos términos
@@ -1468,7 +1461,7 @@ Tratamos tus datos de acuerdo con la Ley 18.331 de Protección de Datos Personal
 - **Material que subís:** apuntes, resúmenes, parciales, fotos y el texto que se extrae de ellos.
 - **Comunicaciones:** grupos a los que te unís, mensajes y archivos que enviás.
 - **Tienda:** publicaciones, compras, ventas y estadísticas de vistas y contactos.
-- **Pagos:** estado de tu suscripción y de tus compras y ventas, montos, fechas e identificadores de Mercado Pago. **Nunca recibimos los datos de tu tarjeta**: los procesa Mercado Pago.
+- **Pagos de la Tienda:** estado de tus compras y ventas, montos, fechas e identificadores de Mercado Pago. **Nunca recibimos los datos de tu tarjeta**: los procesa Mercado Pago. Nexus no cobra suscripción.
 - **Recordatorios:** horarios elegidos, zona horaria y próximos bloques de estudio.
 - **Datos técnicos:** la información que se guarda en el almacenamiento de tu navegador para que la página funcione, y los datos que cualquier sitio web recibe al cargarse (dirección IP, tipo de navegador). No usamos cookies de publicidad ni herramientas de rastreo, y las letras y librerías de Nexus se sirven desde el propio sitio, sin Google Fonts ni otras redes de terceros.
 
@@ -1476,7 +1469,7 @@ Tratamos tus datos de acuerdo con la Ley 18.331 de Protección de Datos Personal
 - Crear y administrar tu cuenta y verificar tu email.
 - Armar tu plan de estudio, generar guías, ejercicios y respuestas del tutor.
 - Permitir los grupos, el chat, los mensajes y la Tienda.
-- Cobrar la suscripción y las ventas, y cumplir con obligaciones contables y fiscales.
+- Registrar las compras y ventas de la Tienda y cumplir con las obligaciones legales que correspondan.
 - Enviarte los recordatorios que activaste y avisos sobre tu cuenta.
 - Prevenir fraudes, abusos e incumplimientos de los Términos.
 No vendemos tus datos ni los usamos para publicidad de terceros.
@@ -1493,7 +1486,7 @@ Tratamos tus datos con tu **consentimiento**, que das al registrarte o iniciar s
 ## 6. Con quién compartimos datos
 No vendemos ni cedemos tus datos. Solo los compartimos con estos proveedores, que los tratan por cuenta nuestra y únicamente para prestar el servicio:
 - **Supabase Inc.** (base de datos, archivos, inicio de sesión y verificación del email). Recibe los datos de tu cuenta, tu perfil, tu plan, tus mensajes, tus grupos, tus publicaciones y los archivos que compartís o vendés. **Los datos se guardan en servidores ubicados en São Paulo, Brasil.** La empresa tiene sede en Estados Unidos.
-- **Mercado Pago** (cobro de la suscripción y de las ventas de la Tienda). Recibe tu email y los datos de cada pago; los datos de tu tarjeta los cargás directamente en Mercado Pago. Opera en **Uruguay** y aplica su propia política de privacidad.
+- **Mercado Pago** (cobro de las compras de la Tienda, que van directo a quien vende). Recibe tu email y los datos de cada pago; los datos de tu tarjeta los cargás directamente en Mercado Pago. Opera en **Uruguay** y aplica su propia política de privacidad.
 - **Resend Inc.** (envío de los códigos de verificación y de los recordatorios). Recibe tu email, tu nombre y el contenido de cada email (por ejemplo, tus próximos bloques de estudio). **Estados Unidos.**
 - **Anthropic PBC** (inteligencia artificial Claude), **solo cuando usás el tutor, la guía, los temarios o los ejercicios con IA dentro de Nexus**. Recibe tu pregunta, datos de tu plan (carrera, materias, temas y fechas) y el fragmento de tu material necesario para responder. **Estados Unidos.** Si usás "Seguir en Claude" o Nexus dentro de Claude, usás tu propia cuenta de Claude y se aplica directamente la política de privacidad de Anthropic.
 - **GitHub Inc.** (alojamiento de la página web). Recibe los datos técnicos de cada visita (dirección IP y navegador). **Estados Unidos.**
@@ -1762,31 +1755,6 @@ function PubProfile({a,p,onClose}){
   </div></div>`;
 }
 const fdate=d=>d?new Date(d).toLocaleDateString('es',{day:'numeric',month:'long'}):'';
-function MiSuscripcion({a}){
-  const [conf,setConf]=useState(false),[busy,setBusy]=useState(false);
-  const sb=a.sub;
-  if(!sb)return html`<div className="card"><b>⭐ Mi suscripción</b><p className="mut" style=${{fontSize:13.5,marginTop:6}}>Cargando…</p></div>`;
-  const x=sb.subscription||{},st=x.status,np=x.next_payment_date,pu=x.paid_until&&new Date(x.paid_until).getTime()>Date.now()?x.paid_until:null;
-  const auto=st==='authorized',pending=st==='pending';
-  const until=(auto&&np)||pu||(sb.in_trial?sb.trial_ends_at:null);
-  const line=auto&&sb.in_trial?html`<b>Semana gratis</b> hasta el ${fdate(sb.trial_ends_at)}<br/>El primer cobro de $${PAGOS.precio} es ese día. Si cancelás antes, no se te cobra nada.`
-    :auto?html`<b>Débito automático activo</b> · $${PAGOS.precio} por mes${np?html`<br/>Próximo cobro: ${fdate(np)}`:''}`
-    :pending?html`<b>Esperando a Mercado Pago</b><br/>Todavía no se confirmó tu débito automático.`
-    :pu?html`<b>${sb.trial_ends_at&&Math.abs(new Date(pu)-new Date(sb.trial_ends_at))<864e5?'Semana gratis hasta el '+fdate(pu):'Pagada hasta el '+fdate(pu)}</b>${st==='cancelled'?html`<br/>Cancelaste el débito automático: no se te cobra más.`:''}`
-    :false?null
-    :html`<b>Sin suscripción activa</b>`;
-  const doCancel=async()=>{setBusy(true);const ok=await a.pay.cancel();setBusy(false);if(ok!==false)setConf(false)};
-  const arrep=html`<details style=${{fontSize:12.5}}><summary className="mut" style=${{cursor:'pointer'}}>¿Te arrepentiste de la compra?</summary><p style=${{marginTop:6}}>Por la Ley 17.250 tenés <b>5 días hábiles</b> desde que contrataste o desde el primer cobro para arrepentirte sin costo. Cancelá la suscripción acá arriba y escribinos a <b style=${{userSelect:'all'}}>${LEGAL.email}</b> con el asunto "Arrepentimiento" y el email de tu cuenta: te devolvemos lo cobrado por Mercado Pago dentro de 10 días hábiles.</p></details>`;
-  return html`<div className="card fl" style=${{gap:10}}><b>⭐ Mi suscripción</b>
-    <div style=${{fontSize:14,lineHeight:1.5}}>${line}</div>
-    <div className="fl" style=${{gap:4}}><span style=${{fontSize:13,fontWeight:600}}>Medios de pago</span><${Medios} auto=${auto||!pu}/>${sb.demo&&html`<span className="mut" style=${{fontSize:12}}>Modo demo: los pagos son simulados.</span>`}</div>
-    ${(auto||pending)?(conf?html`<div className="alertbox fl" style=${{gap:8,background:'var(--t-rose)'}}><span style=${{fontSize:13.5}}>¿Cancelar la suscripción? No se te va a cobrar más${until?' y vas a poder usar Nexus hasta el '+fdate(until):''}.</span><div className="row wrap" style=${{gap:8}}><button className="btn btn-sm btn-s" disabled=${busy} onClick=${doCancel}>${busy?'Cancelando…':'Sí, cancelar'}</button><button className="btn btn-sm" onClick=${()=>setConf(false)}>No, seguir suscripto</button></div></div>`
-      :html`<div className="row wrap" style=${{gap:8}}><button className="btn btn-sm" onClick=${()=>setConf(true)}>Cancelar suscripción</button>${!sb.demo&&html`<button className="btn btn-sm btn-g" onClick=${a.pay.refresh}>Actualizar</button>`}</div>`)
-    :html`<div className="row wrap" style=${{gap:8}}><button className="btn btn-sm btn-s" onClick=${a.pay.subscribe}>Activar débito automático</button><button className="btn btn-sm" onClick=${a.pay.payMonth}>Pagar 1 mes</button>${!sb.demo&&html`<button className="btn btn-sm btn-g" onClick=${a.pay.refresh}>Actualizar</button>`}</div>
-      <span className="mut" style=${{fontSize:12}}>Con débito automático se cobran $${PAGOS.precio} cada mes${sb.trial_available?', con '+PAGOS.prueba+' días gratis al empezar':''}. Con "Pagar 1 mes" pagás una sola vez y no se renueva solo.</span>`}
-    ${arrep}
-  </div>`;
-}
 const REM_DEF=[8,13,17,21];
 const remHours=r=>{const hs=String((r&&r.hours)||'').split(',').map(x=>parseInt(x,10)).filter(h=>h>=0&&h<=23);return hs.length===4?hs:REM_DEF};
 const DIAS=[[1,'L'],[2,'M'],[3,'X'],[4,'J'],[5,'V'],[6,'S'],[0,'D']];
@@ -1837,7 +1805,7 @@ function DatosCard({a}){
     ${lg&&html`<span className="mut" style=${{fontSize:12.5}}>Aceptaste la versión del ${fdate(lg.v)} el ${new Date(lg.at).toLocaleDateString('es')}.</span>`}
     <div><button className="btn btn-sm" onClick=${a.downloadData}>📥 Descargar mis datos</button></div>
     ${!del?html`<div><button className="btn btn-sm btn-g" onClick=${()=>setDel(true)}>Borrar mi cuenta</button></div>`
-    :html`<div className="alertbox fl" style=${{gap:8,background:'var(--t-rose)'}}><b>¿Borrar tu cuenta para siempre?</b><span style=${{fontSize:13.5}}>Se borran tu perfil, tu plan, tus apuntes, tus mensajes y tus publicaciones, y se cancela tu suscripción. No se puede deshacer. Los registros de pagos se conservan solo por obligación legal.</span>
+    :html`<div className="alertbox fl" style=${{gap:8,background:'var(--t-rose)'}}><b>¿Borrar tu cuenta para siempre?</b><span style=${{fontSize:13.5}}>Se borran tu perfil, tu plan, tus apuntes, tus mensajes y tus publicaciones. No se puede deshacer. Los registros de compras y ventas de la Tienda se conservan solo por obligación legal.</span>
       <label className="row" style=${{gap:8,fontSize:13.5,cursor:'pointer'}}><input type="checkbox" checked=${sure} onChange=${e=>setSure(e.target.checked)} style=${{width:18,height:18,flex:'0 0 18px',accentColor:'var(--ink)'}}/> Entiendo que no se puede recuperar</label>
       <div className="row wrap" style=${{gap:8}}><button className="btn btn-sm btn-s" disabled=${!sure||busy} onClick=${async()=>{setBusy(true);const ok=await a.deleteAccount();if(!ok)setBusy(false)}}>${busy?'Borrando…':'Sí, borrar mi cuenta'}</button><button className="btn btn-sm" onClick=${()=>{setDel(false);setSure(false)}}>Cancelar</button></div></div>`}
   </div>`;
@@ -1861,7 +1829,6 @@ function Perfil({a,onClose}){
       <div className="row wrap" style=${{gap:6,marginTop:6}}><label htmlFor="pf-photo" className="btn btn-sm" style=${{cursor:'pointer'}}>${u.photo?'Cambiar foto':'Agregar foto'}</label>${u.photo&&html`<button className="btn btn-sm btn-g" onClick=${()=>{a.setPhoto(null);a.toast('Foto quitada')}}>Quitar</button>`}</div></div></div>
     <${BioCard} a=${a}/>
     <div className="card fl" style=${{gap:8,fontSize:14}}><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Universidad</span><b style=${{textAlign:'right'}}>${u.uni}</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Carrera</span><b>${u.carrera}</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Año</span><b>${u.anio}.º</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">País</span><b>${u.pais}</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Estudio por día</span><b>${u.horas||3} h</b></div></div>
-    ${SHOW_PAY&&html`<${MiSuscripcion} a=${a}/>`}
     ${SHOW_PAY&&html`<${Recordatorios} a=${a}/>`}
     ${STANDALONE&&html`<div className="card fl" style=${{gap:8}}><b>✳️ Tu cuenta de Claude</b>
       <span className="mut" style=${{fontSize:13}}>${CLAUDE_APP_URL?'Abrí Nexus dentro de claude.ai: el tutor, la guía, los temas y los ejercicios usan tu propia cuenta de Claude, sin clave. Tu progreso de este navegador no se pasa solo: volvé a subir tus apuntes allá.':'Desde el tutor y tus apuntes podés tocar "Seguir en Claude": se abre claude.ai con tu cuenta y un pedido armado con tu carrera, tus parciales, tus temas flojos y tu material.'}</span>
@@ -1909,8 +1876,8 @@ function Logros({a}){
    · Demo: todo en este navegador, con compañeros de ejemplo, para probar cómo funciona. */
 /* Base Supabase del sitio (la completa quien publica Nexus; ver README). Activa la verificación por email, los grupos, los mensajes y la tienda para todos. */
 const SUPA={url:'',key:''};
-/* Cobros: suscripción mensual obligatoria con 1 semana gratis y comisión por cada venta de la tienda (los valores reales los define el servidor). */
-const PAGOS={precio:400,moneda:'UYU',prueba:7,comision:.10};
+/* Nexus es gratuito: sin suscripción y sin comisión. En la Tienda, cada venta va entera a quien vende (por su Mercado Pago). */
+const PAGOS={comision:0};
 const grpCfg={get:()=>{try{const c=JSON.parse(localStorage.getItem('ea-grp')||'null');if(c)return c}catch(e){}return SUPA.url&&SUPA.key?SUPA:null},set:c=>{try{c?localStorage.setItem('ea-grp',JSON.stringify(c)):localStorage.removeItem('ea-grp')}catch(e){}}};
 const uidOf=email=>{const k='ea-uid-'+email;try{const ac=mailCfg()&&acctLoad()[email];if(ac&&ac.auth_id)return ac.auth_id;let v=localStorage.getItem(k);if(!v){v='u'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);localStorage.setItem(k,v)}return v}catch(e){return 'u'+keyOf(email).replace(/\s/g,'')}};
 /* Verificación del email con código (Supabase Auth: manda un código de 6 dígitos al correo) */
@@ -2176,13 +2143,13 @@ function Tienda({a}){
       await api.buyDemo(l,me.uid);log(l,'click');setBuy(null);setTick(t=>t+1);setTab('compras');a.toast('Compra aprobada (simulada). Ya está en "Mis compras".');
     }catch(e){if(!e||e.code!=='cancelled')setErr(payErr(e))}finally{setBusy(false)}
   };
-  const card=({l,why,n})=>{const free=!(+l.price>0),fee=Math.round((+l.price||0)*PAGOS.comision*100)/100;return html`<div key=${l.id} className="card fl" style=${{gap:8}}>
+  const card=({l,why,n})=>{const free=!(+l.price>0);return html`<div key=${l.id} className="card fl" style=${{gap:8}}>
     <div className="row" style=${{gap:12,alignItems:'flex-start'}}><span className="tile" style=${{width:46,height:46,fontSize:22,flex:'0 0 46px'}}>${(LKIND[l.kind]||LKIND.otro)[0]}</span>
       <div className="grow" style=${{minWidth:0}}><b style=${{fontSize:16,display:'block',overflowWrap:'anywhere'}}>${l.title}</b><span className="mut" style=${{fontSize:12.5}}>${(LKIND[l.kind]||LKIND.otro)[1]} · ${l.subj_name} · <button onClick=${async()=>{const r=await api.profiles([l.uid]).catch(()=>[]);a.showProfile((r&&r[0])||{uid:l.uid,name:l.seller_name,uni:l.seller_uni,carrera:l.carrera})}} style=${{border:0,background:'transparent',padding:0,color:'var(--ink)',textDecoration:'underline',font:'inherit',cursor:'pointer'}}>${l.seller_name}</button>${l.seller_uni?' · '+l.seller_uni:''}</span></div>
       <span className="fl" style=${{alignItems:'flex-end',gap:2}}><b className="num" style=${{whiteSpace:'nowrap',fontSize:16}}>${free?'Gratis':money(l.price,l.currency)}</b>${n>0&&html`<span className="mut num" style=${{fontSize:12,whiteSpace:'nowrap'}}>🔥 ${n} vendido${n===1?'':'s'}</span>`}</span></div>
     ${why&&why.length>0&&html`<div className="chips">${why.slice(0,3).map(w=>html`<span key=${w} className="lvl" style=${{background:'var(--t-mint)',color:'var(--ink)'}}>${w}</span>`)}</div>`}
     ${open===l.id&&html`<div className="fl" style=${{gap:8,fontSize:14}}>${l.descr&&html`<p style=${{whiteSpace:'pre-wrap'}}>${l.descr}</p>`}${l.topics&&html`<p className="mut" style=${{fontSize:13}}>Temas: ${l.topics}</p>`}${l.has_file&&html`<p className="mut" style=${{fontSize:13}}>📎 Incluye un archivo para descargar después de la compra.</p>`}${l.preview&&html`<div style=${{background:'var(--surf)',borderRadius:14,padding:12,fontSize:13,whiteSpace:'pre-wrap',maxHeight:220,overflow:'auto'}}><div className="eyebrow" style=${{marginBottom:4}}>Vista previa</div>${l.preview}</div>`}</div>`}
-    ${buy===l.id&&html`<div className="alertbox fl" style=${{gap:8,background:'var(--t-blue)'}}><b>Pagás ${money(l.price,l.currency)} con Mercado Pago${a.pay.online?'':' (simulado: modo demo)'}.</b><span style=${{fontSize:13}}>Después de pagar vas a poder descargar el material y ver el contacto de ${l.seller_name.replace(' (ejemplo)','')} en "Mis compras". De ese monto, Nexus se queda con el ${Math.round(PAGOS.comision*100)} % (${money(fee,l.currency)}).</span><${Medios}/><div className="row wrap" style=${{gap:8}}><button className="btn btn-s btn-sm" disabled=${busy} onClick=${()=>pay(l)}>${busy?'Abriendo Mercado Pago…':a.pay.online?'Ir a pagar':'Pagar (simulado)'}</button><button className="btn btn-sm btn-g" onClick=${()=>setBuy(null)}>Cancelar</button></div></div>`}
+    ${buy===l.id&&html`<div className="alertbox fl" style=${{gap:8,background:'var(--t-blue)'}}><b>Pagás ${money(l.price,l.currency)} con Mercado Pago${a.pay.online?'':' (simulado: modo demo)'}.</b><span style=${{fontSize:13}}>Después de pagar vas a poder descargar el material y ver el contacto de ${l.seller_name.replace(' (ejemplo)','')} en "Mis compras". El pago va directo a quien vende: Nexus no cobra comisión.</span><${Medios}/><div className="row wrap" style=${{gap:8}}><button className="btn btn-s btn-sm" disabled=${busy} onClick=${()=>pay(l)}>${busy?'Abriendo Mercado Pago…':a.pay.online?'Ir a pagar':'Pagar (simulado)'}</button><button className="btn btn-sm btn-g" onClick=${()=>setBuy(null)}>Cancelar</button></div></div>`}
     <div className="row wrap" style=${{gap:8}}><button className="btn btn-sm" onClick=${()=>view(l.id)}>${open===l.id?'Ver menos':'Ver detalle'}</button>
       ${free?html`<button className="btn btn-sm btn-s" onClick=${()=>{setTab('compras');setTimeout(()=>getIt(l),0)}}>Obtener gratis</button>`:buy!==l.id&&html`<button className="btn btn-sm btn-s" onClick=${()=>{setBuy(l.id);log(l,'view')}}>Comprar · ${money(l.price,l.currency)}</button>`}
       <button className="btn btn-sm" onClick=${()=>a.openDM(l.uid,l.seller_name.replace(' (ejemplo)',''),'Vende: '+l.title)}><${Icon} n="msg" s=${14}/> Preguntar</button>
@@ -2231,7 +2198,7 @@ function Vender({a,api,me,mine,ev,sold,onChange}){
   useEffect(()=>{if(!f||k.length<3){setAud(null);return}let ok=true;const t=setTimeout(()=>{api.students(k).then(ps=>{if(!ok)return;const list=(ps||[]).filter(p=>p.uid!==me.uid&&(!f.onlyUni||p.uni===me.uni)&&(!f.years.length||f.years.includes(+p.anio)));setAud(list.length)}).catch(()=>ok&&setAud(null))},400);return()=>{ok=false;clearTimeout(t)}},[k,f&&f.onlyUni,f&&f.years.join(',')]);
   useEffect(()=>{let ok=true;(async()=>{try{if(a.pay.online){const s=await liveSession(a.user.email);if(!s){if(ok)setSales([]);return}const r=await api.salesOf(s.uid,s.access_token);if(ok)setSales(r||[])}else{const r=await api.salesOf(me.uid);if(ok)setSales(r||[])}}catch(e){if(ok)setSales([])}})();return()=>{ok=false}},[mine]);
   const matsOf=f?a.mats.filter(m=>m.text&&(subjects.find(s=>s.id===m.subj)||{}).name===f.subj_name):[];
-  const priceNum=f?(f.price===''?0:+String(f.price).replace(',','.')):0,feeNum=Math.round(priceNum*PAGOS.comision*100)/100;
+  const priceNum=f?(f.price===''?0:+String(f.price).replace(',','.')):0;
   const publish=async()=>{
     if(f.title.trim().length<5)return setErr('Escribí un título claro (ej: "Resumen completo de Anatomía, parcial 1").');
     if(keyOf(f.subj_name).length<3)return setErr('Elegí la materia: así le aparece a quien la cursa.');
@@ -2257,16 +2224,16 @@ function Vender({a,api,me,mine,ev,sold,onChange}){
     }catch(e){if(!e||e.code!=='cancelled')setErr('No pude publicar. Probá de nuevo.')}finally{setBusy(false)}
   };
   const stat=(id,kind)=>ev.filter(e=>e.listing_id===id&&e.kind===kind).length;
-  const ok=(sales||[]).filter(x=>x.status==='approved'),gross=ok.reduce((x,y)=>x+(+y.amount||0),0),fees=ok.reduce((x,y)=>x+(+y.fee||0),0);
+  const ok=(sales||[]).filter(x=>x.status==='approved'),gross=ok.reduce((x,y)=>x+(+y.amount||0),0);
   const subjOpts=[...new Set([...subjects.map(s=>s.name),...UDELAR_MED.map(c=>c.n)])];
   const ta={width:'100%',font:'inherit',padding:12,borderRadius:16,border:'1.5px solid var(--line)',background:'var(--card)',color:'var(--ink)',resize:'vertical'};
   return html`<div className="fl" style=${{gap:16}}>
     <div className="card fl" style=${{gap:8}}><b>💳 Cobrar con Mercado Pago</b>
       <span className="mut" style=${{fontSize:12.5}}>Quien te compra puede pagar con tarjeta de crédito, débito o dinero en Mercado Pago. La plata te llega a tu cuenta de Mercado Pago y desde ahí la pasás a tu banco cuando quieras.</span>
-      ${a.seller?html`<span style=${{fontSize:13.5}}>✅ Tu cuenta está conectada. Cada venta se cobra por Nexus: te llega el ${100-Math.round(PAGOS.comision*100)} % a tu Mercado Pago y Nexus retiene el ${Math.round(PAGOS.comision*100)} % de comisión.${a.pay.online?'':' (Simulado en modo demo.)'}</span>`
-      :html`<span className="mut" style=${{fontSize:13.5}}>Para vender, conectá tu cuenta de Mercado Pago. Quien compra paga dentro de Nexus; te llega el ${100-Math.round(PAGOS.comision*100)} % directo a tu cuenta y Nexus retiene el ${Math.round(PAGOS.comision*100)} % de cada venta. El material gratis no paga comisión.</span><div><button className="btn btn-s btn-sm" onClick=${a.pay.connect}>Conectar Mercado Pago</button></div>`}</div>
+      ${a.seller?html`<span style=${{fontSize:13.5}}>✅ Tu cuenta está conectada. Cada venta te llega completa a tu Mercado Pago: Nexus no cobra comisión.${a.pay.online?'':' (Simulado en modo demo.)'}</span>`
+      :html`<span className="mut" style=${{fontSize:13.5}}>Para vender, conectá tu cuenta de Mercado Pago. Quien compra paga dentro de Nexus y la plata te llega completa a tu cuenta. Nexus no cobra comisión.</span><div><button className="btn btn-s btn-sm" onClick=${a.pay.connect}>Conectar Mercado Pago</button></div>`}</div>
     ${sales&&sales.length>0&&html`<div className="card fl" style=${{gap:10}}><b>Tus ventas</b>
-      <div className="grid2" style=${{gap:10}}>${[['Ventas',String(ok.length)],['Vendiste',money(gross,ok[0]&&ok[0].currency)],['Comisión Nexus ('+Math.round(PAGOS.comision*100)+' %)',money(fees,ok[0]&&ok[0].currency)],['Te queda',money(gross-fees,ok[0]&&ok[0].currency)]].map(([l,v])=>html`<div key=${l}><div className="eyebrow">${l}</div><b className="num" style=${{fontSize:22}}>${v}</b></div>`)}</div></div>`}
+      <div className="grid2" style=${{gap:10}}>${[['Ventas',String(ok.length)],['Vendiste',money(gross,ok[0]&&ok[0].currency)]].map(([l,v])=>html`<div key=${l}><div className="eyebrow">${l}</div><b className="num" style=${{fontSize:22}}>${v}</b></div>`)}</div></div>`}
     ${!f&&html`<div className="card fl" style=${{gap:8}}><b>¿Vendés resúmenes, cursos o clases?</b><span className="mut" style=${{fontSize:13.5}}>Tu publicación le aparece primero a quien está cursando esa materia, y todavía más arriba si el tema le cuesta o tiene el parcial cerca. Podés apuntar a tu facultad y a años específicos.</span><div><button className="btn btn-s btn-sm" onClick=${()=>setF(blank)}><${Icon} n="plus" s=${14}/> Nueva publicación</button></div></div>`}
     ${f&&html`<div className="card fl" style=${{gap:12}}>
       <b>Nueva publicación</b>
@@ -2279,7 +2246,7 @@ function Vender({a,api,me,mine,ev,sold,onChange}){
         <label className="row" style=${{gap:8,fontSize:13.5,cursor:'pointer',marginTop:8}}><input type="checkbox" checked=${f.onlyUni} onChange=${e=>set({onlyUni:e.target.checked})} style=${{width:18,height:18,flex:'0 0 18px',accentColor:'var(--ink)'}}/> Solo estudiantes de ${me.uni||'mi universidad'}</label>
         <div className="alertbox" style=${{marginTop:8,background:'var(--t-blue)',fontSize:13.5}}>${aud==null?'Le va a aparecer a quien curse '+(f.subj_name||'esa materia')+(f.years.length?' en '+f.years.join(', ')+'.º año':'')+'.':html`Público estimado: <b>${aud}</b> estudiante${aud===1?'':'s'} cursando ${f.subj_name}${f.years.length?' en '+f.years.join(', ')+'.º año':''}${f.onlyUni?' en tu facultad':''}${a.pay.online?'':' (modo demo)'}.`}</div></div>
       <div><label htmlFor="v-p" style=${{fontWeight:600,fontSize:14}}>Precio</label><div className="row" style=${{gap:6}}><select aria-label="Moneda" value=${f.currency} onChange=${e=>set({currency:e.target.value})} style=${{width:'auto',minWidth:86,flex:'0 0 auto'}}><option>UYU</option><option>USD</option></select><input id="v-p" inputMode="decimal" placeholder="0 = gratis" value=${f.price} onInput=${e=>set({price:e.target.value})}/></div>
-        ${priceNum>0&&html`<div className="row wrap num" style=${{gap:14,marginTop:8,fontSize:13.5}}><span>Precio <b>${money(priceNum,f.currency)}</b></span><span>Comisión Nexus ${Math.round(PAGOS.comision*100)} % <b>${money(feeNum,f.currency)}</b></span><span>Recibís <b>${money(priceNum-feeNum,f.currency)}</b></span></div><span className="mut" style=${{fontSize:12}}>Mercado Pago puede descontar además su propia tarifa por cobro.</span>`}</div>
+        ${priceNum>0&&html`<div className="row wrap num" style=${{gap:14,marginTop:8,fontSize:13.5}}><span>Precio <b>${money(priceNum,f.currency)}</b></span><span>Recibís <b>${money(priceNum,f.currency)}</b> (Nexus no cobra comisión)</span></div><span className="mut" style=${{fontSize:12}}>Mercado Pago puede descontar además su propia tarifa por cobro.</span>`}</div>
       <div><label htmlFor="v-f" style=${{fontWeight:600,fontSize:14}}>Archivo que se entrega (opcional)</label><input id="v-f" type="file" accept=".pdf,.docx,.pptx,.zip,.txt,.md" onChange=${e=>set({file:e.target.files[0]||null})} style=${{padding:'.5rem'}}/><span className="mut" style=${{fontSize:12}}>Se descarga recién después de que se aprueba el pago. Hasta 50 MB.</span></div>
       <div><div style=${{fontWeight:600,fontSize:14,marginBottom:6}}>Contacto para quien compre</div><div className="row" style=${{gap:6}}><select aria-label="Tipo de contacto" value=${f.contact_kind} onChange=${e=>set({contact_kind:e.target.value})} style=${{width:'auto',minWidth:124,flex:'0 0 auto'}}><option value="whatsapp">WhatsApp</option><option value="instagram">Instagram</option><option value="email">Email</option><option value="link">Link</option></select><input aria-label="Dato de contacto" placeholder=${{whatsapp:'59899123456',instagram:'@tuusuario',email:'tu@email.com',link:'https://…'}[f.contact_kind]} value=${f.contact} onInput=${e=>set({contact:e.target.value})}/></div><span className="mut" style=${{fontSize:12}}>Se muestra solo después del pago (por ejemplo, para coordinar clases). Antes, te pueden escribir por Mensajes.</span></div>
       <div><label htmlFor="v-d" style=${{fontWeight:600,fontSize:14}}>Descripción</label><textarea id="v-d" rows="3" placeholder="Qué incluye, cuántas páginas, cómo lo entregás, horarios de las clases…" value=${f.descr} onInput=${e=>set({descr:e.target.value})} style=${ta}></textarea></div>
@@ -2450,22 +2417,6 @@ function AuthModal({email,onOk,onCancel}){
     ${err&&html`<div className="alertbox" role="alert" style=${{background:'var(--t-rose)'}}>${err}</div>`}</div></div>`;
 }
 const money=(v,c)=>(c||'UYU')+' '+(+v||0).toLocaleString('es',{maximumFractionDigits:2});
-const subLocal={k:e=>'ea-sub-'+e,get(e){try{return JSON.parse(localStorage.getItem(this.k(e))||'null')}catch(x){return null}},set(e,v){try{v?localStorage.setItem(this.k(e),JSON.stringify(v)):localStorage.removeItem(this.k(e))}catch(x){}}};
-const daysLeft=iso=>Math.max(0,Math.ceil((new Date(iso).getTime()-Date.now())/864e5));
-function Paywall({a}){
-  const [busy,setBusy]=useState(false),sb=a.sub||{},free=sb.trial_available!==false;
-  const first=new Date(Date.now()+PAGOS.prueba*864e5);
-  return html`<div className="screen" style=${{padding:0,gap:18,maxWidth:560}}>
-    <div className="hero th-ana"><div className="eyebrow">Suscripción Nexus</div>
-      <h1 style=${{fontSize:'clamp(26px,7vw,34px)',fontWeight:700,marginTop:6,color:'#fff'}}>${free?'Empezá con '+PAGOS.prueba+' días gratis':'Suscribite para seguir'}</h1>
-      <p style=${{marginTop:8,fontSize:15}}>${free?'Para usar Nexus activá tu suscripción. Hoy no se te cobra nada: el primer cobro es el '+fdate(first)+'.':'Tu semana gratis ya se usó. Activá la suscripción para seguir con tu plan, el tutor, tus apuntes y los grupos.'}</p>
-      <div className="num" style=${{fontWeight:800,fontSize:48,marginTop:14,lineHeight:1}}>$${PAGOS.precio}<span style=${{fontSize:18,fontWeight:500}}> por mes</span></div>${free&&html`<p style=${{fontSize:13.5,marginTop:4,opacity:.9}}>después de la semana gratis</p>`}
-      <div style=${{marginTop:10}}><${Medios} auto=${true} dark=${true}/></div>
-      <p style=${{fontSize:13,opacity:.9,marginTop:6}}>${free?'Si cancelás antes del '+fdate(first)+' desde Mi perfil, no se te cobra nada.':'Cancelás cuando quieras desde Mi perfil.'}</p>
-      <div className="row wrap" style=${{marginTop:16}}><button className="btn btn-i btn-big" disabled=${busy} onClick=${async()=>{setBusy(true);await a.pay.subscribe();setBusy(false)}}>${busy?'Abriendo Mercado Pago…':free?'Activar mis '+PAGOS.prueba+' días gratis':'Suscribirme'}</button><button className="btn btn-ghost" onClick=${a.pay.refresh}>Ya me suscribí</button></div>
-      <p style=${{fontSize:12.5,opacity:.85,marginTop:12}}>¿Tu tarjeta de débito no acepta débito automático? <button className="btn btn-sm btn-ghost" style=${{padding:'.2rem .7rem'}} onClick=${a.pay.payMonth}>Pagar 1 mes ahora ($${PAGOS.precio})</button></p></div>
-    <div className="row wrap"><button className="btn btn-sm" onClick=${a.openPerfil}>Mi perfil</button><button className="btn btn-sm btn-g" onClick=${a.logout}>Cerrar sesión</button></div></div>`;
-}
 
 /* Panel derecho en computadora: perfil, actividad de la semana y materias */
 function RPanel({a}){
@@ -2509,30 +2460,18 @@ function Main({user,isNew,onUser}){
   const [stats,setStats]=useState(()=>SV.stats||{rests:0,sims:0,rescueUsed:false});
   const [mats,setMats]=useState(()=>SV.mats||EX_MATS),[guides,setGuides]=useState(()=>SV.guides||{}),[qv,setQv]=useState(0),[exInit,setExInit]=useState(null),[simInit,setSimInit]=useState(null);
   const [perfil,setPerfil]=useState(false),[editing,setEditing]=useState(false);
-  const [authReq,setAuthReq]=useState(null),[sub,setSub]=useState(null),[seller,setSeller]=useState(null),[dmInit,setDmInit]=useState(null),[shopInit,setShopInit]=useState(null);
+  const [authReq,setAuthReq]=useState(null),[seller,setSeller]=useState(null),[dmInit,setDmInit]=useState(null),[shopInit,setShopInit]=useState(null);
   const online=!!mailCfg();
   const ensureAuth=async()=>{const s=await liveSession(user.email);if(s)return s;return new Promise((res,rej)=>setAuthReq({res,rej}))};
-  const localStatus=()=>{const l=subLocal.get(user.email),auto=!!(l&&l.status==='authorized'),te=l&&l.trial_ends_at||null;
-    const pu=l&&l.paid_until?new Date(l.paid_until).getTime():0;
-    return {trial_available:!(l&&l.trial_used),trial_ends_at:te,in_trial:auto&&!!te&&new Date(te).getTime()>Date.now(),subscription:l,active:auto||pu>Date.now(),demo:true}};
   const refreshPay=async(prompt)=>{
-    if(!online){setSub(localStatus());try{setSeller(!!localStorage.getItem('ea-mp-'+user.email))}catch(e){setSeller(false)}return}
-    const s=prompt?await ensureAuth().catch(()=>null):await liveSession(user.email);
-    if(!s){setSub(x=>x&&!x.unknown?x:{trial_available:true,trial_ends_at:null,in_trial:false,subscription:null,active:false,unknown:true});return}
-    try{const j=await callFn({action:'status'},s);setSub(j);setSeller(!!j.seller_connected)}catch(e){setSub(x=>x||{trial_available:true,trial_ends_at:null,in_trial:false,subscription:null,active:false,unknown:true})}
+    if(!online){try{setSeller(!!localStorage.getItem('ea-mp-'+user.email))}catch(e){setSeller(false)}return}
+    const s=prompt?await ensureAuth().catch(()=>null):await liveSession(user.email);if(!s)return;
+    try{const j=await callFn({action:'status'},s);setSeller(!!j.seller_connected)}catch(e){}
   };
   useEffect(()=>{refreshPay(false)},[]);
   const go=url=>{if(url)window.location.href=url};
   const pay={
     online,refresh:()=>refreshPay(true),
-    subscribe:async()=>{if(!online){const l=subLocal.get(user.email)||{},st=localStatus(),te=st.trial_available?new Date(Date.now()+PAGOS.prueba*864e5).toISOString():null,first=new Date(Math.max(Date.now(),te?new Date(te).getTime():0,l.paid_until?new Date(l.paid_until).getTime():0)).toISOString();subLocal.set(user.email,{...l,status:'authorized',trial_used:true,trial_ends_at:te||l.trial_ends_at||null,next_payment_date:first,demo:true});setSub(localStatus());toast(te?'¡Listo! Tenés '+PAGOS.prueba+' días gratis. El primer cobro es el '+new Date(te).toLocaleDateString('es')+' (simulado en modo demo).':'Suscripción activada (simulada en modo demo)');return}
-      try{const s=await ensureAuth();const j=await callFn({action:'subscribe'},s);if(j.already){toast('Ya tenés la suscripción activa');refreshPay(false)}else go(j.url)}catch(e){if(e&&e.code!=='cancelled')toast(payErr(e))}},
-    cancel:async()=>{
-      if(!online){const l=subLocal.get(user.email)||{},keep=Math.max(l.paid_until?new Date(l.paid_until).getTime():0,l.status==='authorized'&&l.next_payment_date?new Date(l.next_payment_date).getTime():0);subLocal.set(user.email,{...l,status:'cancelled',next_payment_date:null,paid_until:keep>Date.now()?new Date(keep).toISOString():null});setSub(localStatus());toast('Suscripción cancelada. No se te va a cobrar más.');return true}
-      try{const s=await ensureAuth();const j=await callFn({action:'cancel_subscription'},s);toast(j.access_until?'Suscripción cancelada. Seguís con acceso hasta el '+new Date(j.access_until).toLocaleDateString('es')+'.':'Suscripción cancelada. No se te va a cobrar más.');await refreshPay(false);return true}catch(e){if(e&&e.code!=='cancelled')toast(payErr(e));return false}},
-    payMonth:async()=>{
-      if(!online){const l=subLocal.get(user.email)||{},base=Math.max(Date.now(),l.paid_until?new Date(l.paid_until).getTime():0),d=new Date(base);d.setMonth(d.getMonth()+1);subLocal.set(user.email,{...l,status:l.status==='authorized'?'authorized':'paid',paid_until:d.toISOString(),demo:true});setSub(localStatus());toast('Pago de 1 mes aprobado (simulado en modo demo)');return}
-      try{const s=await ensureAuth();const j=await callFn({action:'pay_month'},s);go(j.url)}catch(e){if(e&&e.code!=='cancelled')toast(payErr(e))}},
     connect:async()=>{if(!online){try{localStorage.setItem('ea-mp-'+user.email,'1')}catch(e){}setSeller(true);toast('Mercado Pago conectado (simulado en modo demo)');return}
       try{const s=await ensureAuth();const j=await callFn({action:'connect'},s);go(j.url)}catch(e){if(e&&e.code!=='cancelled')toast(payErr(e))}},
     checkout:async l=>{const s=await ensureAuth();const j=await callFn({action:'checkout',listing_id:l.id},s);go(j.url)},
@@ -2541,7 +2480,7 @@ function Main({user,isNew,onUser}){
   useEffect(()=>{let r=null;try{r=new URLSearchParams(location.search).get('r')}catch(e){}if(!r)return;
     try{history.replaceState(null,'',location.pathname+location.hash)}catch(e){}
     const M={'mp-ok':['Mercado Pago conectado. Ya podés vender.','vender'],'mp-error':['No se pudo conectar Mercado Pago. Probá de nuevo.','vender'],'compra':['¡Pago aprobado! Tu compra está en "Mis compras" (puede tardar unos segundos).','compras'],'compra-pendiente':['Tu pago quedó pendiente. Cuando se acredite, aparece en "Mis compras".','compras'],'compra-error':['El pago no se completó. No se te cobró nada.','todo'],'suscripcion':['Gracias. Estamos confirmando tu suscripción con Mercado Pago.',null]}[r];
-    if(!M)return;toast(M[0]);if(M[1]){setShopInit(M[1]);setTab('tienda')}if(r==='suscripcion'||r==='mp-ok')setTimeout(()=>refreshPay(false),2500)},[]);
+    if(!M)return;toast(M[0]);if(M[1]){setShopInit(M[1]);setTab('tienda')}if(r==='mp-ok')setTimeout(()=>refreshPay(false),2500)},[]);
   const risk0=useMemo(()=>initSubjects().filter(s=>{const t=s.topics.filter(x=>x.level==='muy');return t.reduce((x,y)=>x+y.m0,0)/t.length<45}).map(s=>s.id),[]);
   const toastT=useRef(null);
   const toast=m=>{setMsg(m);clearTimeout(toastT.current);toastT.current=setTimeout(()=>setMsg(null),3200)};
@@ -2595,7 +2534,7 @@ function Main({user,isNew,onUser}){
   const downloadData=()=>{
     const acct={...user};delete acct.ph;delete acct.salt;
     const get=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}};
-    const data={exportado:new Date().toISOString(),cuenta:acct,datos_de_estudio:get(dkey(user.email)),suscripcion:get('ea-sub-'+user.email),recordatorios:get('ea-rem-'+user.email)};
+    const data={exportado:new Date().toISOString(),cuenta:acct,datos_de_estudio:get(dkey(user.email)),recordatorios:get('ea-rem-'+user.email)};
     const txt=JSON.stringify(data,null,2);
     if(!STANDALONE){(async()=>{try{const d=await window.claude.use('downloads');if(!d){toast('Para descargar tus datos, abrí Nexus en el sitio web.');return}const r=await d.save({filename:'nexus-mis-datos.json',data:txt});if(r&&r.status==='saved')toast('Descargamos tus datos en un archivo')}catch(e){if(!e||e.code!=='declined')toast('No se pudo descargar el archivo.')}})();return}
     const b=new Blob([txt],{type:'application/json'}),u=URL.createObjectURL(b),el=document.createElement('a');
@@ -2629,7 +2568,7 @@ function Main({user,isNew,onUser}){
       else sessStore.set(user.email,null)}
     sessionEnd();setPerfil(false);onUser(null)};
   const streak=streakOf(hist);
-  const A={streak,acceptLegal,showLegal:setLegalDoc,downloadData,deleteAccount,setPhoto,setBio,showProfile:setPubP,hist,events,addEvent,delEvent,user,pay,sub,seller,ensureAuth,rem,setRem,sendTestReminder,remPreview,dmInit,shopInit,clearDm:()=>setDmInit(null),clearShop:()=>setShopInit(null),openDM:(uid,name,descr)=>{setDmInit({uid,name,descr});setTab('match')},tab,go:setTab,subjects,prefs,mastery,slow,plan,kept,reviews,errors,rescue,stats,run,mats,guides,qv,exInit,simInit,risk0,examOf,toast,nudge,slowTopic,tutorTopic,isDark,
+  const A={streak,acceptLegal,showLegal:setLegalDoc,downloadData,deleteAccount,setPhoto,setBio,showProfile:setPubP,hist,events,addEvent,delEvent,user,pay,seller,ensureAuth,rem,setRem,sendTestReminder,remPreview,dmInit,shopInit,clearDm:()=>setDmInit(null),clearShop:()=>setShopInit(null),openDM:(uid,name,descr)=>{setDmInit({uid,name,descr});setTab('match')},tab,go:setTab,subjects,prefs,mastery,slow,plan,kept,reviews,errors,rescue,stats,run,mats,guides,qv,exInit,simInit,risk0,examOf,toast,nudge,slowTopic,tutorTopic,isDark,
     openPerfil:()=>setPerfil(true),editPerfil:()=>{setPerfil(false);setEditing(true)},
     logout,
     flipTheme:flip,openOnb:st=>setOnb(typeof st==='number'?st:true),
@@ -2678,7 +2617,7 @@ function Main({user,isNew,onUser}){
   const NAV=[['ahora','Inicio','home'],['calendario','Plan','calendar'],['materias','Materias','book'],['material','Apuntes','upload',1],['match','Grupos','users'],['tienda','Tienda','bag']];
   return html`<div className="stage"><div className="phone">
     <main className="pad">
-      ${SHOW_PAY&&!sub?html`<div className="screen" style=${{padding:0}}><p className="mut">Cargando tu suscripción…</p></div>`:SHOW_PAY&&!sub.active?html`<${Paywall} a=${A}/>`:html`<div>
+      ${html`<div>
       ${sec&&html`<button className="back" style=${{marginBottom:16}} onClick=${()=>setTab('ahora')}><${Icon} n="chevL" s=${16}/> Inicio</button>`}
       ${tab==='ahora'&&html`<${Ahora} a=${A}/>`}
       ${tab==='calendario'&&html`<${Calendario} a=${A}/>`}
@@ -2692,11 +2631,11 @@ function Main({user,isNew,onUser}){
       ${tab==='tienda'&&html`<div className="screen" style=${{padding:0}}><${Tienda} a=${A}/></div>`}
       ${tab==='rescate'&&html`<div className="sec"><${Rescate} a=${A}/></div>`}</div>`}
     </main>
-    ${(!SHOW_PAY||(sub&&sub.active))&&html`<${RPanel} a=${A}/>`}
+    <${RPanel} a=${A}/>
     <nav className="dock" aria-label="Principal"><div className="brand"><span className="logo">N</span>Nexus</div><div className="pill">${NAV.map(([k,l,ic,w])=>html`<button key=${k} title=${l} className=${'dk'+(w?' dk-wide':'')} aria-current=${cur===k?'page':null} onClick=${()=>setTab(k)}><${Icon} n=${ic} s=${21}/><span>${l}</span></button>`)}</div><div className="round"><button className="dk" title="Tutor" aria-current=${cur==='tutor'?'page':null} onClick=${()=>setTab('tutor')}><${Icon} n="msg" s=${21}/><span>Tutor</span></button></div><button className="dk dk-set" title="Configuración" aria-label="Configuración" onClick=${A.openOnb}><${Icon} n="settings" s=${20}/></button><button className="me" onClick=${A.openPerfil} aria-label="Mi perfil" title="Mi perfil"><${Av} u=${user} size=${48}/><span style=${{minWidth:0}}><b style=${{fontSize:14,display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:130}}>${user.nombre.split(' ')[0]}</b><small>${user.uni.replace(/\s*\(.*\)/,'')}</small></span></button></nav>
     ${perfil&&html`<${Perfil} a=${A} onClose=${()=>setPerfil(false)}/>`}
     ${editing&&html`<${Welcome} edit=${true} initial=${user} onDone=${(p)=>{onUser(p);setPrefs(x=>({...x,carrera:p.carrera,uni:p.uni,anio:p.anio,maxH:p.horas||x.maxH}));setEditing(false);toast('Datos actualizados')}} onClose=${()=>setEditing(false)}/>`}
-    ${onb&&(!SHOW_PAY||(sub&&sub.active))&&html`<${Onboarding} a=${A} start=${typeof onb==='number'?onb:0} onClose=${()=>setOnb(false)}/>`}
+    ${onb&&html`<${Onboarding} a=${A} start=${typeof onb==='number'?onb:0} onClose=${()=>setOnb(false)}/>`}
     ${pubP&&html`<${PubProfile} a=${A} p=${pubP} onClose=${()=>setPubP(null)}/>`}
     ${legalDoc&&html`<${LegalDoc} which=${legalDoc} onSwitch=${setLegalDoc} onClose=${()=>setLegalDoc(null)}/>`}
     ${!legalOk(user)&&html`<${LegalGate} a=${A}/>`}

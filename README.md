@@ -13,7 +13,7 @@ Hacé doble clic en `index.html`. React, la letra (DM Sans) y las librerías par
 Tiene que servirse por **HTTPS** (todos los de arriba lo hacen); lo necesita el cifrado de contraseñas del navegador.
 
 ## Qué funciona sin configurar nada
-Ingreso con cuenta, suscripción con semana gratis y tienda en modo demo (pagos simulados), onboarding, plan adaptativo, modo rescate, materias, ejercicios, simulador, logros, Study Match, y **subir apuntes** (PDF, Word, PowerPoint, TXT y fotos, también desde el celular y desde Drive vía el selector de archivos). El tutor funciona en modo guiado.
+Ingreso con cuenta, uso gratuito, tienda en modo demo (pagos simulados), onboarding, plan adaptativo, modo rescate, materias, ejercicios, simulador, logros, Study Match, y **subir apuntes** (PDF, Word, PowerPoint, TXT y fotos, también desde el celular y desde Drive vía el selector de archivos). El tutor funciona en modo guiado.
 
 ## Activar la IA (opcional)
 El tutor con IA, la guía de estudio, las preguntas desde tus apuntes y la lectura de fotos necesitan una clave de la API de Anthropic. Cada persona la pega en **Mi perfil → IA del tutor**. La clave se guarda solo en su navegador y se envía únicamente a api.anthropic.com. No pongas tu clave dentro del archivo.
@@ -65,37 +65,34 @@ Probadas con 51 casos en una base PostgreSQL:
 - **Perfil público:** en Grupos, Mensajes y la Tienda se ven el nombre, la foto (versión chica), la descripción "Sobre mí" (hasta 160 caracteres), la carrera, el año, la facultad y las materias. Nunca el email ni la contraseña. Tocando a una persona se abre su perfil, con las materias en común y un botón para escribirle.
 - En la tienda, el contacto de quien vende solo lo ve quien le compró.
 
-## Cobros: suscripción y comisión por ventas (Mercado Pago)
-- **Suscripción obligatoria con 1 semana gratis:** apenas alguien se registra o inicia sesión, antes de usar la app, tiene que activar la suscripción en Mercado Pago. Ahí carga su tarjeta de crédito, débito o su cuenta de Mercado Pago, y **hoy no se le cobra nada**: el primer cobro de **$400** es a los 7 días, y después todos los meses. Si cancela durante la semana, no se le cobra y sigue usando Nexus hasta que termina la semana. La semana gratis se da una sola vez por persona. Todo el dinero va **directo a tu cuenta de Mercado Pago** (la del `MP_ACCESS_TOKEN`).
-  - **Alternativa:** si una tarjeta de débito no acepta débito automático, está **"Pagar 1 mes ahora"**, un cobro único de $400 con crédito, débito o dinero en Mercado Pago. Da acceso inmediato y no se renueva solo.
-- **Mi perfil → Mi suscripción:** muestra el estado (semana gratis, débito automático con fecha del próximo cobro, pagada hasta tal fecha) y permite **cancelar en cualquier momento** con un paso de confirmación. Al cancelar no se cobra más, y la persona sigue con acceso hasta el final de lo que ya pagó.
-- **Tienda:** quien compra paga dentro de Nexus con Mercado Pago. A quien vende le llega el 90 % a su propia cuenta y **Nexus se queda automáticamente con el 10 %** (comisión de Mercado Pago Marketplace). El archivo y el contacto se entregan recién cuando el pago está aprobado, en **Mis compras**. Antes de comprar, se puede preguntar por Mensajes. El material gratis no paga comisión.
+## Nexus es gratuito
+- **Sin suscripción:** cualquiera se registra y usa todo Nexus sin pagar. No hay período de prueba ni cobros automáticos.
+- **Sin comisión:** en la Tienda, quien compra paga con Mercado Pago y la plata le llega **completa** a quien vende (Mercado Pago le descuenta su propia tarifa). Nexus no cobra nada. El archivo y el contacto se entregan recién cuando el pago está aprobado, en **Mis compras**. Antes de comprar, se puede preguntar por Mensajes.
 - **Orden de la tienda:** recomendado (según tus materias, temas flojos y parciales), más vendidos, más barato, más caro y más nuevo.
 - **Modo demo:** sin configurar nada, todo esto funciona simulado en el navegador para probarlo.
 
-### Activar los cobros reales
-Hace falta Supabase (ver arriba, con `SUPA` completado) y una cuenta de Mercado Pago.
-1. **Mercado Pago:** en developers.mercadopago.com creá una aplicación (modelo de integración: *Marketplace* / pagos online). Anotá el *Access Token de producción*, el *Client ID* y el *Client Secret*. En la configuración de la aplicación, poné como **Redirect URL** `https://TU-PROYECTO.supabase.co/functions/v1/mp-oauth`.
+### Activar los pagos reales de la Tienda
+Solo hace falta si querés que en la Tienda se pueda pagar dentro de Nexus. Necesitás Supabase (ver arriba, con `SUPA` completado) y una cuenta de Mercado Pago (no recibe dinero: solo identifica tu aplicación).
+1. **Mercado Pago:** en developers.mercadopago.com creá una aplicación (modelo de integración: *Marketplace* / pagos online). Anotá el *Client ID* y el *Client Secret*. En la configuración de la aplicación, poné como **Redirect URL** `https://TU-PROYECTO.supabase.co/functions/v1/mp-oauth`.
 2. **Base de datos:** ejecutá en orden todos los archivos de `supabase/migrations/` (ver *Configurar Supabase*). Esto también cierra la tabla `listings`: solo quien publicó puede editar o borrar su publicación.
 3. **Funciones:** con la CLI de Supabase (`npm i -g supabase`, `supabase login`, `supabase link --project-ref TU-PROYECTO`):
 ```
-supabase secrets set MP_ACCESS_TOKEN=APP_USR-... MP_CLIENT_ID=... MP_CLIENT_SECRET=... SITE_URL=https://tu-sitio/ STATE_SECRET=una-frase-larga-al-azar
+supabase secrets set MP_CLIENT_ID=... MP_CLIENT_SECRET=... SITE_URL=https://tu-sitio/ STATE_SECRET=una-frase-larga-al-azar
 supabase functions deploy pagos
 supabase functions deploy mp-oauth --no-verify-jwt
 supabase functions deploy mp-webhook --no-verify-jwt
 supabase functions deploy recordatorios --no-verify-jwt
 ```
-Opcionales: `COMISION` (0.10), `SUB_PRECIO` (400), `SUB_MONEDA` (UYU), `PRUEBA_DIAS` (7). Si los cambiás, cambiá también `PAGOS` al principio del script de `index.html`, que es lo que se muestra en pantalla.
-4. **Avisos de pago (webhooks):** en tu aplicación de Mercado Pago → Webhooks, poné `https://TU-PROYECTO.supabase.co/functions/v1/mp-webhook` con los eventos *Pagos* y *Planes y suscripciones*. Los pagos de la tienda también avisan solos a esa dirección.
+Opcional: `COMISION` (por defecto 0, sin comisión). Si algún día querés cobrar una, tendrías que cambiar también `PAGOS` en `index.html` y los Términos y condiciones.
+4. **Avisos de pago (webhooks):** en tu aplicación de Mercado Pago → Webhooks, poné `https://TU-PROYECTO.supabase.co/functions/v1/mp-webhook` con el evento *Pagos*. Los pagos de la tienda también avisan solos a esa dirección.
 5. Probá primero con las **credenciales y usuarios de prueba** de Mercado Pago, y después cambiá a las de producción.
 
-**Cómo funciona por dentro (para revisar):** las funciones están en `supabase/functions/`. Ningún precio ni pago sale del navegador: la función toma el precio de la base, y cada aviso de pago se vuelve a consultar a Mercado Pago antes de registrar la venta. Las ventas, los tokens de Mercado Pago de quienes venden y las suscripciones solo las escriben las funciones.
+**Cómo funciona por dentro (para revisar):** las funciones están en `supabase/functions/`. Ningún precio ni pago sale del navegador: la función toma el precio de la base, y cada aviso de pago se vuelve a consultar a Mercado Pago antes de registrar la venta. Las ventas y los tokens de Mercado Pago de quienes venden solo los escriben las funciones.
 
 **Límites a tener en cuenta:**
-- La pantalla de suscripción se controla en el navegador: alguien con conocimientos técnicos podría saltearla. Lo que se cobra y se entrega (ventas y descargas) sí lo controla el servidor.
+- Lo que se cobra y se entrega (ventas y descargas) lo controla el servidor.
 - Mercado Pago descuenta además su propia tarifa por cada cobro.
-- La comisión de Marketplace se cobra en la moneda de la cuenta de quien vende. Por eso la tienda acepta UYU y USD.
-- Dentro de Claude no se puede pagar (la página no puede salir a Mercado Pago), así que esa versión no tiene pantalla de suscripción.
+- Dentro de Claude no se puede pagar en la Tienda (la página no puede salir a Mercado Pago).
 
 ## Recordatorios por email (Gmail o cualquier correo)
 En **Mi perfil → Recordatorios por email** cada persona activa **4 emails por día**, en su hora local (por defecto 08:00, 13:00, 17:00 y 21:00; puede cambiarlas) y los días que elige:
@@ -127,14 +124,13 @@ Nexus incluye **Términos y condiciones** y **Política de privacidad** pensados
 - **Aceptación obligatoria:** para **registrarse** y para **iniciar sesión** hay que marcar la casilla de aceptación. Se guarda la versión aceptada y la fecha; con Supabase también se guarda en la tabla `legal_acceptances`.
 - **Cambios en los textos:** si los cambiás, subí `LEGAL_V` y a todas las personas se les pide aceptar la nueva versión antes de seguir.
 - **Links directos:** `…/nexus/#terminos` y `…/nexus/#privacidad`.
-- **Mi perfil → Legal y tus datos:** links a los textos, **Descargar mis datos** (archivo JSON) y **Borrar mi cuenta** (cancela la suscripción y borra los datos; se conservan solo los registros de pagos que exige la ley).
+- **Mi perfil → Legal y tus datos:** links a los textos, **Descargar mis datos** (archivo JSON) y **Borrar mi cuenta** (borra los datos; se conservan solo los registros de compras y ventas que pueda exigir la ley).
 - **Tienda:** para publicar hay que declarar que el material es propio o que se tiene derecho a venderlo.
-- **Mi suscripción:** explica cómo pedir el arrepentimiento.
 
 **Antes de abrir al público:**
 1. Los datos del titular están en `LEGAL`, en `index.html`: hoy figura **Diana Peralta (nombre comercial: Nexus)** con su email. Si querés, agregá la cédula o el RUT, el domicilio, el departamento y, cuando lo tengas, el número de inscripción ante la URCDP. Los campos vacíos no se muestran.
 2. Inscribí la base de datos ante la **URCDP**, la Unidad Reguladora y de Control de Datos Personales (trámite en línea en gub.uy).
-3. Hacé **revisar los textos por un abogado** y consultá con un **contador** cómo facturar la suscripción y las comisiones.
+3. Hacé **revisar los textos por un abogado** y consultá con un **contador** si necesitás registrarte de alguna forma aunque Nexus sea gratuito.
 4. En Supabase ejecutá las migraciones que falten (ver *Configurar Supabase*) y volvé a subir la función `pagos`, que borra cuentas completas.
 
 ## Lo que hay que saber
