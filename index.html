@@ -182,7 +182,7 @@ textarea{resize:vertical;min-height:96px;border-radius:18px}
 const STANDALONE=!(window.claude&&window.claude.use);
 const aiKey={get:()=>{try{return localStorage.getItem('ea-key')||''}catch(e){return ''}},set:k=>{try{k?localStorage.setItem('ea-key',k):localStorage.removeItem('ea-key')}catch(e){}window.dispatchEvent(new Event('ea-ai'))}};
 /* Nexus dentro de Claude: el link del artifact publicado en claude.ai. Ahí la IA usa la cuenta de Claude de cada persona. */
-const CLAUDE_APP_URL='';
+const CLAUDE_APP_URL='https://claude.ai/artifact/WsunKkPTN3zjemT6s3RUp4';
 /* Abre claude.ai con un pedido ya armado con el perfil y el material de la persona (usa su propia cuenta de Claude). */
 function openInClaude(prompt,toast){
   const p=String(prompt).slice(0,6500);
@@ -1331,9 +1331,9 @@ function Perfil({a,onClose}){
     ${STANDALONE&&html`<div className="card fl" style=${{gap:8}}><b>🤖 IA dentro de Nexus con clave de API (avanzado)</b>
       <span className="mut" style=${{fontSize:13}}>${has?'Clave guardada: el tutor, la guía y las preguntas con IA están activos.':'Pegá tu clave de la API de Anthropic para activar el tutor con IA, la guía de estudio y las preguntas desde tu material. Sin clave, todo lo demás funciona igual.'} Se guarda solo en este navegador y se envía únicamente a api.anthropic.com.</span>
       ${has?html`<div><button className="btn btn-sm" onClick=${()=>{aiKey.set('');setHas(false);a.toast('Clave quitada')}}>Quitar clave</button></div>`:html`<div className="row" style=${{gap:8}}><input type="password" aria-label="Clave de la API de Anthropic" placeholder="sk-ant-…" value=${k} onInput=${e=>setK(e.target.value)} autoComplete="off"/><button className="btn btn-s btn-sm" disabled=${k.trim().length<20} onClick=${()=>{aiKey.set(k.trim());setK('');setHas(true);a.toast('IA activada')}}>Guardar</button></div>`}</div>`}
-    <div className="card fl" style=${{gap:8}}><b>🤝 Grupos en línea (opcional)</b>
+    ${STANDALONE&&html`<div className="card fl" style=${{gap:8}}><b>🤝 Grupos en línea (opcional)</b>
       <span className="mut" style=${{fontSize:13}}>${gc?'Conectado: los grupos, el chat y el material compartido son con gente real.':'Sin esto, los grupos de estudio funcionan en modo demo. Para conocer gente real, conectá una base de Supabase (gratis). Los pasos y la tabla están en el README.'} En los grupos se ven tu nombre, universidad, carrera y materias; nunca tu email ni tu contraseña.</span>
-      ${gc?html`<div><button className="btn btn-sm" onClick=${()=>{grpCfg.set(null);setGc(null);a.toast('Grupos en línea desconectados')}}>Desconectar</button></div>`:html`<div className="fl" style=${{gap:8}}><input aria-label="URL del proyecto de Supabase" placeholder="https://xxxx.supabase.co" value=${gu} onInput=${e=>setGu(e.target.value)} autoComplete="off"/><div className="row" style=${{gap:8}}><input type="password" aria-label="Clave pública (anon) de Supabase" placeholder="Clave pública (anon)" value=${gk} onInput=${e=>setGk(e.target.value)} autoComplete="off"/><button className="btn btn-s btn-sm" disabled=${!/^https:\/\/[^\s/]+/.test(gu.trim())||gk.trim().length<20} onClick=${()=>{const c={url:gu.trim(),key:gk.trim()};grpCfg.set(c);setGc(c);a.toast('Grupos en línea conectados')}}>Conectar</button></div></div>`}</div>
+      ${gc?html`<div><button className="btn btn-sm" onClick=${()=>{grpCfg.set(null);setGc(null);a.toast('Grupos en línea desconectados')}}>Desconectar</button></div>`:html`<div className="fl" style=${{gap:8}}><input aria-label="URL del proyecto de Supabase" placeholder="https://xxxx.supabase.co" value=${gu} onInput=${e=>setGu(e.target.value)} autoComplete="off"/><div className="row" style=${{gap:8}}><input type="password" aria-label="Clave pública (anon) de Supabase" placeholder="Clave pública (anon)" value=${gk} onInput=${e=>setGk(e.target.value)} autoComplete="off"/><button className="btn btn-s btn-sm" disabled=${!/^https:\/\/[^\s/]+/.test(gu.trim())||gk.trim().length<20} onClick=${()=>{const c={url:gu.trim(),key:gk.trim()};grpCfg.set(c);setGc(c);a.toast('Grupos en línea conectados')}}>Conectar</button></div></div>`}</div>`}
     <div className="fl" style=${{gap:10}}><button className="btn" onClick=${a.editPerfil}>Editar mis datos</button><button className="btn" onClick=${()=>{onClose();a.openOnb()}}>Ajustar materias y horarios</button><button className="btn btn-s" onClick=${a.logout}>Cerrar sesión</button></div>
   </div></div>`;
 }
@@ -1494,7 +1494,7 @@ function GroupChat({a,api,me,g,onBack,onLeave}){
   </div>`;
 }
 
-function useApi(subjects){const cfg=grpCfg.get();return useMemo(()=>cfg&&cfg.url&&cfg.key?sbApi(cfg):demoApi(subjects),[cfg&&cfg.url,cfg&&cfg.key,subjects.length])}
+function useApi(subjects){const cfg=STANDALONE?grpCfg.get():null;return useMemo(()=>cfg&&cfg.url&&cfg.key?sbApi(cfg):demoApi(subjects),[cfg&&cfg.url,cfg&&cfg.key,subjects.length])}
 function useMe(a){const {user,prefs,subjects}=a;return useMemo(()=>({uid:uidOf(user.email),name:user.nombre,uni:prefs.uni||user.uni,carrera:prefs.carrera,anio:prefs.anio,slot:prefs.from<12?'Mañana':prefs.from<18?'Tarde':'Noche',note:'',subjects:'|'+subjects.map(s=>keyOf(s.name)).join('|')+'|',ts:Date.now()}),[user.email,subjects])}
 
 /* ---------- TIENDA DE MATERIAL: cada publicación le aparece a quien cursa esa materia ---------- */
@@ -1537,11 +1537,12 @@ function Tienda({a}){
     ${open===l.id&&html`<div className="fl" style=${{gap:8,fontSize:14}}>${l.descr&&html`<p style=${{whiteSpace:'pre-wrap'}}>${l.descr}</p>`}${l.topics&&html`<p className="mut" style=${{fontSize:13}}>Temas: ${l.topics}</p>`}${l.preview&&html`<div style=${{background:'var(--surf)',borderRadius:14,padding:12,fontSize:13,whiteSpace:'pre-wrap',maxHeight:220,overflow:'auto'}}><div className="eyebrow" style=${{marginBottom:4}}>Vista previa</div>${l.preview}</div>`}</div>`}
     <div className="row wrap" style=${{gap:8}}><button className="btn btn-sm" onClick=${()=>view(l.id)}>${open===l.id?'Ver menos':'Ver detalle'}</button>
       ${u?html`<a className="btn btn-sm btn-s" href=${u} target="_blank" rel="noopener noreferrer" onClick=${()=>log(l,'click')}>Contactar ${l.contact_kind==='whatsapp'?'por WhatsApp':l.contact_kind==='instagram'?'por Instagram':l.contact_kind==='email'?'por email':''} ↗</a>`:html`<span className="mut" style=${{fontSize:12.5,alignSelf:'center'}}>Contacto: ${l.contact}</span>`}
+      ${u&&html`<span className="mut" style=${{fontSize:12.5,alignSelf:'center',userSelect:'all',overflowWrap:'anywhere'}}>${l.contact}</span>`}
       <button className="btn btn-sm btn-g" style=${{marginLeft:'auto'}} onClick=${()=>{log(l,'report');setHidden(h=>[...h,l.id]);a.toast('Gracias. Ocultamos esta publicación.')}}>Denunciar</button></div></div>`};
   return html`<div className="fl" style=${{gap:18}}>
     <${Head} eyebrow="Tienda de material" title=${tab==='vender'?'Vendé tu material':'Material para vos'} sub=${tab==='vender'?'Publicá resúmenes, cursos o clases y llegá a quienes cursan esa materia.':'Resúmenes, cursos y clases de las materias que estás cursando.'}/>
     <div className="tabs" role="tablist">${[['para','Para vos'],['todo','Explorar'],['vender','Vender']].map(([k,l])=>html`<button key=${k} role="tab" className="tab" aria-selected=${tab===k} onClick=${()=>setTab(k)}>${l}</button>`)}</div>
-    ${!api.online&&html`<div className="alertbox" style=${{background:'var(--t-cream)'}}><b>Modo demo.</b> Las publicaciones de ejemplo y las tuyas quedan en este navegador. Con <b>Grupos en línea</b> conectado en Mi perfil, la tienda es compartida.</div>`}
+    ${!api.online&&html`<div className="alertbox" style=${{background:'var(--t-cream)'}}><b>Modo demo.</b> Las publicaciones de ejemplo y las tuyas quedan en este navegador. ${STANDALONE?html`Con <b>Grupos en línea</b> conectado en Mi perfil, la tienda es compartida.`:'La tienda compartida funciona en el sitio web de Nexus (con Grupos en línea activado).'}</div>`}
     ${err&&html`<div className="alertbox" role="alert" style=${{background:'var(--t-rose)'}}>${err}</div>`}
     ${tab!=='vender'?html`<div className="fl" style=${{gap:12}}>
       <input aria-label="Buscar en la tienda" placeholder="🔎 Buscar (ej: plexo braquial, parciales)" value=${q} onInput=${e=>setQ(e.target.value)}/>
@@ -1554,7 +1555,7 @@ function Tienda({a}){
 function Vender({a,api,me,mine,ev,onChange}){
   const {subjects}=a,first=subjects[0];
   const blank={title:'',kind:'resumen',subj_name:first?first.name:'',topics:'',years:[],onlyUni:false,price:'',currency:/argent/i.test(a.user.pais||'')?'ARS':'UYU',contact_kind:'whatsapp',contact:'',descr:'',preview:''};
-  const [f,setF]=useState(null),[aud,setAud]=useState(null),[err,setErr]=useState(null),[busy,setBusy]=useState(false);
+  const [f,setF]=useState(null),[aud,setAud]=useState(null),[err,setErr]=useState(null),[busy,setBusy]=useState(false),[del,setDel]=useState(null);
   const set=p=>{setF(x=>({...x,...p}));setErr(null)};
   const k=f?keyOf(f.subj_name):'';
   useEffect(()=>{if(!f||k.length<3){setAud(null);return}let ok=true;const t=setTimeout(()=>{api.students(k).then(ps=>{if(!ok)return;const list=(ps||[]).filter(p=>p.uid!==me.uid&&(!f.onlyUni||p.uni===me.uni)&&(!f.years.length||f.years.includes(+p.anio)));setAud(list.length)}).catch(()=>ok&&setAud(null))},400);return()=>{ok=false;clearTimeout(t)}},[k,f&&f.onlyUni,f&&f.years.join(',')]);
@@ -1595,7 +1596,7 @@ function Vender({a,api,me,mine,ev,onChange}){
     ${mine===null?html`<p className="mut">Cargando…</p>`:mine.length===0?html`<p className="mut">Todavía no publicaste nada.</p>`:mine.map(l=>html`<div key=${l.id} className="card fl" style=${{gap:8,opacity:l.active?1:.6}}>
       <div className="row wrap" style=${{justifyContent:'space-between'}}><b>${(LKIND[l.kind]||LKIND.otro)[0]} ${l.title}</b><span className="mut" style=${{fontSize:12.5}}>${l.subj_name}${l.years?' · '+l.years.split('|').filter(Boolean).join(', ')+'.º año':''}${l.unis?' · tu facultad':''}</span></div>
       <div className="row wrap" style=${{gap:16}}><span><b className="num" style=${{fontSize:22}}>${stat(l.id,'view')}</b> <span className="mut" style=${{fontSize:13}}>vistas</span></span><span><b className="num" style=${{fontSize:22}}>${stat(l.id,'click')}</b> <span className="mut" style=${{fontSize:13}}>contactos</span></span>${breakdown(l.id)&&html`<span className="mut" style=${{fontSize:12.5,alignSelf:'center'}}>${breakdown(l.id)}</span>`}</div>
-      <div className="row wrap" style=${{gap:8}}><button className="btn btn-sm" onClick=${async()=>{await api.updateListing(l.id,{active:!l.active}).catch(()=>{});onChange()}}>${l.active?'Pausar':'Reactivar'}</button><button className="btn btn-sm btn-g" onClick=${async()=>{if(!confirm('¿Borrar "'+l.title+'"?'))return;await api.deleteListing(l.id).catch(()=>{});onChange()}}>Borrar</button></div></div>`)}
+      <div className="row wrap" style=${{gap:8}}><button className="btn btn-sm" onClick=${async()=>{await api.updateListing(l.id,{active:!l.active}).catch(()=>{});onChange()}}>${l.active?'Pausar':'Reactivar'}</button>${del===l.id?html`<button className="btn btn-sm" style=${{background:'var(--t-rose)'}} onClick=${async()=>{setDel(null);await api.deleteListing(l.id).catch(()=>{});onChange()}}>Sí, borrar</button><button className="btn btn-sm btn-g" onClick=${()=>setDel(null)}>No</button>`:html`<button className="btn btn-sm btn-g" onClick=${()=>setDel(l.id)}>Borrar</button>`}</div></div>`)}
   </div>`;
 }
 
@@ -1616,7 +1617,7 @@ function Match({a}){
   if(open)return html`<${GroupChat} a=${a} api=${api} me=${me} g=${open} onBack=${()=>{setOpen(null);setTick(t=>t+1)}} onLeave=${leave}/>`;
   return html`<div className="fl" style=${{gap:18}}>
     <${Head} eyebrow="Grupos de estudio" title="Estudiá con otros" sub="Conocé gente que está cursando tu misma materia, armá grupos, chateá y compartí material."/>
-    ${!api.online&&html`<div className="alertbox" style=${{background:'var(--t-cream)'}}><b>Modo demo.</b> Los compañeros y grupos son de ejemplo y todo queda en este navegador. Para conocer gente real, activá <b>Grupos en línea</b> en Mi perfil.</div>`}
+    ${!api.online&&html`<div className="alertbox" style=${{background:'var(--t-cream)'}}><b>Modo demo.</b> Los compañeros y grupos son de ejemplo y todo queda en este navegador. ${STANDALONE?html`Para conocer gente real, activá <b>Grupos en línea</b> en Mi perfil.`:'Los grupos con gente real funcionan en el sitio web de Nexus (con Grupos en línea activado).'}</div>`}
     <div><div className="eyebrow" style=${{marginBottom:8}}>Materia</div><div className="chips">${subjects.map(x=>html`<button key=${x.id} className="chip" aria-pressed=${x.id===s.id} onClick=${()=>{setSid(x.id);setForm(null)}}>${x.emoji} ${x.name}</button>`)}</div></div>
     ${err&&html`<div className="alertbox" role="alert" style=${{background:'var(--t-rose)'}}>${err}</div>`}
     <div className="fl" style=${{gap:10}}>
