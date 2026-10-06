@@ -1347,16 +1347,64 @@ function Welcome({initial,edit,onDone,onClose}){
     </div></div></div>`;
 }
 
+const fdate=d=>d?new Date(d).toLocaleDateString('es',{day:'numeric',month:'long'}):'';
+function MiSuscripcion({a}){
+  const [conf,setConf]=useState(false),[busy,setBusy]=useState(false);
+  const sb=a.sub;
+  if(!sb)return html`<div className="card"><b>⭐ Mi suscripción</b><p className="mut" style=${{fontSize:13.5,marginTop:6}}>Cargando…</p></div>`;
+  const x=sb.subscription||{},st=x.status,np=x.next_payment_date,pu=x.paid_until&&new Date(x.paid_until).getTime()>Date.now()?x.paid_until:null;
+  const auto=st==='authorized',pending=st==='pending';
+  const until=(auto&&np)||pu||(sb.in_trial?sb.trial_ends_at:null);
+  const line=auto?html`<b>Débito automático activo</b> · $${PAGOS.precio} por mes${np?html`<br/>Próximo cobro: ${fdate(np)}`:''}`
+    :pending?html`<b>Esperando a Mercado Pago</b><br/>Todavía no se confirmó tu débito automático.`
+    :pu?html`<b>Pagada hasta el ${fdate(pu)}</b>${st==='cancelled'?html`<br/>Cancelaste el débito automático: no se te cobra más.`:''}`
+    :sb.in_trial?html`<b>Mes gratis</b> · te quedan ${daysLeft(sb.trial_ends_at)} días (hasta el ${fdate(sb.trial_ends_at)})`
+    :html`<b>Sin suscripción activa</b>`;
+  const doCancel=async()=>{setBusy(true);const ok=await a.pay.cancel();setBusy(false);if(ok!==false)setConf(false)};
+  return html`<div className="card fl" style=${{gap:10}}><b>⭐ Mi suscripción</b>
+    <div style=${{fontSize:14,lineHeight:1.5}}>${line}</div>
+    <span className="mut" style=${{fontSize:12.5}}>Pagás con Mercado Pago: tarjeta de crédito, débito o dinero en tu cuenta. El pago va directo a Nexus.${sb.demo?' (Modo demo: los pagos son simulados.)':''}</span>
+    ${(auto||pending)?(conf?html`<div className="alertbox fl" style=${{gap:8,background:'var(--t-rose)'}}><span style=${{fontSize:13.5}}>¿Cancelar la suscripción? No se te va a cobrar más${until?' y vas a poder usar Nexus hasta el '+fdate(until):''}.</span><div className="row wrap" style=${{gap:8}}><button className="btn btn-sm btn-s" disabled=${busy} onClick=${doCancel}>${busy?'Cancelando…':'Sí, cancelar'}</button><button className="btn btn-sm" onClick=${()=>setConf(false)}>No, seguir suscripto</button></div></div>`
+      :html`<div className="row wrap" style=${{gap:8}}><button className="btn btn-sm" onClick=${()=>setConf(true)}>Cancelar suscripción</button>${!sb.demo&&html`<button className="btn btn-sm btn-g" onClick=${a.pay.refresh}>Actualizar</button>`}</div>`)
+    :html`<div className="row wrap" style=${{gap:8}}><button className="btn btn-sm btn-s" onClick=${a.pay.subscribe}>Activar débito automático</button><button className="btn btn-sm" onClick=${a.pay.payMonth}>Pagar 1 mes</button>${!sb.demo&&html`<button className="btn btn-sm btn-g" onClick=${a.pay.refresh}>Actualizar</button>`}</div>
+      <span className="mut" style=${{fontSize:12}}>Con débito automático se cobran $${PAGOS.precio} cada mes${sb.in_trial?', empezando cuando termina tu mes gratis':''}. Con "Pagar 1 mes" pagás una sola vez y no se renueva solo.</span>`}
+  </div>`;
+}
+const DIAS=[[1,'L'],[2,'M'],[3,'X'],[4,'J'],[5,'V'],[6,'S'],[0,'D']];
+const REM_KINDS=[['sesiones','Mis bloques de estudio del día'],['repasos','Repasos pendientes'],['inactividad','Si dejo de estudiar 2 días']];
+function Recordatorios({a}){
+  const r=a.rem||{enabled:false,hour:18,days:'0123456',kinds:'sesiones,repasos,inactividad'};
+  const [busy,setBusy]=useState(false),[prev,setPrev]=useState(false);
+  const upd=p=>a.setRem({...r,...p});
+  const toggle=async()=>{
+    if(!r.enabled&&a.pay.online){try{await a.ensureAuth()}catch(e){return}}
+    upd({enabled:!r.enabled});a.toast(r.enabled?'Recordatorios desactivados':'Listo: te vamos a escribir a '+a.user.email);
+  };
+  const test=async()=>{
+    if(!a.pay.online){setPrev(true);return}
+    setBusy(true);try{await a.sendTestReminder();a.toast('Te mandamos un email de prueba. Revisá también Spam o Promociones.')}catch(e){a.toast(e&&e.code==='cancelled'?'Cancelado.':'No pudimos mandar el email. Probá de nuevo más tarde.')}finally{setBusy(false)}
+  };
+  const gmail=/@gmail\.com$/i.test(a.user.email);
+  return html`<div className="card fl" style=${{gap:10}}><b>🔔 Recordatorios por email</b>
+    <span className="mut" style=${{fontSize:13}}>Un email por día, a la hora que elijas, para que no se te pasen tus sesiones de estudio y repasos. Te llega a ${gmail?'tu Gmail':'tu correo'}: <b style=${{overflowWrap:'anywhere'}}>${a.user.email}</b>.</span>
+    <label className="row" style=${{gap:8,fontSize:14,cursor:'pointer'}}><input type="checkbox" checked=${!!r.enabled} onChange=${toggle} style=${{width:20,height:20,flex:'0 0 20px',accentColor:'var(--ink)'}}/> Mandarme recordatorios</label>
+    ${r.enabled&&html`<div className="fl" style=${{gap:10}}>
+      <div className="row wrap" style=${{gap:8}}><label htmlFor="rem-h" style=${{fontSize:13.5}}>Hora</label><select id="rem-h" value=${r.hour} onChange=${e=>upd({hour:+e.target.value})} style=${{width:'auto',minWidth:110}}>${[...Array(18)].map((_,i)=>i+6).map(h=>html`<option key=${h} value=${h}>${String(h).padStart(2,'0')}:00</option>`)}</select></div>
+      <div className="chips" role="group" aria-label="Días">${DIAS.map(([d,l])=>html`<button key=${d} className="chip" aria-pressed=${r.days.includes(String(d))} aria-label=${['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][d]} onClick=${()=>{const on=r.days.includes(String(d)),nd=on?r.days.replace(String(d),''):r.days+d;if(nd)upd({days:nd.split('').sort().join('')})}}>${l}</button>`)}</div>
+      <div className="fl" style=${{gap:6}}>${REM_KINDS.map(([k,l])=>html`<label key=${k} className="row" style=${{gap:8,fontSize:13.5,cursor:'pointer'}}><input type="checkbox" checked=${r.kinds.includes(k)} onChange=${e=>{const ks=r.kinds.split(',').filter(Boolean).filter(x=>x!==k);if(e.target.checked)ks.push(k);if(ks.length)upd({kinds:ks.join(',')})}} style=${{width:18,height:18,flex:'0 0 18px',accentColor:'var(--ink)'}}/> ${l}</label>`)}</div>
+      <div className="row wrap" style=${{gap:8}}><button className="btn btn-sm" disabled=${busy} onClick=${test}>${busy?'Enviando…':a.pay.online?'Mandarme uno de prueba':'Ver cómo se ve'}</button></div>
+      ${prev&&html`<div style=${{background:'var(--surf)',borderRadius:14,padding:12,fontSize:13.5}}><div className="eyebrow" style=${{marginBottom:6}}>Vista previa del email</div><${Md} text=${a.remPreview()}/></div>`}
+      ${!a.pay.online&&html`<span className="mut" style=${{fontSize:12}}>Modo demo: para que los emails se envíen de verdad hay que configurar el servicio de correo (ver README).</span>`}</div>`}
+  </div>`;
+}
 function Perfil({a,onClose}){
   const u=a.user,[k,setK]=useState(''),[has,setHas]=useState(!!aiKey.get()),[gc,setGc]=useState(()=>grpCfg.get()),[gu,setGu]=useState(''),[gk,setGk]=useState('');
   return html`<div className="overlay" role="dialog" aria-modal="true" aria-label="Mi perfil"><div className="sheet">
     <div className="row" style=${{justifyContent:'space-between'}}><h2 style=${{fontSize:24,fontWeight:700}}>Mi perfil</h2><button className="ibtn" onClick=${onClose} aria-label="Cerrar"><${Icon} n="x" s=${18}/></button></div>
     <div className="card row" style=${{gap:14}}><span className="av" style=${{width:56,height:56,flexBasis:56,fontSize:20}}>${initials(u.nombre)}</span><div className="grow" style=${{minWidth:0}}><b style=${{fontSize:17,display:'block'}}>${u.nombre}</b><span className="mut" style=${{fontSize:13,overflowWrap:'anywhere'}}>${u.email}</span></div></div>
     <div className="card fl" style=${{gap:8,fontSize:14}}><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Universidad</span><b style=${{textAlign:'right'}}>${u.uni}</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Carrera</span><b>${u.carrera}</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Año</span><b>${u.anio}.º</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">País</span><b>${u.pais}</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Estudio por día</span><b>${u.horas||3} h</b></div></div>
-    ${STANDALONE&&a.sub&&html`<div className="card fl" style=${{gap:8}}><b>⭐ Suscripción Nexus</b>
-      ${(()=>{const sb=a.sub,st=sb.subscription&&sb.subscription.status,np=sb.subscription&&sb.subscription.next_payment_date;
-        return html`<span className="mut" style=${{fontSize:13.5}}>${st==='authorized'?'Activa · $'+PAGOS.precio+' por mes'+(np?' · próximo cobro el '+new Date(np).toLocaleDateString('es'):''):st==='pending'?'Esperando la confirmación de Mercado Pago.':sb.in_trial?'Mes gratis: te quedan '+daysLeft(sb.trial_ends_at)+' días. Después, $'+PAGOS.precio+' por mes.':'Sin suscripción activa.'}${sb.demo?' (modo demo: los pagos son simulados)':''}</span>
-        <div className="row wrap" style=${{gap:8}}>${st==='authorized'?html`<button className="btn btn-sm btn-g" onClick=${a.pay.cancel}>Cancelar suscripción</button>`:html`<button className="btn btn-sm btn-s" onClick=${a.pay.subscribe}>Suscribirme con Mercado Pago</button>`}${!sb.demo&&html`<button className="btn btn-sm" onClick=${a.pay.refresh}>Actualizar</button>`}</div>`})()}</div>`}
+    ${STANDALONE&&html`<${MiSuscripcion} a=${a}/>`}
+    ${STANDALONE&&html`<${Recordatorios} a=${a}/>`}
     ${STANDALONE&&html`<div className="card fl" style=${{gap:8}}><b>✳️ Tu cuenta de Claude</b>
       <span className="mut" style=${{fontSize:13}}>${CLAUDE_APP_URL?'Abrí Nexus dentro de claude.ai: el tutor, la guía, los temas y los ejercicios usan tu propia cuenta de Claude, sin clave. Tu progreso de este navegador no se pasa solo: volvé a subir tus apuntes allá.':'Desde el tutor y tus apuntes podés tocar "Seguir en Claude": se abre claude.ai con tu cuenta y un pedido armado con tu carrera, tus parciales, tus temas flojos y tu material.'}</span>
       <div className="row wrap" style=${{gap:8}}>${CLAUDE_APP_URL&&html`<a className="btn btn-s btn-sm" href=${CLAUDE_APP_URL} target="_blank" rel="noopener">Abrir Nexus en Claude ↗</a>`}<button className="btn btn-sm" onClick=${()=>openInClaude('Quiero que seas mi tutor personal de estudio. '+perfilTxt(a)+'\nArmame un plan para esta semana priorizando lo que más me cuesta y lo que rindo antes, y después empecemos por el primer tema con método socrático. Español rioplatense.',a.toast)}>Estudiar en Claude ↗</button></div></div>`}
@@ -1891,8 +1939,8 @@ function Paywall({a}){
     <div className="hero th-ana"><div className="eyebrow">Suscripción Nexus</div><h1 style=${{fontSize:'clamp(26px,7vw,34px)',fontWeight:700,marginTop:6,color:'#fff'}}>Terminó tu mes gratis</h1>
       <p style=${{marginTop:8,fontSize:15}}>Para seguir con tu plan, el tutor, tus apuntes y los grupos, suscribite.</p>
       <div className="num" style=${{fontWeight:800,fontSize:48,marginTop:14,lineHeight:1}}>$${PAGOS.precio}<span style=${{fontSize:18,fontWeight:500}}> por mes</span></div>
-      <p style=${{fontSize:13,opacity:.9,marginTop:6}}>Pagás con Mercado Pago. Podés cancelar cuando quieras desde Mi perfil.</p>
-      <div className="row wrap" style=${{marginTop:16}}><button className="btn btn-i btn-big" disabled=${busy} onClick=${async()=>{setBusy(true);await a.pay.subscribe();setBusy(false)}}>${busy?'Abriendo Mercado Pago…':'Suscribirme'}</button><button className="btn btn-ghost" onClick=${a.pay.refresh}>Ya me suscribí</button></div></div>
+      <p style=${{fontSize:13,opacity:.9,marginTop:6}}>Pagás con Mercado Pago: tarjeta de crédito, débito o dinero en tu cuenta. Cancelás cuando quieras desde Mi perfil.</p>
+      <div className="row wrap" style=${{marginTop:16}}><button className="btn btn-i btn-big" disabled=${busy} onClick=${async()=>{setBusy(true);await a.pay.subscribe();setBusy(false)}}>${busy?'Abriendo Mercado Pago…':'Suscribirme'}</button><button className="btn btn-ghost" onClick=${a.pay.payMonth}>Pagar solo 1 mes</button><button className="btn btn-ghost" onClick=${a.pay.refresh}>Ya pagué</button></div></div>
     <div className="row wrap"><button className="btn btn-sm" onClick=${a.openPerfil}>Mi perfil</button><button className="btn btn-sm btn-g" onClick=${a.logout}>Cerrar sesión</button></div></div>`;
 }
 
@@ -1911,7 +1959,8 @@ function Main({user,isNew,onUser}){
   const online=!!mailCfg();
   const ensureAuth=async()=>{const s=await liveSession(user.email);if(s)return s;return new Promise((res,rej)=>setAuthReq({res,rej}))};
   const localStatus=()=>{const te=new Date((user.created||Date.now())+PAGOS.prueba*864e5).toISOString(),l=subLocal.get(user.email),inT=Date.now()<new Date(te).getTime();
-    return {trial_ends_at:te,in_trial:inT,subscription:l,active:inT||!!(l&&l.status==='authorized'),demo:true}};
+    const pu=l&&l.paid_until?new Date(l.paid_until).getTime():0;
+    return {trial_ends_at:te,in_trial:inT,subscription:l,active:inT||!!(l&&(l.status==='authorized'||pu>Date.now())),demo:true}};
   const refreshPay=async(prompt)=>{
     if(!online){setSub(localStatus());try{setSeller(!!localStorage.getItem('ea-mp-'+user.email))}catch(e){setSeller(false)}return}
     const s=prompt?await ensureAuth().catch(()=>null):await liveSession(user.email);
@@ -1924,8 +1973,12 @@ function Main({user,isNew,onUser}){
     online,refresh:()=>refreshPay(true),
     subscribe:async()=>{if(!online){const te=localStatus().trial_ends_at;subLocal.set(user.email,{status:'authorized',next_payment_date:new Date(Math.max(Date.now(),new Date(te).getTime())).toISOString(),demo:true});setSub(localStatus());toast('Suscripción activada (simulada en modo demo)');return}
       try{const s=await ensureAuth();const j=await callFn({action:'subscribe'},s);if(j.already){toast('Ya tenés la suscripción activa');refreshPay(false)}else go(j.url)}catch(e){if(e&&e.code!=='cancelled')toast(payErr(e))}},
-    cancel:async()=>{if(!online){subLocal.set(user.email,null);setSub(localStatus());toast('Suscripción cancelada');return}
-      try{const s=await ensureAuth();await callFn({action:'cancel_subscription'},s);toast('Suscripción cancelada');refreshPay(false)}catch(e){if(e&&e.code!=='cancelled')toast(payErr(e))}},
+    cancel:async()=>{
+      if(!online){const l=subLocal.get(user.email)||{},keep=Math.max(l.paid_until?new Date(l.paid_until).getTime():0,l.status==='authorized'&&l.next_payment_date?new Date(l.next_payment_date).getTime():0);subLocal.set(user.email,{...l,status:'cancelled',next_payment_date:null,paid_until:keep>Date.now()?new Date(keep).toISOString():null});setSub(localStatus());toast('Suscripción cancelada. No se te va a cobrar más.');return true}
+      try{const s=await ensureAuth();const j=await callFn({action:'cancel_subscription'},s);toast(j.access_until?'Suscripción cancelada. Seguís con acceso hasta el '+new Date(j.access_until).toLocaleDateString('es')+'.':'Suscripción cancelada. No se te va a cobrar más.');await refreshPay(false);return true}catch(e){if(e&&e.code!=='cancelled')toast(payErr(e));return false}},
+    payMonth:async()=>{
+      if(!online){const l=subLocal.get(user.email)||{},st=localStatus(),base=Math.max(Date.now(),new Date(st.trial_ends_at).getTime(),l.paid_until?new Date(l.paid_until).getTime():0),d=new Date(base);d.setMonth(d.getMonth()+1);subLocal.set(user.email,{...l,status:l.status==='authorized'?'authorized':'paid',paid_until:d.toISOString(),demo:true});setSub(localStatus());toast('Pago de 1 mes aprobado (simulado en modo demo)');return}
+      try{const s=await ensureAuth();const j=await callFn({action:'pay_month'},s);go(j.url)}catch(e){if(e&&e.code!=='cancelled')toast(payErr(e))}},
     connect:async()=>{if(!online){try{localStorage.setItem('ea-mp-'+user.email,'1')}catch(e){}setSeller(true);toast('Mercado Pago conectado (simulado en modo demo)');return}
       try{const s=await ensureAuth();const j=await callFn({action:'connect'},s);go(j.url)}catch(e){if(e&&e.code!=='cancelled')toast(payErr(e))}},
     checkout:async l=>{const s=await ensureAuth();const j=await callFn({action:'checkout',listing_id:l.id},s);go(j.url)},
@@ -1948,7 +2001,31 @@ function Main({user,isNew,onUser}){
   const nudge=(id,dl)=>setMastery(m=>({...m,[id]:clamp((m[id]??50)+dl,0,100)}));
   const tName=id=>(findT(subjects,id)||{t:{name:id}}).t.name;
   const slowTopic=id=>{setSlow(s=>({...s,[id]:(s[id]||0)+1}));nudge(id,-6);toast(`Recalculé tu semana: ${tName(id)} sube de prioridad`)};
-  const A={user,pay,sub,seller,ensureAuth,dmInit,shopInit,clearDm:()=>setDmInit(null),clearShop:()=>setShopInit(null),openDM:(uid,name,descr)=>{setDmInit({uid,name,descr});setTab('match')},tab,go:setTab,subjects,prefs,mastery,slow,plan,kept,reviews,errors,rescue,stats,run,mats,guides,qv,exInit,simInit,risk0,examOf,toast,nudge,slowTopic,tutorTopic,isDark,
+  /* Recordatorios por email: la configuración queda en este navegador y los próximos bloques se mandan al servidor */
+  const [rem,setRem0]=useState(()=>{try{return JSON.parse(localStorage.getItem('ea-rem-'+user.email)||'null')}catch(e){return null}});
+  const setRem=v=>{setRem0(v);try{localStorage.setItem('ea-rem-'+user.email,JSON.stringify(v))}catch(e){}};
+  const remData=useMemo(()=>{
+    const blocks=plan.filter(b=>b.type==='study'&&!b.done&&b.day<8).slice(0,40).map(b=>{const f=findT(subjects,b.topic),d=dateOf(b.day);d.setHours(0,b.start,0,0);return {start:d.toISOString(),topic:f?f.t.name:'',subject:f?f.s.name:'',review:!!b.review}});
+    let la=0;kept.forEach(k=>{const d=dateOf(k.day);d.setHours(0,k.start+k.dur,0,0);la=Math.max(la,d.getTime())});
+    return {blocks,reviews:reviews.filter(r=>r.due<=Date.now()+864e5).length,last_active:la?new Date(la).toISOString():null};
+  },[plan,reviews,kept,subjects]);
+  const remSent=useRef('');
+  useEffect(()=>{
+    if(!online||!rem)return;
+    const row={email:user.email,enabled:!!rem.enabled,hour:rem.hour,days:rem.days,kinds:rem.kinds,tz:(()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'America/Montevideo'}catch(e){return 'America/Montevideo'}})(),name:user.nombre,...remData};
+    const key=JSON.stringify(row);if(key===remSent.current)return;
+    const t=setTimeout(async()=>{const s=await liveSession(user.email);if(!s)return;const c=mailCfg();
+      try{const r=await fetch(c.url.replace(/\/+$/,'')+'/rest/v1/reminders?on_conflict=auth_id',{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+s.access_token,'content-type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({auth_id:s.uid,...row,updated_at:new Date().toISOString()})});if(r.ok)remSent.current=key}catch(e){}},2500);
+    return()=>clearTimeout(t)},[rem,remData,online]);
+  const sendTestReminder=async()=>{const s=await ensureAuth(),c=mailCfg();remSent.current='';
+    const r=await fetch(c.url.replace(/\/+$/,'')+'/functions/v1/recordatorios',{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+s.access_token,'content-type':'application/json'},body:'{}'});if(!r.ok)throw {code:'mail'}};
+  const remPreview=()=>{const k=(rem&&rem.kinds)||'',today=dateOf(0).toDateString(),bl=remData.blocks.filter(b=>new Date(b.start).toDateString()===today&&new Date(b.start)>Date.now()),out=['Hola, '+user.nombre.split(' ')[0]+':'];
+    if(k.includes('sesiones')&&bl.length)out.push('**Hoy tenés '+bl.length+' bloque'+(bl.length>1?'s':'')+' de estudio:**',...bl.slice(0,6).map(b=>'- '+hhmm(new Date(b.start).getHours()*60+new Date(b.start).getMinutes())+' · '+b.topic+' ('+b.subject+')'));
+    if(k.includes('repasos')&&remData.reviews)out.push('Tenés **'+remData.reviews+' repaso'+(remData.reviews>1?'s':'')+'** pendientes.');
+    const idle=remData.last_active?Math.floor((Date.now()-new Date(remData.last_active))/864e5):0;if(k.includes('inactividad')&&idle>=2)out.push('Hace '+idle+' días que no completás un bloque. Con uno de 45 minutos hoy ya volvés a ritmo.');
+    if(out.length===1)out.push('Hoy no tenés bloques ni repasos pendientes. Cuando los tengas, te avisamos a esta hora.');
+    out.push('[Abrir Nexus] · No quiero recibir más recordatorios');return out.join('\n')};
+  const A={user,pay,sub,seller,ensureAuth,rem,setRem,sendTestReminder,remPreview,dmInit,shopInit,clearDm:()=>setDmInit(null),clearShop:()=>setShopInit(null),openDM:(uid,name,descr)=>{setDmInit({uid,name,descr});setTab('match')},tab,go:setTab,subjects,prefs,mastery,slow,plan,kept,reviews,errors,rescue,stats,run,mats,guides,qv,exInit,simInit,risk0,examOf,toast,nudge,slowTopic,tutorTopic,isDark,
     openPerfil:()=>setPerfil(true),editPerfil:()=>{setPerfil(false);setEditing(true)},
     logout:()=>{sessionEnd();setPerfil(false);onUser(null)},
     flipTheme:flip,openOnb:st=>setOnb(typeof st==='number'?st:true),

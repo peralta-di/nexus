@@ -4,3 +4,7 @@ verify_jwt = false
 
 [functions.mp-webhook]
 verify_jwt = false
+
+# Corre por pg_cron (con x-cron-secret) y por el link de baja del email.
+[functions.recordatorios]
+verify_jwt = false
