@@ -1390,6 +1390,12 @@ function Welcome({initial,edit,onDone,onClose}){
     </div></div></div>`;
 }
 
+/* Medios de pago aceptados (los procesa Mercado Pago) */
+function Medios({auto,dark}){
+  const it=auto?[['💳','Tarjeta de crédito'],['💳','Tarjeta de débito*'],['🔵','Dinero en Mercado Pago']]:[['💳','Tarjeta de crédito'],['💳','Tarjeta de débito'],['🔵','Dinero en Mercado Pago']];
+  return html`<div className="fl" style=${{gap:6}}><div className="chips">${it.map(([e,l])=>html`<span key=${l} className="lvl" style=${{background:dark?'rgba(255,255,255,.22)':'var(--surf2)',color:dark?'#fff':'var(--ink)'}}>${e} ${l}</span>`)}</div>
+    <span style=${{fontSize:11.5,opacity:.75}}>🔒 Pago seguro procesado por Mercado Pago. Nexus no ve ni guarda los datos de tu tarjeta.${auto?' *El débito automático con tarjeta de débito depende de tu banco; si no te deja, usá "Pagar 1 mes".':''}</span></div>`;
+}
 const fdate=d=>d?new Date(d).toLocaleDateString('es',{day:'numeric',month:'long'}):'';
 function MiSuscripcion({a}){
   const [conf,setConf]=useState(false),[busy,setBusy]=useState(false);
@@ -1406,7 +1412,7 @@ function MiSuscripcion({a}){
   const doCancel=async()=>{setBusy(true);const ok=await a.pay.cancel();setBusy(false);if(ok!==false)setConf(false)};
   return html`<div className="card fl" style=${{gap:10}}><b>⭐ Mi suscripción</b>
     <div style=${{fontSize:14,lineHeight:1.5}}>${line}</div>
-    <span className="mut" style=${{fontSize:12.5}}>Pagás con Mercado Pago: tarjeta de crédito, débito o dinero en tu cuenta. El pago va directo a Nexus.${sb.demo?' (Modo demo: los pagos son simulados.)':''}</span>
+    <div className="fl" style=${{gap:4}}><span style=${{fontSize:13,fontWeight:600}}>Medios de pago</span><${Medios} auto=${auto||!pu}/>${sb.demo&&html`<span className="mut" style=${{fontSize:12}}>Modo demo: los pagos son simulados.</span>`}</div>
     ${(auto||pending)?(conf?html`<div className="alertbox fl" style=${{gap:8,background:'var(--t-rose)'}}><span style=${{fontSize:13.5}}>¿Cancelar la suscripción? No se te va a cobrar más${until?' y vas a poder usar Nexus hasta el '+fdate(until):''}.</span><div className="row wrap" style=${{gap:8}}><button className="btn btn-sm btn-s" disabled=${busy} onClick=${doCancel}>${busy?'Cancelando…':'Sí, cancelar'}</button><button className="btn btn-sm" onClick=${()=>setConf(false)}>No, seguir suscripto</button></div></div>`
       :html`<div className="row wrap" style=${{gap:8}}><button className="btn btn-sm" onClick=${()=>setConf(true)}>Cancelar suscripción</button>${!sb.demo&&html`<button className="btn btn-sm btn-g" onClick=${a.pay.refresh}>Actualizar</button>`}</div>`)
     :html`<div className="row wrap" style=${{gap:8}}><button className="btn btn-sm btn-s" onClick=${a.pay.subscribe}>Activar débito automático</button><button className="btn btn-sm" onClick=${a.pay.payMonth}>Pagar 1 mes</button>${!sb.demo&&html`<button className="btn btn-sm btn-g" onClick=${a.pay.refresh}>Actualizar</button>`}</div>
@@ -1724,7 +1730,7 @@ function Tienda({a}){
       <span className="fl" style=${{alignItems:'flex-end',gap:2}}><b className="num" style=${{whiteSpace:'nowrap',fontSize:16}}>${free?'Gratis':money(l.price,l.currency)}</b>${n>0&&html`<span className="mut num" style=${{fontSize:12,whiteSpace:'nowrap'}}>🔥 ${n} vendido${n===1?'':'s'}</span>`}</span></div>
     ${why&&why.length>0&&html`<div className="chips">${why.slice(0,3).map(w=>html`<span key=${w} className="lvl" style=${{background:'var(--t-mint)',color:'var(--ink)'}}>${w}</span>`)}</div>`}
     ${open===l.id&&html`<div className="fl" style=${{gap:8,fontSize:14}}>${l.descr&&html`<p style=${{whiteSpace:'pre-wrap'}}>${l.descr}</p>`}${l.topics&&html`<p className="mut" style=${{fontSize:13}}>Temas: ${l.topics}</p>`}${l.has_file&&html`<p className="mut" style=${{fontSize:13}}>📎 Incluye un archivo para descargar después de la compra.</p>`}${l.preview&&html`<div style=${{background:'var(--surf)',borderRadius:14,padding:12,fontSize:13,whiteSpace:'pre-wrap',maxHeight:220,overflow:'auto'}}><div className="eyebrow" style=${{marginBottom:4}}>Vista previa</div>${l.preview}</div>`}</div>`}
-    ${buy===l.id&&html`<div className="alertbox fl" style=${{gap:8,background:'var(--t-blue)'}}><b>Pagás ${money(l.price,l.currency)} con Mercado Pago${a.pay.online?'':' (simulado: modo demo)'}.</b><span style=${{fontSize:13}}>Después de pagar vas a poder descargar el material y ver el contacto de ${l.seller_name.replace(' (ejemplo)','')} en "Mis compras". De ese monto, Nexus se queda con el ${Math.round(PAGOS.comision*100)} % (${money(fee,l.currency)}).</span><div className="row wrap" style=${{gap:8}}><button className="btn btn-s btn-sm" disabled=${busy} onClick=${()=>pay(l)}>${busy?'Abriendo Mercado Pago…':a.pay.online?'Ir a pagar':'Pagar (simulado)'}</button><button className="btn btn-sm btn-g" onClick=${()=>setBuy(null)}>Cancelar</button></div></div>`}
+    ${buy===l.id&&html`<div className="alertbox fl" style=${{gap:8,background:'var(--t-blue)'}}><b>Pagás ${money(l.price,l.currency)} con Mercado Pago${a.pay.online?'':' (simulado: modo demo)'}.</b><span style=${{fontSize:13}}>Después de pagar vas a poder descargar el material y ver el contacto de ${l.seller_name.replace(' (ejemplo)','')} en "Mis compras". De ese monto, Nexus se queda con el ${Math.round(PAGOS.comision*100)} % (${money(fee,l.currency)}).</span><${Medios}/><div className="row wrap" style=${{gap:8}}><button className="btn btn-s btn-sm" disabled=${busy} onClick=${()=>pay(l)}>${busy?'Abriendo Mercado Pago…':a.pay.online?'Ir a pagar':'Pagar (simulado)'}</button><button className="btn btn-sm btn-g" onClick=${()=>setBuy(null)}>Cancelar</button></div></div>`}
     <div className="row wrap" style=${{gap:8}}><button className="btn btn-sm" onClick=${()=>view(l.id)}>${open===l.id?'Ver menos':'Ver detalle'}</button>
       ${free?html`<button className="btn btn-sm btn-s" onClick=${()=>{setTab('compras');setTimeout(()=>getIt(l),0)}}>Obtener gratis</button>`:buy!==l.id&&html`<button className="btn btn-sm btn-s" onClick=${()=>{setBuy(l.id);log(l,'view')}}>Comprar · ${money(l.price,l.currency)}</button>`}
       <button className="btn btn-sm" onClick=${()=>a.openDM(l.uid,l.seller_name.replace(' (ejemplo)',''),'Vende: '+l.title)}><${Icon} n="msg" s=${14}/> Preguntar</button>
@@ -1803,6 +1809,7 @@ function Vender({a,api,me,mine,ev,sold,onChange}){
   const ta={width:'100%',font:'inherit',padding:12,borderRadius:16,border:'1.5px solid var(--line)',background:'var(--card)',color:'var(--ink)',resize:'vertical'};
   return html`<div className="fl" style=${{gap:16}}>
     <div className="card fl" style=${{gap:8}}><b>💳 Cobrar con Mercado Pago</b>
+      <span className="mut" style=${{fontSize:12.5}}>Quien te compra puede pagar con tarjeta de crédito, débito o dinero en Mercado Pago. La plata te llega a tu cuenta de Mercado Pago y desde ahí la pasás a tu banco cuando quieras.</span>
       ${a.seller?html`<span style=${{fontSize:13.5}}>✅ Tu cuenta está conectada. Cada venta se cobra por Nexus: te llega el ${100-Math.round(PAGOS.comision*100)} % a tu Mercado Pago y Nexus retiene el ${Math.round(PAGOS.comision*100)} % de comisión.${a.pay.online?'':' (Simulado en modo demo.)'}</span>`
       :html`<span className="mut" style=${{fontSize:13.5}}>Para vender, conectá tu cuenta de Mercado Pago. Quien compra paga dentro de Nexus; te llega el ${100-Math.round(PAGOS.comision*100)} % directo a tu cuenta y Nexus retiene el ${Math.round(PAGOS.comision*100)} % de cada venta. El material gratis no paga comisión.</span><div><button className="btn btn-s btn-sm" onClick=${a.pay.connect}>Conectar Mercado Pago</button></div>`}</div>
     ${sales&&sales.length>0&&html`<div className="card fl" style=${{gap:10}}><b>Tus ventas</b>
@@ -1987,7 +1994,7 @@ function Paywall({a}){
     <div className="hero th-ana"><div className="eyebrow">Suscripción Nexus</div><h1 style=${{fontSize:'clamp(26px,7vw,34px)',fontWeight:700,marginTop:6,color:'#fff'}}>Terminó tu mes gratis</h1>
       <p style=${{marginTop:8,fontSize:15}}>Para seguir con tu plan, el tutor, tus apuntes y los grupos, suscribite.</p>
       <div className="num" style=${{fontWeight:800,fontSize:48,marginTop:14,lineHeight:1}}>$${PAGOS.precio}<span style=${{fontSize:18,fontWeight:500}}> por mes</span></div>
-      <p style=${{fontSize:13,opacity:.9,marginTop:6}}>Pagás con Mercado Pago: tarjeta de crédito, débito o dinero en tu cuenta. Cancelás cuando quieras desde Mi perfil.</p>
+      <div style=${{marginTop:10}}><${Medios} auto=${true} dark=${true}/></div><p style=${{fontSize:13,opacity:.9,marginTop:6}}>Cancelás cuando quieras desde Mi perfil.</p>
       <div className="row wrap" style=${{marginTop:16}}><button className="btn btn-i btn-big" disabled=${busy} onClick=${async()=>{setBusy(true);await a.pay.subscribe();setBusy(false)}}>${busy?'Abriendo Mercado Pago…':'Suscribirme'}</button><button className="btn btn-ghost" onClick=${a.pay.payMonth}>Pagar solo 1 mes</button><button className="btn btn-ghost" onClick=${a.pay.refresh}>Ya pagué</button></div></div>
     <div className="row wrap"><button className="btn btn-sm" onClick=${a.openPerfil}>Mi perfil</button><button className="btn btn-sm btn-g" onClick=${a.logout}>Cerrar sesión</button></div></div>`;
 }

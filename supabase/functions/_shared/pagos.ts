@@ -230,6 +230,8 @@ export async function handlePagos(req: Request): Promise<Response> {
           body: {
             items: [{ id: l.id, title: String(l.title).slice(0, 250), quantity: 1, unit_price: price, currency_id: l.currency || "UYU" }],
             marketplace_fee: round2(price * c.comision),
+            // Tarjeta de crédito, débito o dinero en Mercado Pago; sin efectivo (tarda días y demoraría la entrega).
+            payment_methods: { excluded_payment_types: [{ id: "ticket" }, { id: "atm" }] },
             external_reference: l.id + "|" + u.id,
             payer: { email: u.email },
             back_urls: { success: c.site + "?r=compra", pending: c.site + "?r=compra-pendiente", failure: c.site + "?r=compra-error" },
