@@ -2495,7 +2495,9 @@ function Main({user,isNew,onUser}){
     const acct={...user};delete acct.ph;delete acct.salt;
     const get=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}};
     const data={exportado:new Date().toISOString(),cuenta:acct,datos_de_estudio:get(dkey(user.email)),suscripcion:get('ea-sub-'+user.email),recordatorios:get('ea-rem-'+user.email)};
-    const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),el=document.createElement('a');
+    const txt=JSON.stringify(data,null,2);
+    if(!STANDALONE){(async()=>{try{const d=await window.claude.use('downloads');if(!d){toast('Para descargar tus datos, abrí Nexus en el sitio web.');return}const r=await d.save({filename:'nexus-mis-datos.json',data:txt});if(r&&r.status==='saved')toast('Descargamos tus datos en un archivo')}catch(e){if(!e||e.code!=='declined')toast('No se pudo descargar el archivo.')}})();return}
+    const b=new Blob([txt],{type:'application/json'}),u=URL.createObjectURL(b),el=document.createElement('a');
     el.href=u;el.download='nexus-mis-datos.json';document.body.appendChild(el);el.click();el.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);toast('Descargamos tus datos en un archivo');
   };
   const deleteAccount=async()=>{
