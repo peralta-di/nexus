@@ -139,7 +139,7 @@ Nexus incluye **Términos y condiciones** y **Política de privacidad** pensados
 - **Mi suscripción:** explica cómo pedir el arrepentimiento.
 
 **Antes de abrir al público:**
-1. Completá `LEGAL` al principio del bloque "TÉRMINOS Y CONDICIONES" en `index.html`: titular, cédula o RUT, domicilio, email, departamento y número de inscripción ante la URCDP. Hoy dice "[a completar]".
+1. Los datos del titular están en `LEGAL`, en `index.html`: hoy figura **Diana Peralta (nombre comercial: Nexus)** con su email. Si querés, agregá la cédula o el RUT, el domicilio, el departamento y, cuando lo tengas, el número de inscripción ante la URCDP. Los campos vacíos no se muestran.
 2. Inscribí la base de datos ante la **URCDP**, la Unidad Reguladora y de Control de Datos Personales (trámite en línea en gub.uy).
 3. Hacé **revisar los textos por un abogado** y consultá con un **contador** cómo facturar la suscripción y las comisiones.
 4. En Supabase ejecutá `supabase/migrations/20261006050000_terminos.sql` y volvé a subir la función `pagos`, que ahora borra cuentas.

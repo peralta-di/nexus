@@ -1347,23 +1347,28 @@ function MaterialScreen({a}){
     <${MaterialPanel} key=${s.id} a=${a} subj=${s.id}/></div></div>`;
 }
 /* ---------- TÉRMINOS Y CONDICIONES Y POLÍTICA DE PRIVACIDAD ----------
-   Completá LEGAL con tus datos antes de abrir Nexus al público y hacé revisar los textos por un abogado.
+   Los datos del titular están en LEGAL; los campos vacíos no se muestran. Conviene que un abogado revise los textos.
    Si cambiás los textos, subí LEGAL_V: a todas las personas se les pide aceptar la nueva versión. */
 const LEGAL={
-  titular:'Nexus',
-  documento:'[a completar: cédula o RUT]',
-  domicilio:'[a completar: domicilio completo y departamento], Uruguay',
-  email:'dianaperalta20061@gmail.com',
-  departamento:'[a completar: departamento]',
-  urcdp:'[a completar: número de inscripción de la base de datos ante la URCDP]'
+  titular:'Diana Peralta',
+  comercial:'Nexus',
+  documento:'',      // cédula o RUT (opcional: si está vacío no se muestra)
+  domicilio:'',      // dirección y departamento (opcional)
+  email:'dianaperalta2006@gmail.com',
+  departamento:'',   // departamento para los tribunales (opcional)
+  urcdp:''           // número de inscripción ante la URCDP, cuando lo tengas
 };
 const LEGAL_V='2026-10-06';
 const LEGAL_FECHA='6 de octubre de 2026';
-const legalDocs=()=>{const L=LEGAL,P=PAGOS;return {
+const legalDocs=()=>{const L=LEGAL,P=PAGOS;
+  const quien=L.titular+(L.comercial?' (nombre comercial: '+L.comercial+')':'')+(L.documento?', '+L.documento:'');
+  const dom=L.domicilio?L.domicilio:'Uruguay';
+  const trib=L.departamento?'los tribunales de '+L.departamento:'los tribunales de la República Oriental del Uruguay';
+  return {
 terminos:{titulo:'Términos y condiciones de uso',texto:`Versión vigente desde el ${LEGAL_FECHA}.
 
 ## 1. Quiénes somos y qué aceptás
-Nexus es una plataforma web de apoyo al estudio universitario. Su titular es ${L.titular} (${L.documento}), con domicilio en ${L.domicilio} (en adelante, "Nexus", "nosotros"). Podés escribirnos a ${L.email}.
+Nexus es una plataforma web de apoyo al estudio universitario. Su titular es ${quien}, con domicilio en ${dom} (en adelante, "Nexus", "nosotros"). Podés escribirnos a ${L.email}.
 Estos Términos y condiciones regulan el uso de Nexus. Al crear una cuenta o al iniciar sesión, y marcar la casilla de aceptación, declarás que los leíste, que los entendés y que los aceptás, junto con la **Política de privacidad**. Si no estás de acuerdo, no uses Nexus.
 
 ## 2. Quién puede usar Nexus
@@ -1440,14 +1445,14 @@ En la medida permitida por la ley y **sin afectar los derechos que te reconoce l
 Podemos modificar estos términos. Te avisaremos en la página y, si el cambio es importante, por email. La nueva versión se aplica cuando la aceptás: hasta entonces no vas a poder seguir usando Nexus.
 
 ## 16. Ley aplicable y reclamos
-Estos términos se rigen por las leyes de la República Oriental del Uruguay. Para cualquier conflicto son competentes los tribunales de ${L.departamento}, sin perjuicio de tu derecho a presentar reclamos ante el Área de Defensa del Consumidor del Ministerio de Economía y Finanzas o ante los tribunales de tu domicilio.
+Estos términos se rigen por las leyes de la República Oriental del Uruguay. Para cualquier conflicto son competentes ${trib}, sin perjuicio de tu derecho a presentar reclamos ante el Área de Defensa del Consumidor del Ministerio de Economía y Finanzas o ante los tribunales de tu domicilio.
 
 ## 17. Contacto
-${L.titular} · ${L.domicilio} · ${L.email}`},
+${quien} · ${dom} · ${L.email}`},
 privacidad:{titulo:'Política de privacidad',texto:`Versión vigente desde el ${LEGAL_FECHA}.
 
 ## 1. Responsable de tus datos
-El responsable de la base de datos es ${L.titular} (${L.documento}), con domicilio en ${L.domicilio}. Contacto: ${L.email}. La base de datos está inscripta ante la Unidad Reguladora y de Control de Datos Personales (URCDP) con el número ${L.urcdp}.
+El responsable de la base de datos es ${quien}, con domicilio en ${dom}. Contacto: ${L.email}.${L.urcdp?' La base de datos está inscripta ante la Unidad Reguladora y de Control de Datos Personales (URCDP) con el número '+L.urcdp+'.':''}
 Tratamos tus datos de acuerdo con la Ley 18.331 de Protección de Datos Personales, sus modificaciones y sus decretos reglamentarios.
 
 ## 2. Qué datos tratamos
@@ -1516,7 +1521,7 @@ Muchas personas usuarias estudian carreras de la salud. **No subas datos de paci
 Si cambiamos esta política te avisaremos en la página y, si el cambio es importante, por email, y te pediremos que aceptes la nueva versión.
 
 ## 14. Contacto
-${L.titular} · ${L.domicilio} · ${L.email}`}}};
+${quien} · ${dom} · ${L.email}`}}};
 
 /* Lector de Términos y Privacidad (también se abre con los links #terminos y #privacidad) */
 function LegalDoc({which,onClose,onSwitch}){
