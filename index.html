@@ -1370,12 +1370,15 @@ function MiSuscripcion({a}){
       <span className="mut" style=${{fontSize:12}}>Con débito automático se cobran $${PAGOS.precio} cada mes${sb.in_trial?', empezando cuando termina tu mes gratis':''}. Con "Pagar 1 mes" pagás una sola vez y no se renueva solo.</span>`}
   </div>`;
 }
+const REM_DEF=[8,13,17,21];
+const remHours=r=>{const hs=String((r&&r.hours)||'').split(',').map(x=>parseInt(x,10)).filter(h=>h>=0&&h<=23);return hs.length===4?hs:REM_DEF};
 const DIAS=[[1,'L'],[2,'M'],[3,'X'],[4,'J'],[5,'V'],[6,'S'],[0,'D']];
 const REM_KINDS=[['sesiones','Mis bloques de estudio del día'],['repasos','Repasos pendientes'],['inactividad','Si dejo de estudiar 2 días']];
 function Recordatorios({a}){
-  const r=a.rem||{enabled:false,hour:18,days:'0123456',kinds:'sesiones,repasos,inactividad'};
+  const r0=a.rem||{enabled:false,days:'0123456',kinds:'sesiones,repasos,inactividad'};
+  const r={...r0,hours:remHours(r0)};
   const [busy,setBusy]=useState(false),[prev,setPrev]=useState(false);
-  const upd=p=>a.setRem({...r,...p});
+  const upd=p=>a.setRem({...r0,hours:r.hours.join(','),...p});
   const toggle=async()=>{
     if(!r.enabled&&a.pay.online){try{await a.ensureAuth()}catch(e){return}}
     upd({enabled:!r.enabled});a.toast(r.enabled?'Recordatorios desactivados':'Listo: te vamos a escribir a '+a.user.email);
@@ -1386,10 +1389,12 @@ function Recordatorios({a}){
   };
   const gmail=/@gmail\.com$/i.test(a.user.email);
   return html`<div className="card fl" style=${{gap:10}}><b>🔔 Recordatorios por email</b>
-    <span className="mut" style=${{fontSize:13}}>Un email por día, a la hora que elijas, para que no se te pasen tus sesiones de estudio y repasos. Te llega a ${gmail?'tu Gmail':'tu correo'}: <b style=${{overflowWrap:'anywhere'}}>${a.user.email}</b>.</span>
+    <span className="mut" style=${{fontSize:13}}>4 emails por día, a las horas que elijas (en tu hora local), para que no se te pasen tus sesiones de estudio y repasos. Te llega a ${gmail?'tu Gmail':'tu correo'}: <b style=${{overflowWrap:'anywhere'}}>${a.user.email}</b>.</span>
     <label className="row" style=${{gap:8,fontSize:14,cursor:'pointer'}}><input type="checkbox" checked=${!!r.enabled} onChange=${toggle} style=${{width:20,height:20,flex:'0 0 20px',accentColor:'var(--ink)'}}/> Mandarme recordatorios</label>
     ${r.enabled&&html`<div className="fl" style=${{gap:10}}>
-      <div className="row wrap" style=${{gap:8}}><label htmlFor="rem-h" style=${{fontSize:13.5}}>Hora</label><select id="rem-h" value=${r.hour} onChange=${e=>upd({hour:+e.target.value})} style=${{width:'auto',minWidth:110}}>${[...Array(18)].map((_,i)=>i+6).map(h=>html`<option key=${h} value=${h}>${String(h).padStart(2,'0')}:00</option>`)}</select></div>
+      <div className="fl" style=${{gap:6}}><span style=${{fontSize:13.5,fontWeight:600}}>Horarios</span>
+        <div className="grid2" style=${{gap:8}}>${r.hours.map((h,i)=>html`<label key=${i} className="row" style=${{gap:6,fontSize:13}}><span className="mut" style=${{minWidth:62}}>${['1.º','2.º','3.º','4.º'][i]} email</span><select id=${'rem-h'+i} value=${h} onChange=${e=>{const v=+e.target.value;if(r.hours.some((x,j)=>j!==i&&x===v)){a.toast('Ya tenés un recordatorio a esa hora');return}const hs=r.hours.map((x,j)=>j===i?v:x).sort((x,y)=>x-y);upd({hours:hs.join(',')})}} style=${{width:'auto',minWidth:96,padding:'.4rem .7rem'}}>${[...Array(24)].map((_,k)=>html`<option key=${k} value=${k}>${String(k).padStart(2,'0')}:00</option>`)}</select></label>`)}</div>
+        <span className="mut" style=${{fontSize:12}}>El primero trae tu plan del día; los siguientes, tu próximo bloque; el último cierra el día.</span></div>
       <div className="chips" role="group" aria-label="Días">${DIAS.map(([d,l])=>html`<button key=${d} className="chip" aria-pressed=${r.days.includes(String(d))} aria-label=${['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][d]} onClick=${()=>{const on=r.days.includes(String(d)),nd=on?r.days.replace(String(d),''):r.days+d;if(nd)upd({days:nd.split('').sort().join('')})}}>${l}</button>`)}</div>
       <div className="fl" style=${{gap:6}}>${REM_KINDS.map(([k,l])=>html`<label key=${k} className="row" style=${{gap:8,fontSize:13.5,cursor:'pointer'}}><input type="checkbox" checked=${r.kinds.includes(k)} onChange=${e=>{const ks=r.kinds.split(',').filter(Boolean).filter(x=>x!==k);if(e.target.checked)ks.push(k);if(ks.length)upd({kinds:ks.join(',')})}} style=${{width:18,height:18,flex:'0 0 18px',accentColor:'var(--ink)'}}/> ${l}</label>`)}</div>
       <div className="row wrap" style=${{gap:8}}><button className="btn btn-sm" disabled=${busy} onClick=${test}>${busy?'Enviando…':a.pay.online?'Mandarme uno de prueba':'Ver cómo se ve'}</button></div>
@@ -2012,18 +2017,18 @@ function Main({user,isNew,onUser}){
   const remSent=useRef('');
   useEffect(()=>{
     if(!online||!rem)return;
-    const row={email:user.email,enabled:!!rem.enabled,hour:rem.hour,days:rem.days,kinds:rem.kinds,tz:(()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'America/Montevideo'}catch(e){return 'America/Montevideo'}})(),name:user.nombre,...remData};
+    const row={email:user.email,enabled:!!rem.enabled,hour:remHours(rem)[0],hours:remHours(rem).join(','),days:rem.days,kinds:rem.kinds,tz:(()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'America/Montevideo'}catch(e){return 'America/Montevideo'}})(),name:user.nombre,...remData};
     const key=JSON.stringify(row);if(key===remSent.current)return;
     const t=setTimeout(async()=>{const s=await liveSession(user.email);if(!s)return;const c=mailCfg();
       try{const r=await fetch(c.url.replace(/\/+$/,'')+'/rest/v1/reminders?on_conflict=auth_id',{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+s.access_token,'content-type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({auth_id:s.uid,...row,updated_at:new Date().toISOString()})});if(r.ok)remSent.current=key}catch(e){}},2500);
     return()=>clearTimeout(t)},[rem,remData,online]);
   const sendTestReminder=async()=>{const s=await ensureAuth(),c=mailCfg();remSent.current='';
     const r=await fetch(c.url.replace(/\/+$/,'')+'/functions/v1/recordatorios',{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+s.access_token,'content-type':'application/json'},body:'{}'});if(!r.ok)throw {code:'mail'}};
-  const remPreview=()=>{const k=(rem&&rem.kinds)||'',today=dateOf(0).toDateString(),bl=remData.blocks.filter(b=>new Date(b.start).toDateString()===today&&new Date(b.start)>Date.now()),out=['Hola, '+user.nombre.split(' ')[0]+':'];
+  const remPreview=()=>{const k=(rem&&rem.kinds)||'',today=dateOf(0).toDateString(),bl=remData.blocks.filter(b=>new Date(b.start).toDateString()===today&&new Date(b.start)>Date.now()),out=['Te llegan 4 por día: a las '+remHours(rem).map(h=>hhmm(h*60)).join(', ').replace(/, ([^,]*)$/,' y $1')+'. Así se ve el primero:','Hola, '+user.nombre.split(' ')[0]+':'];
     if(k.includes('sesiones')&&bl.length)out.push('**Hoy tenés '+bl.length+' bloque'+(bl.length>1?'s':'')+' de estudio:**',...bl.slice(0,6).map(b=>'- '+hhmm(new Date(b.start).getHours()*60+new Date(b.start).getMinutes())+' · '+b.topic+' ('+b.subject+')'));
     if(k.includes('repasos')&&remData.reviews)out.push('Tenés **'+remData.reviews+' repaso'+(remData.reviews>1?'s':'')+'** pendientes.');
     const idle=remData.last_active?Math.floor((Date.now()-new Date(remData.last_active))/864e5):0;if(k.includes('inactividad')&&idle>=2)out.push('Hace '+idle+' días que no completás un bloque. Con uno de 45 minutos hoy ya volvés a ritmo.');
-    if(out.length===1)out.push('Hoy no tenés bloques ni repasos pendientes. Cuando los tengas, te avisamos a esta hora.');
+    if(out.length===2)out.push('Hoy no tenés bloques ni repasos pendientes. Cuando los tengas, te avisamos a esta hora.');
     out.push('[Abrir Aulario] · No quiero recibir más recordatorios');return out.join('\n')};
   const A={user,pay,sub,seller,ensureAuth,rem,setRem,sendTestReminder,remPreview,dmInit,shopInit,clearDm:()=>setDmInit(null),clearShop:()=>setShopInit(null),openDM:(uid,name,descr)=>{setDmInit({uid,name,descr});setTab('match')},tab,go:setTab,subjects,prefs,mastery,slow,plan,kept,reviews,errors,rescue,stats,run,mats,guides,qv,exInit,simInit,risk0,examOf,toast,nudge,slowTopic,tutorTopic,isDark,
     openPerfil:()=>setPerfil(true),editPerfil:()=>{setPerfil(false);setEditing(true)},

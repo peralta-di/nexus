@@ -84,7 +84,7 @@ y después ejecutá las líneas de `listings`, `listing_events` y `archivos`.
 ### Activar los cobros reales
 Hace falta Supabase (ver arriba, con `SUPA` completado) y una cuenta de Mercado Pago.
 1. **Mercado Pago:** en developers.mercadopago.com creá una aplicación (modelo de integración: *Marketplace* / pagos online). Anotá el *Access Token de producción*, el *Client ID* y el *Client Secret*. En la configuración de la aplicación, poné como **Redirect URL** `https://TU-PROYECTO.supabase.co/functions/v1/mp-oauth`.
-2. **Base de datos:** en Supabase → SQL Editor, ejecutá `supabase/migrations/20261006000000_pagos.sql` y después `supabase/migrations/20261006010000_suscripcion_y_recordatorios.sql`. Esto también cierra la tabla `listings`: desde ahora solo quien publicó (con su email verificado) puede editar o borrar su publicación.
+2. **Base de datos:** en Supabase → SQL Editor, ejecutá en orden los archivos de `supabase/migrations/`: `20261006000000_pagos.sql`, `20261006010000_suscripcion_y_recordatorios.sql` y `20261006020000_recordatorios_4_por_dia.sql`. Esto también cierra la tabla `listings`: desde ahora solo quien publicó (con su email verificado) puede editar o borrar su publicación.
 3. **Funciones:** con la CLI de Supabase (`npm i -g supabase`, `supabase login`, `supabase link --project-ref TU-PROYECTO`):
 ```
 supabase secrets set MP_ACCESS_TOKEN=APP_USR-... MP_CLIENT_ID=... MP_CLIENT_SECRET=... SITE_URL=https://tu-sitio/ STATE_SECRET=una-frase-larga-al-azar
@@ -106,10 +106,12 @@ Opcionales: `COMISION` (0.10), `SUB_PRECIO` (400), `SUB_MONEDA` (UYU), `PRUEBA_D
 - Dentro de Claude no se puede pagar (la página no puede salir a Mercado Pago), así que esa versión no tiene pantalla de suscripción.
 
 ## Recordatorios por email (Gmail o cualquier correo)
-En **Mi perfil → Recordatorios por email** cada persona activa un email por día, a la hora que elige y los días que elige, con:
-- sus bloques de estudio del día;
-- sus repasos pendientes;
-- un aviso si lleva 2 días sin estudiar.
+En **Mi perfil → Recordatorios por email** cada persona activa **4 emails por día**, en su hora local (por defecto 08:00, 13:00, 17:00 y 21:00; puede cambiarlas) y los días que elige:
+- **el primero:** su plan del día;
+- **los dos del medio:** su próximo bloque;
+- **el último:** el cierre del día y cuándo es el próximo bloque.
+
+También avisan de los repasos pendientes. Una vez por día, en el primero, avisan si la persona lleva 2 días sin estudiar.
 
 Cada email trae un link para darse de baja. La página manda al servidor solo los próximos bloques y la cantidad de repasos; los apuntes no se envían. Sin configurar nada, se ve una vista previa del email.
 
