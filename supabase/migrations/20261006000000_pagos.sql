@@ -1,4 +1,4 @@
--- Pagos de Aulario: ventas con 10 % de comisión (Mercado Pago Marketplace) y suscripción mensual con prueba gratis.
+-- Pagos de Nexus: ventas con 10 % de comisión (Mercado Pago Marketplace) y suscripción mensual con prueba gratis.
 -- Requiere las tablas del README (students, groups, members, messages, listings, listing_events).
 
 -- 1) Publicaciones: lectura pública, pero solo quien publicó (con sesión de Supabase) puede crear, editar o borrar.

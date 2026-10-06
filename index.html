@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="Aulario: planificador de estudio universitario. Te dice qué estudiar ahora y por qué.">
+<meta name="description" content="Nexus: planificador de estudio universitario. Te dice qué estudiar ahora y por qué.">
 <meta name="theme-color" content="#9c82f7">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='26' fill='%239c82f7'/%3E%3Ctext x='50' y='72' font-size='64' font-weight='700' text-anchor='middle' fill='white' font-family='Arial'%3EA%3C/text%3E%3C/svg%3E">
-<title>Aulario</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='26' fill='%239c82f7'/%3E%3Ctext x='50' y='72' font-size='64' font-weight='700' text-anchor='middle' fill='white' font-family='Arial'%3EN%3C/text%3E%3C/svg%3E">
+<title>Nexus</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
@@ -175,7 +175,7 @@ textarea{resize:vertical;min-height:96px;border-radius:18px}
 </style>
 </head>
 <body>
-<noscript>Aulario necesita JavaScript para funcionar.</noscript>
+<noscript>Nexus necesita JavaScript para funcionar.</noscript>
 <div id="root"></div>
 <script>
 /* ---------- IA propia (solo fuera de claude.ai): clave de Anthropic de la persona ---------- */
@@ -184,7 +184,7 @@ const STANDALONE=!(window.claude&&window.claude.use);
 const PREVIEW=false;
 const SHOW_PAY=STANDALONE||PREVIEW;
 const aiKey={get:()=>{try{return localStorage.getItem('ea-key')||''}catch(e){return ''}},set:k=>{try{k?localStorage.setItem('ea-key',k):localStorage.removeItem('ea-key')}catch(e){}window.dispatchEvent(new Event('ea-ai'))}};
-/* Aulario dentro de Claude: el link del artifact publicado en claude.ai. Ahí la IA usa la cuenta de Claude de cada persona. */
+/* Nexus dentro de Claude: el link del artifact publicado en claude.ai. Ahí la IA usa la cuenta de Claude de cada persona. */
 const CLAUDE_APP_URL='https://claude.ai/artifact/WsunKkPTN3zjemT6s3RUp4';
 /* Abre claude.ai con un pedido ya armado con el perfil y el material de la persona (usa su propia cuenta de Claude). */
 function openInClaude(prompt,toast){
@@ -747,7 +747,7 @@ Si en este mensaje corregís la respuesta del estudiante a un ejercicio, termin�
   };
   return html`<div className="fl" style=${{gap:16,minHeight:'calc(100vh - 150px)'}}>
     <${Head} eyebrow="Tutor" title="Aprendé de a un paso" right=${html`<span className="lvl" style=${{background:ai?'var(--t-mint)':'var(--surf2)',color:'var(--ink)',alignSelf:'center'}}>${ai===null?'Conectando…':ai?'IA conectada':'Modo guiado'}</span>`}/>
-    ${STANDALONE&&html`<div className="alertbox row wrap" style=${{justifyContent:'space-between',gap:10,background:'var(--t-lilac)'}}><span style=${{fontSize:13.5}}><b>Estudiá con tu cuenta de Claude.</b> ${CLAUDE_APP_URL?'Abrí Aulario dentro de Claude o seguí esta charla allá, con tu perfil y tu material.':'Seguí esta charla en Claude con tu perfil, tus temas flojos y tu material ya cargados.'}</span><span className="row" style=${{gap:6}}>${CLAUDE_APP_URL&&html`<a className="btn btn-sm" href=${CLAUDE_APP_URL} target="_blank" rel="noopener">Aulario en Claude ↗</a>`}<button className="btn btn-sm btn-s" onClick=${toClaude}>Seguir en Claude ↗</button></span></div>`}
+    ${STANDALONE&&html`<div className="alertbox row wrap" style=${{justifyContent:'space-between',gap:10,background:'var(--t-lilac)'}}><span style=${{fontSize:13.5}}><b>Estudiá con tu cuenta de Claude.</b> ${CLAUDE_APP_URL?'Abrí Nexus dentro de Claude o seguí esta charla allá, con tu perfil y tu material.':'Seguí esta charla en Claude con tu perfil, tus temas flojos y tu material ya cargados.'}</span><span className="row" style=${{gap:6}}>${CLAUDE_APP_URL&&html`<a className="btn btn-sm" href=${CLAUDE_APP_URL} target="_blank" rel="noopener">Nexus en Claude ↗</a>`}<button className="btn btn-sm btn-s" onClick=${toClaude}>Seguir en Claude ↗</button></span></div>`}
     <div className="chips" role="group" aria-label="Nivel de explicación"><button className="chip" aria-pressed=${mode==='cero'} onClick=${()=>setMode('cero')}>Explicámelo desde cero</button><button className="chip" aria-pressed=${mode==='examen'} onClick=${()=>setMode('examen')}>Explicámelo a nivel examen universitario</button></div>
     ${ai&&hasMat&&html`<div className="chips" role="group" aria-label="Tu material"><button className="chip" aria-pressed=${onlyMat} onClick=${()=>setOnlyMat(!onlyMat)}>📎 Responder solo según mi material</button><button className="chip" disabled=${busy} onClick=${()=>{setOnlyMat(true);focus.current=null;push({k:'u',text:'Haceme una pregunta sobre mi material.'});setTimeout(()=>askAI('Haceme una pregunta sobre mi material, sin darme la respuesta. Cuando te responda, corregime según el material.'),0)}}><${Icon} n="sparkle" s=${13}/> Preguntame sobre mi material</button></div>`}
     ${!ai&&ai!==null&&hasMat&&html`<div className="chips"><button className="chip" onClick=${()=>a.go('material')}>📎 Preguntas y ejercicios sobre mi material</button></div>`}
@@ -1317,7 +1317,7 @@ function Welcome({initial,edit,onDone,onClose}){
   };
   const E=k=>err&&err.k===k&&html`<div role="alert" style=${{color:'var(--ink)',background:'var(--t-rose)',borderRadius:12,padding:'6px 12px',fontSize:13,marginTop:6}}>${err.m}</div>`;
   const fld=(id,label,key,props={})=>html`<div><label htmlFor=${id} style=${{fontWeight:600,fontSize:14}}>${label}</label><input id=${id} value=${f[key]} onInput=${e=>set({[key]:e.target.value})} autoComplete="off" ...${props}/>${E(key)}</div>`;
-  const cloud=edit?null:html`<div className="gate-art"><div className="logo" style=${{marginBottom:14}}>A</div><h1 style=${{fontSize:38,fontWeight:700,lineHeight:1.15,color:'#fff'}}>Aulario</h1><p style=${{fontSize:19,color:'#fff',opacity:.95,marginTop:10}}>No necesitás hacer todo. Necesitás saber qué hacer ahora.</p>
+  const cloud=edit?null:html`<div className="gate-art"><div className="logo" style=${{marginBottom:14}}>N</div><h1 style=${{fontSize:38,fontWeight:700,lineHeight:1.15,color:'#fff'}}>Nexus</h1><p style=${{fontSize:19,color:'#fff',opacity:.95,marginTop:10}}>No necesitás hacer todo. Necesitás saber qué hacer ahora.</p>
     <ul style=${{listStyle:'none',padding:0,marginTop:28,display:'flex',flexDirection:'column',gap:12,color:'#fff',fontSize:15}}><li>🎯 Tu prioridad de hoy, con el porqué</li><li>🗓️ Plan que se reajusta solo</li><li>🤖 Tutor que te hace pensar</li><li>📎 Tus apuntes y parciales como guía</li></ul></div>`;
   return html`<div className="gate" role="dialog" aria-modal="true" aria-label=${edit?'Editar mis datos':'Ingresar'}>
     ${cloud}
@@ -1366,8 +1366,8 @@ function MiSuscripcion({a}){
   const doCancel=async()=>{setBusy(true);const ok=await a.pay.cancel();setBusy(false);if(ok!==false)setConf(false)};
   return html`<div className="card fl" style=${{gap:10}}><b>⭐ Mi suscripción</b>
     <div style=${{fontSize:14,lineHeight:1.5}}>${line}</div>
-    <span className="mut" style=${{fontSize:12.5}}>Pagás con Mercado Pago: tarjeta de crédito, débito o dinero en tu cuenta. El pago va directo a Aulario.${sb.demo?' (Modo demo: los pagos son simulados.)':''}</span>
-    ${(auto||pending)?(conf?html`<div className="alertbox fl" style=${{gap:8,background:'var(--t-rose)'}}><span style=${{fontSize:13.5}}>¿Cancelar la suscripción? No se te va a cobrar más${until?' y vas a poder usar Aulario hasta el '+fdate(until):''}.</span><div className="row wrap" style=${{gap:8}}><button className="btn btn-sm btn-s" disabled=${busy} onClick=${doCancel}>${busy?'Cancelando…':'Sí, cancelar'}</button><button className="btn btn-sm" onClick=${()=>setConf(false)}>No, seguir suscripto</button></div></div>`
+    <span className="mut" style=${{fontSize:12.5}}>Pagás con Mercado Pago: tarjeta de crédito, débito o dinero en tu cuenta. El pago va directo a Nexus.${sb.demo?' (Modo demo: los pagos son simulados.)':''}</span>
+    ${(auto||pending)?(conf?html`<div className="alertbox fl" style=${{gap:8,background:'var(--t-rose)'}}><span style=${{fontSize:13.5}}>¿Cancelar la suscripción? No se te va a cobrar más${until?' y vas a poder usar Nexus hasta el '+fdate(until):''}.</span><div className="row wrap" style=${{gap:8}}><button className="btn btn-sm btn-s" disabled=${busy} onClick=${doCancel}>${busy?'Cancelando…':'Sí, cancelar'}</button><button className="btn btn-sm" onClick=${()=>setConf(false)}>No, seguir suscripto</button></div></div>`
       :html`<div className="row wrap" style=${{gap:8}}><button className="btn btn-sm" onClick=${()=>setConf(true)}>Cancelar suscripción</button>${!sb.demo&&html`<button className="btn btn-sm btn-g" onClick=${a.pay.refresh}>Actualizar</button>`}</div>`)
     :html`<div className="row wrap" style=${{gap:8}}><button className="btn btn-sm btn-s" onClick=${a.pay.subscribe}>Activar débito automático</button><button className="btn btn-sm" onClick=${a.pay.payMonth}>Pagar 1 mes</button>${!sb.demo&&html`<button className="btn btn-sm btn-g" onClick=${a.pay.refresh}>Actualizar</button>`}</div>
       <span className="mut" style=${{fontSize:12}}>Con débito automático se cobran $${PAGOS.precio} cada mes${sb.in_trial?', empezando cuando termina tu mes gratis':''}. Con "Pagar 1 mes" pagás una sola vez y no se renueva solo.</span>`}
@@ -1414,9 +1414,9 @@ function Perfil({a,onClose}){
     ${SHOW_PAY&&html`<${MiSuscripcion} a=${a}/>`}
     ${SHOW_PAY&&html`<${Recordatorios} a=${a}/>`}
     ${STANDALONE&&html`<div className="card fl" style=${{gap:8}}><b>✳️ Tu cuenta de Claude</b>
-      <span className="mut" style=${{fontSize:13}}>${CLAUDE_APP_URL?'Abrí Aulario dentro de claude.ai: el tutor, la guía, los temas y los ejercicios usan tu propia cuenta de Claude, sin clave. Tu progreso de este navegador no se pasa solo: volvé a subir tus apuntes allá.':'Desde el tutor y tus apuntes podés tocar "Seguir en Claude": se abre claude.ai con tu cuenta y un pedido armado con tu carrera, tus parciales, tus temas flojos y tu material.'}</span>
-      <div className="row wrap" style=${{gap:8}}>${CLAUDE_APP_URL&&html`<a className="btn btn-s btn-sm" href=${CLAUDE_APP_URL} target="_blank" rel="noopener">Abrir Aulario en Claude ↗</a>`}<button className="btn btn-sm" onClick=${()=>openInClaude('Quiero que seas mi tutor personal de estudio. '+perfilTxt(a)+'\nArmame un plan para esta semana priorizando lo que más me cuesta y lo que rindo antes, y después empecemos por el primer tema con método socrático. Español rioplatense.',a.toast)}>Estudiar en Claude ↗</button></div></div>`}
-    ${STANDALONE&&html`<div className="card fl" style=${{gap:8}}><b>🤖 IA dentro de Aulario con clave de API (avanzado)</b>
+      <span className="mut" style=${{fontSize:13}}>${CLAUDE_APP_URL?'Abrí Nexus dentro de claude.ai: el tutor, la guía, los temas y los ejercicios usan tu propia cuenta de Claude, sin clave. Tu progreso de este navegador no se pasa solo: volvé a subir tus apuntes allá.':'Desde el tutor y tus apuntes podés tocar "Seguir en Claude": se abre claude.ai con tu cuenta y un pedido armado con tu carrera, tus parciales, tus temas flojos y tu material.'}</span>
+      <div className="row wrap" style=${{gap:8}}>${CLAUDE_APP_URL&&html`<a className="btn btn-s btn-sm" href=${CLAUDE_APP_URL} target="_blank" rel="noopener">Abrir Nexus en Claude ↗</a>`}<button className="btn btn-sm" onClick=${()=>openInClaude('Quiero que seas mi tutor personal de estudio. '+perfilTxt(a)+'\nArmame un plan para esta semana priorizando lo que más me cuesta y lo que rindo antes, y después empecemos por el primer tema con método socrático. Español rioplatense.',a.toast)}>Estudiar en Claude ↗</button></div></div>`}
+    ${STANDALONE&&html`<div className="card fl" style=${{gap:8}}><b>🤖 IA dentro de Nexus con clave de API (avanzado)</b>
       <span className="mut" style=${{fontSize:13}}>${has?'Clave guardada: el tutor, la guía y las preguntas con IA están activos.':'Pegá tu clave de la API de Anthropic para activar el tutor con IA, la guía de estudio y las preguntas desde tu material. Sin clave, todo lo demás funciona igual.'} Se guarda solo en este navegador y se envía únicamente a api.anthropic.com.</span>
       ${has?html`<div><button className="btn btn-sm" onClick=${()=>{aiKey.set('');setHas(false);a.toast('Clave quitada')}}>Quitar clave</button></div>`:html`<div className="row" style=${{gap:8}}><input type="password" aria-label="Clave de la API de Anthropic" placeholder="sk-ant-…" value=${k} onInput=${e=>setK(e.target.value)} autoComplete="off"/><button className="btn btn-s btn-sm" disabled=${k.trim().length<20} onClick=${()=>{aiKey.set(k.trim());setK('');setHas(true);a.toast('IA activada')}}>Guardar</button></div>`}</div>`}
     ${STANDALONE&&html`<div className="card fl" style=${{gap:8}}><b>🤝 Grupos en línea (opcional)</b>
@@ -1457,7 +1457,7 @@ function Logros({a}){
    Dos modos con la misma interfaz:
    · En línea: base Supabase propia (URL + clave pública en Mi perfil) → gente real, chat y material compartido.
    · Demo: todo en este navegador, con compañeros de ejemplo, para probar cómo funciona. */
-/* Base Supabase del sitio (la completa quien publica Aulario; ver README). Activa la verificación por email, los grupos, los mensajes y la tienda para todos. */
+/* Base Supabase del sitio (la completa quien publica Nexus; ver README). Activa la verificación por email, los grupos, los mensajes y la tienda para todos. */
 const SUPA={url:'',key:''};
 /* Cobros: suscripción mensual con mes gratis y comisión por cada venta de la tienda (los valores reales los define el servidor). */
 const PAGOS={precio:400,moneda:'UYU',prueba:30,comision:.10};
@@ -1540,7 +1540,7 @@ function demoApi(subjects){
   if(!db.seededL){db.seededL=true;db.listings=db.listings||[];
     const kinds=[['resumen','Resumen completo de ','con esquemas y lo que más toman',250],['parciales','Parciales resueltos de ','2019 a 2025, explicados paso a paso',400],['clases','Clases de apoyo de ','individuales o en grupo, por Zoom',600]];
     const pool=[...subjects.map(x=>({n:x.name,t:visT(x).slice(0,3).map(t=>t.name)})),...UDELAR_MED.filter(c=>!subjects.some(x=>keyOf(x.name)===keyOf(c.n))).slice(0,3).map(c=>({n:c.n,t:c.t.slice(0,3)}))];
-    pool.forEach((x,i)=>{const k=kinds[i%kinds.length],p=DEMO_P[(i+3)%DEMO_P.length];db.listings.push({id:'dl'+gid(),uid:'demo'+keyOf(p[0]).replace(/\s/g,''),seller_name:p[0]+' (ejemplo)',seller_uni:p[1],title:k[1]+x.n,kind:k[0],subj:keyOf(x.n),subj_name:x.n,topics:x.t.join(', '),unis:'',years:'',carrera:'Medicina',price:k[3],currency:'UYU',contact_kind:'email',contact:'ejemplo@aulario.demo',descr:'Material '+k[2]+'. Ideal para el parcial. (Publicación de ejemplo)',preview:'Vista previa: índice de '+x.t.join(', ')+'.',ts:Date.now()-i*36e5*7,active:true,demo:true})});
+    pool.forEach((x,i)=>{const k=kinds[i%kinds.length],p=DEMO_P[(i+3)%DEMO_P.length];db.listings.push({id:'dl'+gid(),uid:'demo'+keyOf(p[0]).replace(/\s/g,''),seller_name:p[0]+' (ejemplo)',seller_uni:p[1],title:k[1]+x.n,kind:k[0],subj:keyOf(x.n),subj_name:x.n,topics:x.t.join(', '),unis:'',years:'',carrera:'Medicina',price:k[3],currency:'UYU',contact_kind:'email',contact:'ejemplo@nexus.demo',descr:'Material '+k[2]+'. Ideal para el parcial. (Publicación de ejemplo)',preview:'Vista previa: índice de '+x.t.join(', ')+'.',ts:Date.now()-i*36e5*7,active:true,demo:true})});
   }
   if(!db.seededS){db.seededS=true;db.sales=db.sales||[];(db.listings||[]).filter(l=>l.demo).forEach((l,i)=>{for(let k=0;k<[7,3,12,5,1,9][i%6];k++)db.sales.push({id:gid(),mp_payment_id:'seed'+gid(),listing_id:l.id,buyer_auth:'demo-comprador'+k,seller_auth:l.uid,amount:l.price,fee:l.price*PAGOS.comision,currency:l.currency,status:'approved',created:Date.now()-k*864e5})})}
   save(db);
@@ -1641,7 +1641,7 @@ function useMe(a){const {user,prefs,subjects}=a;return useMemo(()=>({uid:uidOf(u
 const LKIND={resumen:['📄','Resumen'],parciales:['🧾','Parciales resueltos'],curso:['🎓','Curso'],clases:['👩‍🏫','Clases de apoyo'],tarjetas:['🗂️','Tarjetas o esquemas'],otro:['📦','Otro']};
 const CUR=['UYU','ARS','USD','CLP','MXN','COP','EUR'];
 const contactUrl=l=>{const c=String(l.contact||'').trim();
-  if(l.contact_kind==='whatsapp'){const d=c.replace(/\D/g,'');return d.length>=8?'https://wa.me/'+d+'?text='+encodeURIComponent('Hola! Vi en Aulario tu publicación "'+l.title+'". ¿Me pasás más info?'):null}
+  if(l.contact_kind==='whatsapp'){const d=c.replace(/\D/g,'');return d.length>=8?'https://wa.me/'+d+'?text='+encodeURIComponent('Hola! Vi en Nexus tu publicación "'+l.title+'". ¿Me pasás más info?'):null}
   if(l.contact_kind==='instagram'){const u=c.replace(/^@/,'').replace(/[^\w.]/g,'');return u?'https://instagram.com/'+u:null}
   if(l.contact_kind==='email')return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c)?'mailto:'+c+'?subject='+encodeURIComponent('Consulta: '+l.title):null;
   return /^https:\/\/[^\s]+$/.test(c)?c:null};
@@ -1684,7 +1684,7 @@ function Tienda({a}){
       <span className="fl" style=${{alignItems:'flex-end',gap:2}}><b className="num" style=${{whiteSpace:'nowrap',fontSize:16}}>${free?'Gratis':money(l.price,l.currency)}</b>${n>0&&html`<span className="mut num" style=${{fontSize:12,whiteSpace:'nowrap'}}>🔥 ${n} vendido${n===1?'':'s'}</span>`}</span></div>
     ${why&&why.length>0&&html`<div className="chips">${why.slice(0,3).map(w=>html`<span key=${w} className="lvl" style=${{background:'var(--t-mint)',color:'var(--ink)'}}>${w}</span>`)}</div>`}
     ${open===l.id&&html`<div className="fl" style=${{gap:8,fontSize:14}}>${l.descr&&html`<p style=${{whiteSpace:'pre-wrap'}}>${l.descr}</p>`}${l.topics&&html`<p className="mut" style=${{fontSize:13}}>Temas: ${l.topics}</p>`}${l.has_file&&html`<p className="mut" style=${{fontSize:13}}>📎 Incluye un archivo para descargar después de la compra.</p>`}${l.preview&&html`<div style=${{background:'var(--surf)',borderRadius:14,padding:12,fontSize:13,whiteSpace:'pre-wrap',maxHeight:220,overflow:'auto'}}><div className="eyebrow" style=${{marginBottom:4}}>Vista previa</div>${l.preview}</div>`}</div>`}
-    ${buy===l.id&&html`<div className="alertbox fl" style=${{gap:8,background:'var(--t-blue)'}}><b>Pagás ${money(l.price,l.currency)} con Mercado Pago${a.pay.online?'':' (simulado: modo demo)'}.</b><span style=${{fontSize:13}}>Después de pagar vas a poder descargar el material y ver el contacto de ${l.seller_name.replace(' (ejemplo)','')} en "Mis compras". De ese monto, Aulario se queda con el ${Math.round(PAGOS.comision*100)} % (${money(fee,l.currency)}).</span><div className="row wrap" style=${{gap:8}}><button className="btn btn-s btn-sm" disabled=${busy} onClick=${()=>pay(l)}>${busy?'Abriendo Mercado Pago…':a.pay.online?'Ir a pagar':'Pagar (simulado)'}</button><button className="btn btn-sm btn-g" onClick=${()=>setBuy(null)}>Cancelar</button></div></div>`}
+    ${buy===l.id&&html`<div className="alertbox fl" style=${{gap:8,background:'var(--t-blue)'}}><b>Pagás ${money(l.price,l.currency)} con Mercado Pago${a.pay.online?'':' (simulado: modo demo)'}.</b><span style=${{fontSize:13}}>Después de pagar vas a poder descargar el material y ver el contacto de ${l.seller_name.replace(' (ejemplo)','')} en "Mis compras". De ese monto, Nexus se queda con el ${Math.round(PAGOS.comision*100)} % (${money(fee,l.currency)}).</span><div className="row wrap" style=${{gap:8}}><button className="btn btn-s btn-sm" disabled=${busy} onClick=${()=>pay(l)}>${busy?'Abriendo Mercado Pago…':a.pay.online?'Ir a pagar':'Pagar (simulado)'}</button><button className="btn btn-sm btn-g" onClick=${()=>setBuy(null)}>Cancelar</button></div></div>`}
     <div className="row wrap" style=${{gap:8}}><button className="btn btn-sm" onClick=${()=>view(l.id)}>${open===l.id?'Ver menos':'Ver detalle'}</button>
       ${free?html`<button className="btn btn-sm btn-s" onClick=${()=>{setTab('compras');setTimeout(()=>getIt(l),0)}}>Obtener gratis</button>`:buy!==l.id&&html`<button className="btn btn-sm btn-s" onClick=${()=>{setBuy(l.id);log(l,'view')}}>Comprar · ${money(l.price,l.currency)}</button>`}
       <button className="btn btn-sm" onClick=${()=>a.openDM(l.uid,l.seller_name.replace(' (ejemplo)',''),'Vende: '+l.title)}><${Icon} n="msg" s=${14}/> Preguntar</button>
@@ -1701,16 +1701,16 @@ function Tienda({a}){
     ${r.url&&/^(https:|data:)/.test(r.url)?html`<a className="btn btn-sm btn-s" style=${{alignSelf:'flex-start'}} href=${r.url} download=${r.file_name||'material'} target="_blank" rel="noopener noreferrer">📥 Descargar ${r.file_name||'archivo'}</a>`:html`<span className="mut">Esta publicación no tiene archivo para descargar.</span>`}
     ${r.contact?html`<span>Contacto de quien vende: <b style=${{userSelect:'all',overflowWrap:'anywhere'}}>${r.contact}</b> ${u&&html`<a href=${u} target="_blank" rel="noopener noreferrer">abrir ↗</a>`}</span>`:null}</div>`};
   return html`<div className="fl" style=${{gap:18}}>
-    <${Head} eyebrow="Tienda de material" title=${tab==='vender'?'Vendé tu material':tab==='compras'?'Mis compras':'Material para vos'} sub=${tab==='vender'?'Publicá resúmenes, cursos o clases y cobrá por Aulario con Mercado Pago.':tab==='compras'?'Lo que compraste: descargas y contacto de quien vende.':'Resúmenes, cursos y clases de las materias que estás cursando.'}/>
+    <${Head} eyebrow="Tienda de material" title=${tab==='vender'?'Vendé tu material':tab==='compras'?'Mis compras':'Material para vos'} sub=${tab==='vender'?'Publicá resúmenes, cursos o clases y cobrá por Nexus con Mercado Pago.':tab==='compras'?'Lo que compraste: descargas y contacto de quien vende.':'Resúmenes, cursos y clases de las materias que estás cursando.'}/>
     <div className="tabs" role="tablist">${[['para','Para vos'],['todo','Explorar'],['compras','Mis compras'],['vender','Vender']].map(([k,l])=>html`<button key=${k} role="tab" className="tab" aria-selected=${tab===k} onClick=${()=>{setTab(k);setBuy(null)}}>${l}</button>`)}</div>
-    ${!a.pay.online&&html`<div className="alertbox" style=${{background:'var(--t-cream)'}}><b>Modo demo.</b> Las publicaciones de ejemplo, las compras y los pagos son simulados y quedan en este navegador. ${STANDALONE?'Con Supabase y Mercado Pago configurados (ver README), se cobra de verdad.':'Los pagos reales funcionan en el sitio web de Aulario.'}</div>`}
+    ${!a.pay.online&&html`<div className="alertbox" style=${{background:'var(--t-cream)'}}><b>Modo demo.</b> Las publicaciones de ejemplo, las compras y los pagos son simulados y quedan en este navegador. ${STANDALONE?'Con Supabase y Mercado Pago configurados (ver README), se cobra de verdad.':'Los pagos reales funcionan en el sitio web de Nexus.'}</div>`}
     ${err&&html`<div className="alertbox" role="alert" style=${{background:'var(--t-rose)'}}>${err}</div>`}
     ${tab==='para'||tab==='todo'?html`<div className="fl" style=${{gap:12}}>
       <input aria-label="Buscar en la tienda" placeholder="🔎 Buscar (ej: plexo braquial, parciales)" value=${q} onInput=${e=>setQ(e.target.value)}/>
       <div className="row wrap" style=${{gap:8,justifyContent:'space-between'}}><div className="chips">${[['all','Todo'],...Object.entries(LKIND).map(([k,v])=>[k,v[0]+' '+v[1]])].map(([k,l])=>html`<button key=${k} className="chip" aria-pressed=${fk===k} onClick=${()=>setFk(k)}>${l}</button>`)}</div>
         <label className="row" style=${{gap:6,fontSize:13}}><span className="mut">Ordenar</span><select id="t-sort" value=${sort} onChange=${e=>setSort(e.target.value)} style=${{width:'auto',minWidth:150,padding:'.4rem .8rem'}}>${SORTS.map(([k,l])=>html`<option key=${k} value=${k}>${l}</option>`)}</select></label></div>
       ${all===null?html`<p className="mut">Cargando…</p>`:items.length===0?html`<div className="card"><p className="mut">${tab==='para'?'Todavía no hay material publicado para tus materias. Mirá en "Explorar" o publicá el tuyo.':'No encontramos publicaciones con ese filtro.'}</p></div>`:items.map(card)}
-      <p className="mut" style=${{fontSize:12.5}}>Pagás con Mercado Pago dentro de Aulario. No pagues por fuera ni por adelantado a desconocidos, y nunca compartas contraseñas.</p></div>`
+      <p className="mut" style=${{fontSize:12.5}}>Pagás con Mercado Pago dentro de Nexus. No pagues por fuera ni por adelantado a desconocidos, y nunca compartas contraseñas.</p></div>`
     :tab==='compras'?html`<div className="fl" style=${{gap:10}}>
       ${pur==='auth'?html`<div className="card fl" style=${{gap:8}}><span>Para ver tus compras, confirmá tu email.</span><div><button className="btn btn-sm btn-s" onClick=${async()=>{try{await a.ensureAuth();setTick(t=>t+1)}catch(e){}}}>Confirmar email</button></div></div>`
       :pur===null?html`<p className="mut">Cargando…</p>`
@@ -1738,7 +1738,7 @@ function Vender({a,api,me,mine,ev,sold,onChange}){
     if(f.title.trim().length<5)return setErr('Escribí un título claro (ej: "Resumen completo de Anatomía, parcial 1").');
     if(keyOf(f.subj_name).length<3)return setErr('Elegí la materia: así le aparece a quien la cursa.');
     if(!(priceNum>=0))return setErr('El precio tiene que ser un número.');
-    if(priceNum>0&&!a.seller)return setErr('Para vender necesitás conectar tu Mercado Pago (arriba). Así cobrás por Aulario y te llega la plata directo.');
+    if(priceNum>0&&!a.seller)return setErr('Para vender necesitás conectar tu Mercado Pago (arriba). Así cobrás por Nexus y te llega la plata directo.');
     if(!f.file&&!contactUrl({...f}))return setErr('Agregá un archivo para entregar o un contacto válido ('+(f.contact_kind==='whatsapp'?'WhatsApp con código de país, ej: 59899123456':f.contact_kind==='instagram'?'tu usuario de Instagram':f.contact_kind==='email'?'un email válido':'un link https://')+').');
     if(f.file&&f.file.size>50e6)return setErr('El archivo pesa más de 50 MB.');
     setBusy(true);
@@ -1763,10 +1763,10 @@ function Vender({a,api,me,mine,ev,sold,onChange}){
   const ta={width:'100%',font:'inherit',padding:12,borderRadius:16,border:'1.5px solid var(--line)',background:'var(--card)',color:'var(--ink)',resize:'vertical'};
   return html`<div className="fl" style=${{gap:16}}>
     <div className="card fl" style=${{gap:8}}><b>💳 Cobrar con Mercado Pago</b>
-      ${a.seller?html`<span style=${{fontSize:13.5}}>✅ Tu cuenta está conectada. Cada venta se cobra por Aulario: te llega el ${100-Math.round(PAGOS.comision*100)} % a tu Mercado Pago y Aulario retiene el ${Math.round(PAGOS.comision*100)} % de comisión.${a.pay.online?'':' (Simulado en modo demo.)'}</span>`
-      :html`<span className="mut" style=${{fontSize:13.5}}>Para vender, conectá tu cuenta de Mercado Pago. Quien compra paga dentro de Aulario; te llega el ${100-Math.round(PAGOS.comision*100)} % directo a tu cuenta y Aulario retiene el ${Math.round(PAGOS.comision*100)} % de cada venta. El material gratis no paga comisión.</span><div><button className="btn btn-s btn-sm" onClick=${a.pay.connect}>Conectar Mercado Pago</button></div>`}</div>
+      ${a.seller?html`<span style=${{fontSize:13.5}}>✅ Tu cuenta está conectada. Cada venta se cobra por Nexus: te llega el ${100-Math.round(PAGOS.comision*100)} % a tu Mercado Pago y Nexus retiene el ${Math.round(PAGOS.comision*100)} % de comisión.${a.pay.online?'':' (Simulado en modo demo.)'}</span>`
+      :html`<span className="mut" style=${{fontSize:13.5}}>Para vender, conectá tu cuenta de Mercado Pago. Quien compra paga dentro de Nexus; te llega el ${100-Math.round(PAGOS.comision*100)} % directo a tu cuenta y Nexus retiene el ${Math.round(PAGOS.comision*100)} % de cada venta. El material gratis no paga comisión.</span><div><button className="btn btn-s btn-sm" onClick=${a.pay.connect}>Conectar Mercado Pago</button></div>`}</div>
     ${sales&&sales.length>0&&html`<div className="card fl" style=${{gap:10}}><b>Tus ventas</b>
-      <div className="grid2" style=${{gap:10}}>${[['Ventas',String(ok.length)],['Vendiste',money(gross,ok[0]&&ok[0].currency)],['Comisión Aulario ('+Math.round(PAGOS.comision*100)+' %)',money(fees,ok[0]&&ok[0].currency)],['Te queda',money(gross-fees,ok[0]&&ok[0].currency)]].map(([l,v])=>html`<div key=${l}><div className="eyebrow">${l}</div><b className="num" style=${{fontSize:22}}>${v}</b></div>`)}</div></div>`}
+      <div className="grid2" style=${{gap:10}}>${[['Ventas',String(ok.length)],['Vendiste',money(gross,ok[0]&&ok[0].currency)],['Comisión Nexus ('+Math.round(PAGOS.comision*100)+' %)',money(fees,ok[0]&&ok[0].currency)],['Te queda',money(gross-fees,ok[0]&&ok[0].currency)]].map(([l,v])=>html`<div key=${l}><div className="eyebrow">${l}</div><b className="num" style=${{fontSize:22}}>${v}</b></div>`)}</div></div>`}
     ${!f&&html`<div className="card fl" style=${{gap:8}}><b>¿Vendés resúmenes, cursos o clases?</b><span className="mut" style=${{fontSize:13.5}}>Tu publicación le aparece primero a quien está cursando esa materia, y todavía más arriba si el tema le cuesta o tiene el parcial cerca. Podés apuntar a tu facultad y a años específicos.</span><div><button className="btn btn-s btn-sm" onClick=${()=>setF(blank)}><${Icon} n="plus" s=${14}/> Nueva publicación</button></div></div>`}
     ${f&&html`<div className="card fl" style=${{gap:12}}>
       <b>Nueva publicación</b>
@@ -1779,7 +1779,7 @@ function Vender({a,api,me,mine,ev,sold,onChange}){
         <label className="row" style=${{gap:8,fontSize:13.5,cursor:'pointer',marginTop:8}}><input type="checkbox" checked=${f.onlyUni} onChange=${e=>set({onlyUni:e.target.checked})} style=${{width:18,height:18,flex:'0 0 18px',accentColor:'var(--ink)'}}/> Solo estudiantes de ${me.uni||'mi universidad'}</label>
         <div className="alertbox" style=${{marginTop:8,background:'var(--t-blue)',fontSize:13.5}}>${aud==null?'Le va a aparecer a quien curse '+(f.subj_name||'esa materia')+(f.years.length?' en '+f.years.join(', ')+'.º año':'')+'.':html`Público estimado: <b>${aud}</b> estudiante${aud===1?'':'s'} cursando ${f.subj_name}${f.years.length?' en '+f.years.join(', ')+'.º año':''}${f.onlyUni?' en tu facultad':''}${a.pay.online?'':' (modo demo)'}.`}</div></div>
       <div><label htmlFor="v-p" style=${{fontWeight:600,fontSize:14}}>Precio</label><div className="row" style=${{gap:6}}><select aria-label="Moneda" value=${f.currency} onChange=${e=>set({currency:e.target.value})} style=${{width:'auto',minWidth:86,flex:'0 0 auto'}}><option>UYU</option><option>USD</option></select><input id="v-p" inputMode="decimal" placeholder="0 = gratis" value=${f.price} onInput=${e=>set({price:e.target.value})}/></div>
-        ${priceNum>0&&html`<div className="row wrap num" style=${{gap:14,marginTop:8,fontSize:13.5}}><span>Precio <b>${money(priceNum,f.currency)}</b></span><span>Comisión Aulario ${Math.round(PAGOS.comision*100)} % <b>${money(feeNum,f.currency)}</b></span><span>Recibís <b>${money(priceNum-feeNum,f.currency)}</b></span></div><span className="mut" style=${{fontSize:12}}>Mercado Pago puede descontar además su propia tarifa por cobro.</span>`}</div>
+        ${priceNum>0&&html`<div className="row wrap num" style=${{gap:14,marginTop:8,fontSize:13.5}}><span>Precio <b>${money(priceNum,f.currency)}</b></span><span>Comisión Nexus ${Math.round(PAGOS.comision*100)} % <b>${money(feeNum,f.currency)}</b></span><span>Recibís <b>${money(priceNum-feeNum,f.currency)}</b></span></div><span className="mut" style=${{fontSize:12}}>Mercado Pago puede descontar además su propia tarifa por cobro.</span>`}</div>
       <div><label htmlFor="v-f" style=${{fontWeight:600,fontSize:14}}>Archivo que se entrega (opcional)</label><input id="v-f" type="file" accept=".pdf,.docx,.pptx,.zip,.txt,.md" onChange=${e=>set({file:e.target.files[0]||null})} style=${{padding:'.5rem'}}/><span className="mut" style=${{fontSize:12}}>Se descarga recién después de que se aprueba el pago. Hasta 50 MB.</span></div>
       <div><div style=${{fontWeight:600,fontSize:14,marginBottom:6}}>Contacto para quien compre</div><div className="row" style=${{gap:6}}><select aria-label="Tipo de contacto" value=${f.contact_kind} onChange=${e=>set({contact_kind:e.target.value})} style=${{width:'auto',minWidth:124,flex:'0 0 auto'}}><option value="whatsapp">WhatsApp</option><option value="instagram">Instagram</option><option value="email">Email</option><option value="link">Link</option></select><input aria-label="Dato de contacto" placeholder=${{whatsapp:'59899123456',instagram:'@tuusuario',email:'tu@email.com',link:'https://…'}[f.contact_kind]} value=${f.contact} onInput=${e=>set({contact:e.target.value})}/></div><span className="mut" style=${{fontSize:12}}>Se muestra solo después del pago (por ejemplo, para coordinar clases). Antes, te pueden escribir por Mensajes.</span></div>
       <div><label htmlFor="v-d" style=${{fontWeight:600,fontSize:14}}>Descripción</label><textarea id="v-d" rows="3" placeholder="Qué incluye, cuántas páginas, cómo lo entregás, horarios de las clases…" value=${f.descr} onInput=${e=>set({descr:e.target.value})} style=${ta}></textarea></div>
@@ -1822,7 +1822,7 @@ function Match({a}){
   if(open)return html`<${GroupChat} a=${a} api=${api} me=${me} g=${open} onBack=${()=>{setOpen(null);setTick(t=>t+1)}} onLeave=${leave}/>`;
   return html`<div className="fl" style=${{gap:18}}>
     <${Head} eyebrow="Grupos de estudio" title="Estudiá con otros" sub="Conocé gente que está cursando tu misma materia, armá grupos, chateá y compartí material."/>
-    ${!api.online&&html`<div className="alertbox" style=${{background:'var(--t-cream)'}}><b>Modo demo.</b> Los compañeros y grupos son de ejemplo y todo queda en este navegador. ${STANDALONE?html`Para conocer gente real, activá <b>Grupos en línea</b> en Mi perfil.`:'Los grupos con gente real funcionan en el sitio web de Aulario (con Grupos en línea activado).'}</div>`}
+    ${!api.online&&html`<div className="alertbox" style=${{background:'var(--t-cream)'}}><b>Modo demo.</b> Los compañeros y grupos son de ejemplo y todo queda en este navegador. ${STANDALONE?html`Para conocer gente real, activá <b>Grupos en línea</b> en Mi perfil.`:'Los grupos con gente real funcionan en el sitio web de Nexus (con Grupos en línea activado).'}</div>`}
     <div className="tabs" role="tablist">${[['grupos','Grupos y gente'],['mensajes','Mensajes'+(unread?' ('+unread+')':'')]].map(([k2,l])=>html`<button key=${k2} role="tab" className="tab" aria-selected=${view===k2} onClick=${()=>setView(k2)}>${l}</button>`)}</div>
     ${view==='mensajes'?html`<div className="fl" style=${{gap:8}}>
       ${threads.length===0?html`<div className="card"><p className="mut">Todavía no tenés mensajes. En "Grupos y gente" tocá <b>Mensaje</b> al lado de alguien que cursa tu materia para escribirle.</p></div>`
@@ -1849,7 +1849,7 @@ function Match({a}){
     </div>
     <div className="fl" style=${{gap:10}}>
       <h2 style=${{fontSize:20,fontWeight:600}}>Cursando ${s.name}</h2>
-      ${ppl===null?html`<p className="mut">Cargando…</p>`:ppl.length===0?html`<div className="card"><p className="mut">Todavía no encontramos a nadie más cursando ${s.name}${api.online?'. Compartí el link de Aulario con tus compañeros':''}.</p></div>`
+      ${ppl===null?html`<p className="mut">Cargando…</p>`:ppl.length===0?html`<div className="card"><p className="mut">Todavía no encontramos a nadie más cursando ${s.name}${api.online?'. Compartí el link de Nexus con tus compañeros':''}.</p></div>`
         :ppl.map(p=>html`<div key=${p.uid} className="card row wrap" style=${{boxShadow:p.uni===me.uni?'inset 5px 0 0 #9c82f7':''}}>
           <span className="av" aria-hidden="true">${initials(p.name)}</span><div className="grow" style=${{minWidth:170}}><b>${p.name}</b> <span className="mut" style=${{fontSize:13}}>· ${p.slot||''}</span>${p.note&&html`<div className="mut" style=${{fontSize:13}}>${p.note}</div>`}<div className="mut" style=${{fontSize:12}}>${[p.carrera,p.anio?p.anio+'.º año':'',p.uni].filter(Boolean).join(' · ')}</div></div>
           ${p.uni===me.uni&&html`<span className="lvl" style=${{background:'var(--t-lilac)',color:'var(--ink)'}}>Tu facultad</span>`}
@@ -1944,7 +1944,7 @@ const daysLeft=iso=>Math.max(0,Math.ceil((new Date(iso).getTime()-Date.now())/86
 function Paywall({a}){
   const [busy,setBusy]=useState(false);
   return html`<div className="screen" style=${{padding:0,gap:18,maxWidth:560}}>
-    <div className="hero th-ana"><div className="eyebrow">Suscripción Aulario</div><h1 style=${{fontSize:'clamp(26px,7vw,34px)',fontWeight:700,marginTop:6,color:'#fff'}}>Terminó tu mes gratis</h1>
+    <div className="hero th-ana"><div className="eyebrow">Suscripción Nexus</div><h1 style=${{fontSize:'clamp(26px,7vw,34px)',fontWeight:700,marginTop:6,color:'#fff'}}>Terminó tu mes gratis</h1>
       <p style=${{marginTop:8,fontSize:15}}>Para seguir con tu plan, el tutor, tus apuntes y los grupos, suscribite.</p>
       <div className="num" style=${{fontWeight:800,fontSize:48,marginTop:14,lineHeight:1}}>$${PAGOS.precio}<span style=${{fontSize:18,fontWeight:500}}> por mes</span></div>
       <p style=${{fontSize:13,opacity:.9,marginTop:6}}>Pagás con Mercado Pago: tarjeta de crédito, débito o dinero en tu cuenta. Cancelás cuando quieras desde Mi perfil.</p>
@@ -2032,7 +2032,7 @@ function Main({user,isNew,onUser}){
     if(k.includes('repasos')&&remData.reviews)out.push('Tenés **'+remData.reviews+' repaso'+(remData.reviews>1?'s':'')+'** pendientes.');
     const idle=remData.last_active?Math.floor((Date.now()-new Date(remData.last_active))/864e5):0;if(k.includes('inactividad')&&idle>=2)out.push('Hace '+idle+' días que no completás un bloque. Con uno de 45 minutos hoy ya volvés a ritmo.');
     if(out.length===2)out.push('Hoy no tenés bloques ni repasos pendientes. Cuando los tengas, te avisamos a esta hora.');
-    out.push('[Abrir Aulario] · No quiero recibir más recordatorios');return out.join('\n')};
+    out.push('[Abrir Nexus] · No quiero recibir más recordatorios');return out.join('\n')};
   const A={user,pay,sub,seller,ensureAuth,rem,setRem,sendTestReminder,remPreview,dmInit,shopInit,clearDm:()=>setDmInit(null),clearShop:()=>setShopInit(null),openDM:(uid,name,descr)=>{setDmInit({uid,name,descr});setTab('match')},tab,go:setTab,subjects,prefs,mastery,slow,plan,kept,reviews,errors,rescue,stats,run,mats,guides,qv,exInit,simInit,risk0,examOf,toast,nudge,slowTopic,tutorTopic,isDark,
     openPerfil:()=>setPerfil(true),editPerfil:()=>{setPerfil(false);setEditing(true)},
     logout:()=>{sessionEnd();setPerfil(false);onUser(null)},
@@ -2096,7 +2096,7 @@ function Main({user,isNew,onUser}){
       ${tab==='tienda'&&html`<div className="sec"><${Tienda} a=${A}/></div>`}
       ${tab==='rescate'&&html`<div className="sec"><${Rescate} a=${A}/></div>`}</div>`}
     </main>
-    <nav className="dock" aria-label="Principal"><div className="brand"><span className="logo">A</span>Aulario</div><div className="pill">${NAV.map(([k,l,ic])=>html`<button key=${k} className="dk" aria-current=${cur===k?'page':null} onClick=${()=>setTab(k)}><${Icon} n=${ic} s=${21}/><span>${l}</span></button>`)}</div><div className="round"><button className="dk" aria-current=${cur==='tutor'?'page':null} onClick=${()=>setTab('tutor')}><${Icon} n="msg" s=${21}/><span>Tutor</span></button></div><button className="me" onClick=${A.openPerfil} aria-label="Mi perfil"><span className="av">${initials(user.nombre)}</span><span style=${{minWidth:0}}><b style=${{fontSize:14,display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:130}}>${user.nombre.split(' ')[0]}</b><small>${user.uni.replace(/\s*\(.*\)/,'')}</small></span></button></nav>
+    <nav className="dock" aria-label="Principal"><div className="brand"><span className="logo">N</span>Nexus</div><div className="pill">${NAV.map(([k,l,ic])=>html`<button key=${k} className="dk" aria-current=${cur===k?'page':null} onClick=${()=>setTab(k)}><${Icon} n=${ic} s=${21}/><span>${l}</span></button>`)}</div><div className="round"><button className="dk" aria-current=${cur==='tutor'?'page':null} onClick=${()=>setTab('tutor')}><${Icon} n="msg" s=${21}/><span>Tutor</span></button></div><button className="me" onClick=${A.openPerfil} aria-label="Mi perfil"><span className="av">${initials(user.nombre)}</span><span style=${{minWidth:0}}><b style=${{fontSize:14,display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:130}}>${user.nombre.split(' ')[0]}</b><small>${user.uni.replace(/\s*\(.*\)/,'')}</small></span></button></nav>
     ${perfil&&html`<${Perfil} a=${A} onClose=${()=>setPerfil(false)}/>`}
     ${editing&&html`<${Welcome} edit=${true} initial=${user} onDone=${(p)=>{onUser(p);setPrefs(x=>({...x,carrera:p.carrera,uni:p.uni,anio:p.anio,maxH:p.horas||x.maxH}));setEditing(false);toast('Datos actualizados')}} onClose=${()=>setEditing(false)}/>`}
     ${onb&&html`<${Onboarding} a=${A} start=${typeof onb==='number'?onb:0} onClose=${()=>setOnb(false)}/>`}

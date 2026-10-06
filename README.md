@@ -1,4 +1,4 @@
-# Aulario — página web lista para publicar
+# Nexus — página web lista para publicar
 
 Esta carpeta es **todo el sitio**: un solo archivo, `index.html`. No hay que instalar nada ni compilar.
 
@@ -19,13 +19,13 @@ Ingreso con cuenta, suscripción y tienda en modo demo (pagos simulados), onboar
 El tutor con IA, la guía de estudio, las preguntas desde tus apuntes y la lectura de fotos necesitan una clave de la API de Anthropic. Cada persona la pega en **Mi perfil → IA del tutor**. La clave se guarda solo en su navegador y se envía únicamente a api.anthropic.com. No pongas tu clave dentro del archivo.
 
 ## Estudiar con tu material
-En **Apuntes → Estudiar con tu material**, Aulario divide tus documentos en temas (usa los títulos de cada parte; con la IA lo hace mejor), estima cuántos bloques de 45 minutos lleva cada uno y arma tu cronograma con esos temas. Durante cada bloque ves la parte de tu material que corresponde.
+En **Apuntes → Estudiar con tu material**, Nexus divide tus documentos en temas (usa los títulos de cada parte; con la IA lo hace mejor), estima cuántos bloques de 45 minutos lleva cada uno y arma tu cronograma con esos temas. Durante cada bloque ves la parte de tu material que corresponde.
 
 ## Materias de Medicina · UdelaR
 En la configuración (o en **Materias → + Materias**) podés elegir las materias de la Facultad de Medicina de la UdelaR (Plan 2008) por año. Si la tuya tiene otro nombre, escribila.
 
 ## Usar la IA con la cuenta de Claude de cada persona
-- **Aulario dentro de Claude:** Aulario también está publicado como página de claude.ai. Abierto ahí, el tutor, la guía, los temas y los ejercicios usan la cuenta de Claude de quien lo abre: sin clave, y la primera vez Claude le pide permiso. El link es https://claude.ai/artifact/WsunKkPTN3zjemT6s3RUp4 (está en `CLAUDE_APP_URL`); para que otros lo usen, compartilo desde el menú Compartir de esa página. Está (al principio del script) y aparece en **Mi perfil** y en el **Tutor**.
+- **Nexus dentro de Claude:** Nexus también está publicado como página de claude.ai. Abierto ahí, el tutor, la guía, los temas y los ejercicios usan la cuenta de Claude de quien lo abre: sin clave, y la primera vez Claude le pide permiso. El link es https://claude.ai/artifact/WsunKkPTN3zjemT6s3RUp4 (está en `CLAUDE_APP_URL`); para que otros lo usen, compartilo desde el menú Compartir de esa página. Está (al principio del script) y aparece en **Mi perfil** y en el **Tutor**.
 - **Seguir en Claude:** en el sitio publicado aparte, los botones "Seguir en Claude ↗" y "Estudiar este material en Claude ↗" abren claude.ai con la sesión de la persona y un pedido ya armado con su carrera, sus parciales, sus temas flojos, sus errores y su material.
 - **Clave de API (avanzado):** sigue estando en Mi perfil, para usar la IA dentro del sitio publicado aparte.
 
@@ -35,7 +35,7 @@ Cuando el sitio tiene Supabase configurado, al crear la cuenta se manda un **có
 Para activarla:
 1. Hacé los pasos 1 y 2 de la sección de abajo (proyecto de Supabase y tablas).
 2. Escribí la URL y la clave `anon` del proyecto en el código, al principio del script: `const SUPA={url:'https://xxxx.supabase.co',key:'…'};`. Así funciona para todos desde el registro, sin que nadie tenga que pegar nada.
-3. En Supabase, **Authentication → Email Templates → Magic Link**, cambiá el cuerpo para que muestre el código, por ejemplo: `<h2>Tu código de Aulario</h2><p>Escribí este código en Aulario: <b>{{ .Token }}</b></p><p>Vence en 1 hora.</p>`
+3. En Supabase, **Authentication → Email Templates → Magic Link**, cambiá el cuerpo para que muestre el código, por ejemplo: `<h2>Tu código de Nexus</h2><p>Escribí este código en Nexus: <b>{{ .Token }}</b></p><p>Vence en 1 hora.</p>`
 4. **Importante:** el correo que trae Supabase por defecto solo envía a los emails del equipo del proyecto, y pocos por hora. Para que les llegue a todos, en **Authentication → SMTP Settings** conectá un servicio de correo (por ejemplo Resend o Brevo, que tienen plan gratis) con un remitente propio.
 
 ## Grupos de estudio y tienda en línea (opcional)
@@ -70,14 +70,14 @@ y después ejecutá las líneas de `listings`, `listing_events` y `archivos`.
 - Los **mensajes directos** (botón *Mensaje* al lado de cada persona, y la pestaña *Mensajes*) se guardan en la misma tabla `messages` que los chats de grupo, así que tampoco son privados frente a quien tenga la clave.
 - En los grupos y la tienda se comparte nombre, universidad, carrera, año y materias; nunca el email ni la contraseña.
 - En la tienda, además, se ve el contacto que cada persona elige publicar.
-- Aulario no cobra ni intermedia pagos.
+- Nexus no cobra ni intermedia pagos.
 
 ## Cobros: suscripción y comisión por ventas (Mercado Pago)
 - **Suscripción:** $400 por mes, con el **primer mes gratis** contado desde que se crea la cuenta (no pide tarjeta para probar). Durante la prueba, Inicio muestra cuántos días quedan. Al terminar la prueba sin pagar, la app muestra la pantalla para suscribirse. Hay dos formas de pagar, y las dos depositan **directo en tu cuenta de Mercado Pago** (la del `MP_ACCESS_TOKEN`):
   - **Débito automático mensual** (suscripción de Mercado Pago): se cobra solo cada mes. El primer cobro es cuando termina el mes gratis o lo ya pagado. Los medios que acepta los define Mercado Pago (tarjeta y dinero en cuenta; el débito depende de lo que tenga habilitado en Uruguay).
   - **Pagar 1 mes:** un cobro único con tarjeta de **crédito, débito** o dinero en Mercado Pago (sin efectivo). Suma un mes y no se renueva solo.
 - **Mi perfil → Mi suscripción:** muestra el estado (mes gratis, débito automático con fecha del próximo cobro, pagada hasta tal fecha) y permite **cancelar en cualquier momento** con un paso de confirmación. Al cancelar no se cobra más, y la persona sigue con acceso hasta el final de lo que ya pagó.
-- **Tienda:** quien compra paga dentro de Aulario con Mercado Pago. A quien vende le llega el 90 % a su propia cuenta y **Aulario se queda automáticamente con el 10 %** (comisión de Mercado Pago Marketplace). El archivo y el contacto se entregan recién cuando el pago está aprobado, en **Mis compras**. Antes de comprar, se puede preguntar por Mensajes. El material gratis no paga comisión.
+- **Tienda:** quien compra paga dentro de Nexus con Mercado Pago. A quien vende le llega el 90 % a su propia cuenta y **Nexus se queda automáticamente con el 10 %** (comisión de Mercado Pago Marketplace). El archivo y el contacto se entregan recién cuando el pago está aprobado, en **Mis compras**. Antes de comprar, se puede preguntar por Mensajes. El material gratis no paga comisión.
 - **Orden de la tienda:** recomendado (según tus materias, temas flojos y parciales), más vendidos, más barato, más caro y más nuevo.
 - **Modo demo:** sin configurar nada, todo esto funciona simulado en el navegador para probarlo.
 
@@ -117,11 +117,11 @@ Cada email trae un link para darse de baja. La página manda al servidor solo lo
 
 Para que se envíen de verdad:
 1. Creá una cuenta en **resend.com** (tiene plan gratis), verificá tu dominio y creá una API key. Con Gmail como remitente no se puede: hace falta un dominio propio. Los emails sí llegan a casillas de Gmail.
-2. `supabase secrets set RESEND_API_KEY=re_... MAIL_FROM="Aulario <recordatorios@tudominio.com>" CRON_SECRET=otra-frase-al-azar`
+2. `supabase secrets set RESEND_API_KEY=re_... MAIL_FROM="Nexus <recordatorios@tudominio.com>" CRON_SECRET=otra-frase-al-azar`
 3. Subí la función: `supabase functions deploy recordatorios --no-verify-jwt`.
 4. Programala cada hora: en Supabase → **Database → Extensions** activá `pg_cron` y `pg_net`, y en SQL Editor ejecutá (con tu proyecto y tu `CRON_SECRET`):
 ```sql
-select cron.schedule('aulario-recordatorios', '0 * * * *', $$
+select cron.schedule('nexus-recordatorios', '0 * * * *', $$
   select net.http_post(
     url := 'https://TU-PROYECTO.supabase.co/functions/v1/recordatorios',
     headers := jsonb_build_object('content-type', 'application/json', 'x-cron-secret', 'TU_CRON_SECRET'),
