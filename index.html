@@ -41,7 +41,7 @@ textarea{resize:vertical;min-height:96px;border-radius:18px}
 .sec>div:not(.fl)>*+*{margin-top:18px}
 .dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;z-index:30}
 .dock .pill{display:flex;gap:4px;background:var(--card);border-radius:999px;padding:8px;box-shadow:var(--shadow)}
-.dk{width:clamp(48px,14.5vw,64px);height:56px;border-radius:22px;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--ink);font-size:10px;font-weight:500}
+.dk{width:clamp(46px,13.2vw,64px);height:56px;border-radius:22px;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--ink);font-size:10px;font-weight:500}
 .dk[aria-current=page]{background:var(--inv);color:var(--invfg)}
 .dock .round{background:var(--card);border-radius:999px;padding:8px;box-shadow:var(--shadow)}
 .eyebrow{font-size:11.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--mute);font-weight:500}
@@ -153,13 +153,14 @@ textarea{resize:vertical;min-height:96px;border-radius:18px}
 .gate-box{width:100%;max-width:460px;display:flex;flex-direction:column;gap:18px;margin:auto 0}
 @media (min-width:900px){.gate{grid-template-columns:1.05fr 1fr}.gate-art{display:flex}.gate-form{align-items:center;padding:40px}}
 /* ---- versión web (escritorio) ---- */
-.brand,.me{display:none}
+.brand,.me,.dk-wide{display:none}
 @media (min-width:600px){.stage{padding:0}.phone{max-width:none;border-radius:0;box-shadow:none;min-height:100vh}.pad{max-width:780px;margin:0 auto;padding:32px 28px 150px}.sheet{max-width:560px}}
 @media (min-width:960px){
  .phone{padding-left:250px}
  .pad{max-width:940px;padding:40px 48px 72px}
  .dock{left:0;top:0;bottom:0;transform:none;width:250px;flex-direction:column;justify-content:flex-start;gap:6px;padding:26px 14px 18px;background:var(--card);border-right:1.5px solid var(--line)}
  .dock .pill,.dock .round{display:flex;flex-direction:column;gap:4px;background:transparent;box-shadow:none;padding:0;border-radius:0}
+ .dk-wide{display:flex}
  .dk{width:100%;height:46px;flex-direction:row;justify-content:flex-start;gap:12px;padding:0 16px;font-size:14.5px;border-radius:16px}
  .dk:hover:not([aria-current=page]){background:var(--surf)}
  .brand{display:flex;align-items:center;gap:10px;padding:0 10px 22px;font-size:18px;font-weight:700}
@@ -393,18 +394,21 @@ const isRight=(q,ans)=>q.type==='sc'?q.a.some(k=>norm(ans).includes(norm(k))):an
 const shuffle=a=>{const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b};
 
 /* ---------- Clases presenciales de ejemplo (por día de semana) ---------- */
-const CLASES={1:[['ana',480,600,'Teórico']],2:[['fis',600,720,'Teórico']],3:[['bio',480,600,'Teórico']],4:[['fis',840,960,'Práctico']],5:[['ana',600,720,'Práctico']]};
+/* Eventos propios del calendario (clases, trabajo, entregas, parciales…). Las fechas son "AAAA-MM-DD" y las horas, minutos desde las 00:00. */
+const EVK={clase:['🏫','Clase'],trabajo:['💼','Trabajo'],parcial:['📝','Parcial'],entrega:['📌','Entrega'],otro:['⭐','Personal']};
+const dayIdx=ds=>Math.round((new Date(ds+'T00:00:00')-D0)/DAY);
+const evOnDay=(e,d)=>{const d0=dayIdx(e.date);return e.weekly?d>=d0&&(d-d0)%7===0:d===d0};
 
 /* ---------- Motor del planificador ---------- */
 function buildPlan(S){
-  const {subjects,prefs,mastery,slow,kept,reviews,rescue}=S,out=[],N=21;
+  const {subjects,prefs,mastery,slow,kept,reviews,rescue}=S,events=S.events||[],out=[],N=21;
   const exam=s=>rescue&&rescue.exam[s.id]!=null?rescue.exam[s.id]:s.exam;
   const nowMin=Math.ceil(((S.nowMs-D0.getTime())/6e4)/5)*5;
   const work={},need={};subjects.forEach(s=>s.topics.forEach(t=>{work[t.id]=Math.max(.08,(100-(mastery[t.id]??50))/100);need[t.id]=t.blocks?Math.max(0,Math.round(t.blocks*(100-(mastery[t.id]??40))/80)):0}));
   const occ=Array.from({length:N},()=>[]);
-  for(let d=0;d<N;d++)(CLASES[dateOf(d).getDay()]||[]).forEach(([sid,a,b,k])=>{if(subjects.some(s=>s.id===sid)){out.push({id:`c${d}-${a}`,day:d,start:a,dur:b-a,type:'class',subj:sid,label:k});occ[d].push([a,b])}});
+  for(let d=0;d<N;d++)events.forEach(e=>{if(!evOnDay(e,d))return;const a=e.start,b=Math.max(e.end,e.start+15);out.push({id:`ev${e.id}-${d}`,day:d,start:a,dur:b-a,type:'event',ev:e,subj:e.subj||null});occ[d].push([a,b])});
   kept.forEach(k=>{out.push({...k,done:true});occ[k.day]&&occ[k.day].push([k.start,k.start+k.dur])});
-  subjects.forEach(s=>{const e=exam(s);if(e>=0&&e<N)out.push({id:'e'+s.id,day:e,start:0,dur:0,type:'exam',subj:s.id})});
+  subjects.forEach(s=>{const e=exam(s);if(e>=0&&e<N&&!events.some(v=>v.kind==='parcial'&&v.subj===s.id&&evOnDay(v,e)))out.push({id:'e'+s.id,day:e,start:0,dur:0,type:'exam',subj:s.id})});
   const DUR=45,cap=(rescue?rescue.hours:prefs.maxH)*60,end=prefs.to*60+(rescue?60:0);
   const revs=reviews.map(r=>({...r,day:Math.max(0,Math.floor((r.due-D0.getTime())/DAY))}));
   let last=null;
@@ -495,6 +499,8 @@ clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',settings:'<circl
 coffee:'<path d="M17 8h1a4 4 0 1 1 0 8h-1M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><path d="M6 2v2M10 2v2M14 2v2"/>',
 eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
 eyeOff:'<path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c6.5 0 10 8 10 8a17.6 17.6 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24M17.94 17.94A10.07 10.07 0 0 1 12 20c-6.5 0-10-8-10-8a17.7 17.7 0 0 1 5.06-5.94M2 2l20 20"/>',
+users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+bag:'<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/>',
 sparkle:'<path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 3v4M17 5h4M5 17v4M3 19h4"/>'
 };
 const Icon=({n,s=18,sw=2})=>html`<svg width=${s} height=${s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth=${sw} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style=${{flex:'0 0 auto'}} dangerouslySetInnerHTML=${{__html:IC[n]||''}}/>`;
@@ -554,7 +560,7 @@ function Ahora({a}){
   const d0=dateOf(0);
   const ts=[...visT(cs)].sort((x,y)=>LV[y.level].w-LV[x.level].w).filter(t=>showC||t.level!=='comp');
   const nComp=cs.topics.filter(t=>t.level==='comp').length;
-  const tools=[['ejercicios','Practicar',reviews.length?`${reviews.length} repaso${reviews.length>1?'s':''} pendiente${reviews.length>1?'s':''}`:'Preguntas por tema','✏️','th-fis'],['simulador','Simulacro','Ensayá un parcial','⏱️','th-bio'],['logros','Logros',`Racha de ${stats.streak} días`,'🔥','th-x'],['match','Grupos de estudio','Chateá y compartí material','🤝','th-ana'],['tienda','Tienda de material','Resúmenes y cursos para tus materias','🛍️','th-bio']];
+  const tools=[['ejercicios','Practicar',reviews.length?`${reviews.length} repaso${reviews.length>1?'s':''} pendiente${reviews.length>1?'s':''}`:'Preguntas por tema','✏️','th-fis'],['simulador','Simulacro','Ensayá un parcial','⏱️','th-bio'],['logros','Logros',`Racha de ${stats.streak} días`,'🔥','th-x'],['material','Mis apuntes','Subí y estudiá tu material','📎','th-ana']];
   return html`<div className="screen" style=${{padding:0,gap:22}}>
     <div className="row" style=${{justifyContent:'space-between',alignItems:'flex-start'}}>
       <div className="grow"><h1 style=${{fontSize:'clamp(28px,8vw,34px)',fontWeight:700}}>${DNF[d0.getDay()]} ${d0.getDate()}</h1><p className="mut" style=${{fontSize:14,marginTop:2}}>${todayS.length?`${todayS.filter(b=>!b.done).length} de ${todayS.length} bloques pendientes`:'Tus próximos bloques'}</p></div>
@@ -563,6 +569,9 @@ function Ahora({a}){
     ${SHOW_PAY&&a.sub&&a.sub.in_trial&&!(a.sub.subscription&&a.sub.subscription.status==='authorized')&&html`<div className="alertbox row wrap" style=${{justifyContent:'space-between',gap:10,background:'var(--t-mint)'}}><span style=${{fontSize:13.5}}><b>Mes gratis: te quedan ${daysLeft(a.sub.trial_ends_at)} días.</b> Después, $${PAGOS.precio} por mes. Si te suscribís ahora, el primer cobro es cuando termina la prueba.</span><button className="btn btn-sm btn-s" onClick=${a.pay.subscribe}>Suscribirme</button></div>`}
     ${hero}
     ${a.rescue?html`<div className="alertbox row wrap" style=${{justifyContent:'space-between'}}><span className="row"><${Icon} n="alert"/> <b>Modo Rescate activo</b></span><button className="btn btn-sm" onClick=${a.stopRescue}>Desactivar</button></div>`:html`<div className="banner"><span style=${{fontSize:34,lineHeight:1}}>🚨</span><div className="grow"><b style=${{fontSize:16}}>MODO RESCATE</b><p style=${{fontSize:12.5,opacity:.95}}>¿Parcial encima y poco tiempo? Armamos tu plan de hoy.</p></div><button className="btn btn-i btn-sm" onClick=${()=>a.go('rescate')}>Armar plan</button></div>`}
+    <div className="grid2" style=${{gap:10}}>
+      <button className="tool th-ana" onClick=${()=>a.go('match')}><span className="tile" style=${{width:42,height:42,fontSize:20}}>💬</span><span><b style=${{fontWeight:600,display:'block',fontSize:15}}>Grupos y chat</b><span className="mut" style=${{fontSize:12.5,lineHeight:1.3,display:'block'}}>Estudiá con gente de tu materia, chateá y compartí apuntes</span></span></button>
+      <button className="tool th-bio" onClick=${()=>a.go('tienda')}><span className="tile" style=${{width:42,height:42,fontSize:20}}>🛍️</span><span><b style=${{fontWeight:600,display:'block',fontSize:15}}>Venta de apuntes</b><span className="mut" style=${{fontSize:12.5,lineHeight:1.3,display:'block'}}>Comprá o vendé resúmenes, cursos y clases</span></span></button></div>
     ${list.length>0&&html`<div className="fl" style=${{gap:10}}><div className="row" style=${{justifyContent:'space-between'}}><h2 style=${{fontSize:20,fontWeight:600}}>${todayS.length?'Tu plan de hoy':'Próximos bloques'}</h2><button className="chip" onClick=${()=>a.go('calendario')}>Ver calendario</button></div>
       ${list.map(b=>{const f=findT(subjects,b.topic);if(!f)return null;const {s,t}=f;return html`<div key=${b.id} className=${'rowt '+thc(s.id)}><span className="tile">${s.emoji}</span><div className="grow"><b style=${{fontWeight:500,display:'block'}}>${t.name}</b><span className="mut num" style=${{fontSize:13}}>${todayS.length?hhmm(b.start):dayLabel(b.day)+' '+hhmm(b.start)} · ${b.dur} min${b.review?' · repaso':''}</span></div>${b.done?html`<span className="pillb"><${Icon} n="check" s=${14}/> Hecho</span>`:html`<button className="pillb" disabled=${!!run} onClick=${()=>a.startRun(b)}>Empezar</button>`}</div>`})}</div>`}
     <div className="fl" style=${{gap:10}}><h2 style=${{fontSize:20,fontWeight:600}}>Parciales</h2>
@@ -579,26 +588,57 @@ function Ahora({a}){
 /* ---------- 3 · CALENDARIO ---------- */
 function Calendario({a}){
   const {plan,subjects}=a;
-  const [wk,setWk]=useState(0),[day,setDay]=useState(0),[open,setOpen]=useState(null);
+  const [wk,setWk]=useState(0),[day,setDay]=useState(0),[open,setOpen]=useState(null),[form,setForm]=useState(null),[err,setErr]=useState(null),[del,setDel]=useState(null);
   const days=[...Array(7)].map((_,i)=>wk*7+i);
-  const items=plan.filter(b=>b.day===day&&b.type!=='exam'),exams=plan.filter(b=>b.day===day&&b.type==='exam');
+  const items=plan.filter(b=>b.day===day&&(b.type==='study'||b.type==='event')).sort((x,y)=>x.start-y.start),exams=plan.filter(b=>b.day===day&&b.type==='exam');
   const dd=dateOf(day),sn=id=>(subjects.find(s=>s.id===id)||{name:id}).name;
   const goW=w=>{setWk(w);setDay(w*7);setOpen(null)};
+  const tm=m=>hhmm(Math.max(0,Math.min(1439,m)));
+  const toMin=v=>{const [h,m]=String(v||'').split(':').map(Number);return Number.isFinite(h)?h*60+(m||0):NaN};
+  const newForm=()=>{setErr(null);setForm({title:'',kind:'clase',subj:'',date:ymd(Math.max(day,0)),from:'09:00',to:'11:00',weekly:false})};
+  const save=()=>{
+    const f=form,st=toMin(f.from),en=toMin(f.to),d=dayIdx(f.date);
+    if(f.kind==='parcial'&&!f.subj)return setErr('Elegí de qué materia es el parcial: así tu plan de estudio se organiza para llegar.');
+    const title=f.title.trim()||(f.kind==='parcial'&&f.subj?'Parcial de '+sn(f.subj):'');
+    if(title.length<2)return setErr('Escribí un nombre (ej: Clase práctica, Trabajo, Entrega del informe).');
+    if(!f.date||!Number.isFinite(d))return setErr('Elegí la fecha.');
+    if(d<0)return setErr('Esa fecha ya pasó.');
+    if(!Number.isFinite(st)||!Number.isFinite(en)||en<=st)return setErr('La hora de fin tiene que ser después de la de inicio.');
+    a.addEvent({id:gid(),title:title.slice(0,80),kind:f.kind,subj:f.subj||null,date:f.date,start:st,end:en,weekly:!!f.weekly&&f.kind!=='parcial'&&f.kind!=='entrega'});
+    setForm(null);setDay(d);setWk(Math.min(2,Math.floor(d/7)));
+  };
+  const upcoming=[...plan.filter(b=>b.type==='exam').map(b=>({d:b.day,name:sn(b.subj),t:null})),...plan.filter(b=>b.type==='event'&&b.ev.kind==='parcial').map(b=>({d:b.day,name:b.ev.subj?sn(b.ev.subj):b.ev.title,t:b.start}))].sort((x,y)=>x.d-y.d);
   return html`<div className="screen" style=${{padding:0}}>
     <${Head} eyebrow=${dd.getFullYear()} title=${MNF[dd.getMonth()]} right=${html`<div className="row" style=${{gap:6}}><button className="ibtn" disabled=${wk===0} aria-label="Semana anterior" onClick=${()=>goW(wk-1)}><${Icon} n="chevL" s=${18}/></button><button className="ibtn" disabled=${wk===2} aria-label="Semana siguiente" onClick=${()=>goW(wk+1)}><${Icon} n="chevR" s=${18}/></button></div>`}/>
-    <div style=${{display:'grid',gridTemplateColumns:'repeat(7,minmax(0,1fr))',gap:6}}>${days.map(d=>{const n=plan.filter(b=>b.day===d&&b.type==='study').length,ex=plan.some(b=>b.day===d&&b.type==='exam');return html`<button key=${d} className="dc" aria-pressed=${day===d} aria-label=${dayLabel(d)} onClick=${()=>{setDay(d);setOpen(null)}}><small>${DN[dateOf(d).getDay()]}</small><b className="num">${dateOf(d).getDate()}</b><span style=${{height:12,display:'flex',gap:3,alignItems:'center'}}>${ex?html`<${Icon} n="alert" s=${12} sw=${2.5}/>`:[...Array(Math.min(3,n))].map((_,i)=>html`<i key=${i} style=${{width:5,height:5,borderRadius:'50%',background:'currentColor',opacity:.55,display:'block'}}/>`)}</span></button>`})}</div>
+    <div style=${{display:'grid',gridTemplateColumns:'repeat(7,minmax(0,1fr))',gap:6}}>${days.map(d=>{const n=plan.filter(b=>b.day===d&&b.type==='study').length,ex=plan.some(b=>b.day===d&&(b.type==='exam'||(b.type==='event'&&b.ev.kind==='parcial'))),ev=plan.some(b=>b.day===d&&b.type==='event');return html`<button key=${d} className="dc" aria-pressed=${day===d} aria-label=${dayLabel(d)} onClick=${()=>{setDay(d);setOpen(null)}}><small>${DN[dateOf(d).getDay()]}</small><b className="num">${dateOf(d).getDate()}</b><span style=${{height:12,display:'flex',gap:3,alignItems:'center'}}>${ex?html`<${Icon} n="alert" s=${12} sw=${2.5}/>`:[...Array(Math.min(3,n))].map((_,i)=>html`<i key=${i} style=${{width:5,height:5,borderRadius:'50%',background:'currentColor',opacity:.55,display:'block'}}/>`)}${ev&&!ex&&html`<i style=${{width:5,height:5,borderRadius:1,background:'currentColor',display:'block'}}/>`}</span></button>`})}</div>
+    <div className="row wrap" style=${{justifyContent:'space-between',gap:8}}><h2 style=${{fontSize:20,fontWeight:600}}>${day===0?'Hoy':dayLabel(day)}</h2><button className="btn btn-sm btn-s" onClick=${()=>form?setForm(null):newForm()}><${Icon} n=${form?'x':'plus'} s=${14}/> ${form?'Cerrar':'Agregar al calendario'}</button></div>
+    ${form&&html`<div className="card fl" style=${{gap:12}}>
+      <b>Agregar algo tuyo</b>
+      <div className="chips" role="group" aria-label="Tipo">${Object.entries(EVK).map(([k,v])=>html`<button key=${k} className="chip" aria-pressed=${form.kind===k} onClick=${()=>{setForm({...form,kind:k});setErr(null)}}>${v[0]} ${v[1]}</button>`)}</div>
+      <div><label htmlFor="ev-t" style=${{fontWeight:600,fontSize:14}}>Nombre</label><input id="ev-t" maxLength="80" placeholder=${{clase:'Ej: Práctico de Anatomía',trabajo:'Ej: Turno en el trabajo',parcial:'Ej: Primer parcial',entrega:'Ej: Entrega del informe',otro:'Ej: Gimnasio, médico, cumpleaños'}[form.kind]} value=${form.title} onInput=${e=>{setForm({...form,title:e.target.value});setErr(null)}}/></div>
+      <div><label htmlFor="ev-s" style=${{fontWeight:600,fontSize:14}}>Materia ${form.kind==='parcial'?'':html`<span className="mut" style=${{fontWeight:400}}>(opcional)</span>`}</label><select id="ev-s" value=${form.subj} onChange=${e=>{setForm({...form,subj:e.target.value});setErr(null)}}><option value="">${form.kind==='parcial'?'Elegí la materia…':'Ninguna'}</option>${subjects.map(s=>html`<option key=${s.id} value=${s.id}>${s.emoji} ${s.name}</option>`)}</select></div>
+      <div className="grid2" style=${{gap:10}}>
+        <div><label htmlFor="ev-d" style=${{fontWeight:600,fontSize:14}}>Fecha</label><input id="ev-d" type="date" min=${ymd(0)} value=${form.date} onChange=${e=>{setForm({...form,date:e.target.value});setErr(null)}}/></div>
+        <div className="row" style=${{gap:8}}><div className="grow"><label htmlFor="ev-f" style=${{fontWeight:600,fontSize:14}}>Desde</label><input id="ev-f" type="time" step="300" value=${form.from} onChange=${e=>{setForm({...form,from:e.target.value});setErr(null)}}/></div><div className="grow"><label htmlFor="ev-h" style=${{fontWeight:600,fontSize:14}}>Hasta</label><input id="ev-h" type="time" step="300" value=${form.to} onChange=${e=>{setForm({...form,to:e.target.value});setErr(null)}}/></div></div></div>
+      ${form.kind!=='parcial'&&form.kind!=='entrega'&&html`<label className="row" style=${{gap:8,fontSize:13.5,cursor:'pointer'}}><input type="checkbox" checked=${form.weekly} onChange=${e=>setForm({...form,weekly:e.target.checked})} style=${{width:18,height:18,flex:'0 0 18px',accentColor:'var(--ink)'}}/> Se repite todas las semanas</label>`}
+      <p className="mut" style=${{fontSize:12.5}}>${form.kind==='parcial'?'Tu plan de estudio se reorganiza para llegar preparado/a a esa fecha.':'En ese horario no te vamos a poner bloques de estudio.'}</p>
+      ${err&&html`<div className="alertbox" role="alert" style=${{background:'var(--t-rose)'}}>${err}</div>`}
+      <div className="row wrap" style=${{gap:8}}><button className="btn btn-s" onClick=${save}><${Icon} n="check" s=${16}/> Guardar</button><button className="btn" onClick=${()=>setForm(null)}>Cancelar</button></div></div>`}
     <div className="fl" style=${{gap:12}}>
-      <h2 style=${{fontSize:20,fontWeight:600}}>${day===0?'Hoy':dayLabel(day)}</h2>
-      ${exams.map(e=>html`<div key=${e.id} className="row" style=${{background:'var(--inv)',color:'var(--invfg)',borderRadius:24,padding:'14px 18px'}}><span style=${{fontSize:26}}>📝</span><div><b>Examen de ${sn(e.subj)}</b><p style=${{fontSize:13,opacity:.7}}>Es el parcial. Descansá bien la noche anterior.</p></div></div>`)}
-      ${items.length===0&&exams.length===0&&html`<div className="card"><p className="mut">No hay bloques este día. Aprovechá para descansar.</p></div>`}
+      ${exams.map(e=>html`<div key=${e.id} className="row" style=${{background:'var(--inv)',color:'var(--invfg)',borderRadius:24,padding:'14px 18px'}}><span style=${{fontSize:26}}>📝</span><div><b>Parcial de ${sn(e.subj)}</b><p style=${{fontSize:13,opacity:.7}}>Descansá bien la noche anterior.</p></div></div>`)}
+      ${items.length===0&&exams.length===0&&html`<div className="card"><p className="mut">No hay bloques de estudio este día. Aprovechá para descansar.</p></div>`}
       ${items.map(b=>{
-        if(b.type==='rest')return html`<div key=${b.id} className="tl"><time className="num">${hhmm(b.start)}</time><div className="brk" style=${{paddingTop:8}}>${b.label} · ${b.dur} min</div></div>`;
-        if(b.type==='class')return html`<div key=${b.id} className="tl"><time className="num">${hhmm(b.start)}</time><div className=${'ccard '+thc(b.subj)}><b style=${{fontWeight:600}}>Clase de ${sn(b.subj)}</b><p className="mut num" style=${{fontSize:13}}>${b.label} · ${hhmm(b.start)}–${hhmm(b.start+b.dur)}</p></div></div>`;
+        if(b.type==='event'){const e=b.ev,k=EVK[e.kind]||EVK.otro,isP=e.kind==='parcial';return html`<div key=${b.id} className="tl"><time className="num">${tm(b.start)}</time><div className="card fl" style=${{gap:6,padding:'12px 16px',...(isP?{background:'var(--inv)',color:'var(--invfg)'}:{})}}>
+          <div className="row wrap" style=${{justifyContent:'space-between',gap:8}}><b style=${{fontWeight:600}}>${k[0]} ${e.title}</b><span className="num" style=${{fontSize:12.5,opacity:.75}}>${tm(e.start)}–${tm(e.end)}</span></div>
+          <span style=${{fontSize:12.5,opacity:.75}}>${k[1]}${e.subj?' · '+sn(e.subj):''}${e.weekly?' · todas las semanas':''}</span>
+          <div>${del===e.id?html`<span className="row wrap" style=${{gap:6}}><button className="btn btn-sm" style=${{background:'var(--t-rose)',color:'var(--ink)'}} onClick=${()=>{setDel(null);a.delEvent(e.id)}}>${e.weekly?'Sí, quitar todas':'Sí, quitar'}</button><button className="btn btn-sm btn-g" onClick=${()=>setDel(null)}>No</button></span>`:html`<button className="chip" style=${{padding:'.2rem .7rem',fontSize:12}} onClick=${()=>setDel(e.id)}>Quitar</button>`}</div></div></div>`}
         const f=findT(subjects,b.topic);if(!f)return null;const {s,t}=f;
-        return html`<div key=${b.id} className="tl"><time className="num">${hhmm(b.start)}</time><div><button className=${'gcard '+thc(s.id)+(b.done?' done':'')} aria-expanded=${open===b.id} onClick=${()=>setOpen(open===b.id?null:b.id)}><b style=${{fontWeight:600,display:'block',fontSize:15.5}}>${b.done?'✓ ':b.review?'↻ ':''}${t.name}</b><span style=${{fontSize:13,opacity:.92}} className="num">${s.name} · ${b.dur} min${t.fromMat?' · 📎 tu material':''}${b.review?' · repaso':''}${b.done?' · hecho':''}</span></button>
+        return html`<div key=${b.id} className="tl"><time className="num">${tm(b.start)}</time><div><button className=${'gcard '+thc(s.id)+(b.done?' done':'')} aria-expanded=${open===b.id} onClick=${()=>setOpen(open===b.id?null:b.id)}><b style=${{fontWeight:600,display:'block',fontSize:15.5}}>${b.done?'✓ ':b.review?'↻ ':''}${t.name}</b><span style=${{fontSize:13,opacity:.92}} className="num">${s.name} · ${b.dur} min${t.fromMat?' · 📎 tu material':''}${b.review?' · repaso':''}${b.done?' · hecho':''}</span></button>
           ${open===b.id&&!b.done&&html`<div className="row wrap" style=${{marginTop:8}}><button className="btn btn-s btn-sm" disabled=${!!a.run} onClick=${()=>{a.startRun(b);a.go('ahora')}}><${Icon} n="play" s=${14}/> Empezar ahora</button><button className="btn btn-sm" onClick=${()=>a.slowTopic(b.topic)}><${Icon} n="clock" s=${14}/> Tardé más con este tema</button></div>`}</div></div>`})}
     </div>
-    <p className="mut" style=${{fontSize:12.5}}>Tocá un bloque para empezarlo. Si te lleva más tiempo, avisanos y recalculamos tu semana.</p></div>`;
+    ${upcoming.length>0&&html`<div className="fl" style=${{gap:8}}><h2 style=${{fontSize:20,fontWeight:600}}>Próximos parciales</h2>
+      ${upcoming.map((u,i)=>html`<button key=${i} className="card row" style=${{justifyContent:'space-between',gap:10,border:0,width:'100%',color:'var(--ink)',textAlign:'left'}} onClick=${()=>{setWk(Math.min(2,Math.floor(u.d/7)));setDay(u.d)}}><span><b>📝 ${u.name}</b><span className="mut" style=${{fontSize:13,display:'block'}}>${dayLabel(u.d)}${u.t!=null?' · '+tm(u.t):''}</span></span><span className="num" style=${{fontWeight:700,whiteSpace:'nowrap'}}>${u.d===0?'Hoy':u.d===1?'Mañana':'En '+u.d+' días'}</span></button>`)}</div>`}
+    <p className="mut" style=${{fontSize:12.5}}>Tocá un bloque para empezarlo. Si te lleva más tiempo, avisanos y recalculamos tu semana. Los descansos entre bloques se te avisan cuando estudiás.</p></div>`;
 }
 
 /* ---------- 5 · MATERIAS ---------- */
@@ -1925,7 +1965,7 @@ Período refractario. Durante el período refractario absoluto no se genera otro
 Sinapsis química. El potencial llega al terminal presináptico, entra Ca2+, las vesículas hacen exocitosis y el neurotransmisor se une al receptor postsináptico. Puede ser excitatoria (PEPS) o inhibitoria (PIPS). Importante: la sumación temporal y espacial decide si se dispara el potencial en la neurona postsináptica.`},
 {id:'ex2',subj:'fis',kind:'examen',name:'Parcial Fisiología 2025-2 (ejemplo)',size:700,status:'ok',example:true,text:`Parcial de Fisiología. 1) Describa las fases del potencial de acción y qué canales participan en cada una. 2) ¿Por qué el período refractario absoluto impide la sumación de potenciales de acción? 3) Explique la sinapsis química y la diferencia entre un PEPS y un PIPS. 4) Verdadero o falso: la bomba Na+/K+ genera por sí sola el potencial de reposo. 5) Calcule el potencial de equilibrio del K+ con la ecuación de Nernst si [K+] interno es 140 mM y externo 5 mM.`}
 ];
-const SECOND=['ejercicios','simulador','logros','match','tienda','rescate'];
+const SECOND=['ejercicios','simulador','logros','rescate'];
 /* Pide el código por email cuando hace falta una sesión (comprar, vender o suscribirse) */
 function AuthModal({email,onOk,onCancel}){
   const [st,setSt]=useState('idle'),[code,setCode]=useState(''),[err,setErr]=useState(null);
@@ -2005,7 +2045,8 @@ function Main({user,isNew,onUser}){
   const flip=()=>{const n=isDark?'light':'dark';setTheme(n);try{localStorage.setItem('ea-theme',n)}catch(e){}};
   useEffect(()=>{if(!run)return;const id=setInterval(()=>setRun(r=>r&&!r.paused&&r.left>0?{...r,left:r.left-1}:r),1000);return()=>clearInterval(id)},[run&&run.phase,run&&run.paused]);
   const examOf=s=>rescue&&rescue.exam[s.id]!=null?rescue.exam[s.id]:s.exam;
-  const plan=useMemo(()=>buildPlan({subjects,prefs,mastery,slow,kept,reviews,rescue,nowMs:Date.now()}),[subjects,prefs,mastery,slow,kept,reviews,rescue]);
+  const [events,setEvents]=useState(()=>SV.events||[]);
+  const plan=useMemo(()=>buildPlan({subjects,prefs,mastery,slow,kept,reviews,rescue,events,nowMs:Date.now()}),[subjects,prefs,mastery,slow,kept,reviews,rescue,events]);
   const nudge=(id,dl)=>setMastery(m=>({...m,[id]:clamp((m[id]??50)+dl,0,100)}));
   const tName=id=>(findT(subjects,id)||{t:{name:id}}).t.name;
   const slowTopic=id=>{setSlow(s=>({...s,[id]:(s[id]||0)+1}));nudge(id,-6);toast(`Recalculé tu semana: ${tName(id)} sube de prioridad`)};
@@ -2033,7 +2074,11 @@ function Main({user,isNew,onUser}){
     const idle=remData.last_active?Math.floor((Date.now()-new Date(remData.last_active))/864e5):0;if(k.includes('inactividad')&&idle>=2)out.push('Hace '+idle+' días que no completás un bloque. Con uno de 45 minutos hoy ya volvés a ritmo.');
     if(out.length===2)out.push('Hoy no tenés bloques ni repasos pendientes. Cuando los tengas, te avisamos a esta hora.');
     out.push('[Abrir Nexus] · No quiero recibir más recordatorios');return out.join('\n')};
-  const A={user,pay,sub,seller,ensureAuth,rem,setRem,sendTestReminder,remPreview,dmInit,shopInit,clearDm:()=>setDmInit(null),clearShop:()=>setShopInit(null),openDM:(uid,name,descr)=>{setDmInit({uid,name,descr});setTab('match')},tab,go:setTab,subjects,prefs,mastery,slow,plan,kept,reviews,errors,rescue,stats,run,mats,guides,qv,exInit,simInit,risk0,examOf,toast,nudge,slowTopic,tutorTopic,isDark,
+  const addEvent=e=>{setEvents(x=>[...x,e]);
+    if(e.kind==='parcial'&&e.subj&&!e.weekly){const d=dayIdx(e.date);if(d>=1){setSubjects(ss=>ss.map(x=>x.id===e.subj?{...x,exam:d}:x));toast('Parcial agendado. Tu plan de estudio se reorganizó para llegar a esa fecha.');return}}
+    toast('Agregado a tu calendario')};
+  const delEvent=id=>{setEvents(x=>x.filter(e=>e.id!==id));toast('Quitado del calendario')};
+  const A={events,addEvent,delEvent,user,pay,sub,seller,ensureAuth,rem,setRem,sendTestReminder,remPreview,dmInit,shopInit,clearDm:()=>setDmInit(null),clearShop:()=>setShopInit(null),openDM:(uid,name,descr)=>{setDmInit({uid,name,descr});setTab('match')},tab,go:setTab,subjects,prefs,mastery,slow,plan,kept,reviews,errors,rescue,stats,run,mats,guides,qv,exInit,simInit,risk0,examOf,toast,nudge,slowTopic,tutorTopic,isDark,
     openPerfil:()=>setPerfil(true),editPerfil:()=>{setPerfil(false);setEditing(true)},
     logout:()=>{sessionEnd();setPerfil(false);onUser(null)},
     flipTheme:flip,openOnb:st=>setOnb(typeof st==='number'?st:true),
@@ -2077,9 +2122,9 @@ function Main({user,isNew,onUser}){
     activateRescue:r=>{setRescue(r);setStats(s=>({...s,rescueUsed:true}));setTab('ahora');toast('Plan de emergencia activado en tu calendario')},
     stopRescue:()=>{setRescue(null);toast('Volviste al plan normal')},
     finishOnboarding:d=>{setPrefs({carrera:d.carrera,uni:d.uni,anio:d.anio,from:d.from,to:d.to,maxH:d.maxH});setSubjects(d.subjects);setMastery(m=>{const n={...m};d.subjects.forEach(s=>s.topics.forEach(t=>{if(n[t.id]==null)n[t.id]=t.m0}));return n});setOnb(false);setTab('ahora');toast('Listo. Recalculé tu plan')}};
-  useEffect(()=>{const id=setTimeout(()=>{try{localStorage.setItem(dkey(user.email),JSON.stringify({day:D0.getTime(),prefs,subjects,mastery,slow,kept,reviews,errors,rescue,stats,mats,guides,qmine:QBANK.filter(q=>q.mine)}))}catch(e){if(!warned.current){warned.current=true;toast('No pude guardar todo: se llenó el espacio del navegador.')}}},500);return()=>clearTimeout(id)},[prefs,subjects,mastery,slow,kept,reviews,errors,rescue,stats,mats,guides,qv]);
+  useEffect(()=>{const id=setTimeout(()=>{try{localStorage.setItem(dkey(user.email),JSON.stringify({day:D0.getTime(),prefs,subjects,mastery,slow,kept,reviews,errors,rescue,stats,mats,guides,events,qmine:QBANK.filter(q=>q.mine)}))}catch(e){if(!warned.current){warned.current=true;toast('No pude guardar todo: se llenó el espacio del navegador.')}}},500);return()=>clearTimeout(id)},[prefs,subjects,mastery,slow,kept,reviews,errors,rescue,stats,mats,guides,events,qv]);
   const sec=SECOND.includes(tab),cur=sec?'ahora':tab;
-  const NAV=[['ahora','Inicio','home'],['calendario','Plan','calendar'],['materias','Materias','book'],['material','Apuntes','upload']];
+  const NAV=[['ahora','Inicio','home'],['calendario','Plan','calendar'],['materias','Materias','book'],['material','Apuntes','upload',1],['match','Grupos','users'],['tienda','Tienda','bag']];
   return html`<div className="stage"><div className="phone">
     <main className="pad">
       ${SHOW_PAY&&sub&&!sub.active?html`<${Paywall} a=${A}/>`:html`<div>
@@ -2092,11 +2137,11 @@ function Main({user,isNew,onUser}){
       ${tab==='ejercicios'&&html`<div className="sec"><${Ejercicios} a=${A}/></div>`}
       ${tab==='simulador'&&html`<div className="sec"><${Simulador} a=${A}/></div>`}
       ${tab==='logros'&&html`<div className="sec"><${Logros} a=${A}/></div>`}
-      ${tab==='match'&&html`<div className="sec"><${Match} a=${A}/></div>`}
-      ${tab==='tienda'&&html`<div className="sec"><${Tienda} a=${A}/></div>`}
+      ${tab==='match'&&html`<div className="screen" style=${{padding:0}}><${Match} a=${A}/></div>`}
+      ${tab==='tienda'&&html`<div className="screen" style=${{padding:0}}><${Tienda} a=${A}/></div>`}
       ${tab==='rescate'&&html`<div className="sec"><${Rescate} a=${A}/></div>`}</div>`}
     </main>
-    <nav className="dock" aria-label="Principal"><div className="brand"><span className="logo">N</span>Nexus</div><div className="pill">${NAV.map(([k,l,ic])=>html`<button key=${k} className="dk" aria-current=${cur===k?'page':null} onClick=${()=>setTab(k)}><${Icon} n=${ic} s=${21}/><span>${l}</span></button>`)}</div><div className="round"><button className="dk" aria-current=${cur==='tutor'?'page':null} onClick=${()=>setTab('tutor')}><${Icon} n="msg" s=${21}/><span>Tutor</span></button></div><button className="me" onClick=${A.openPerfil} aria-label="Mi perfil"><span className="av">${initials(user.nombre)}</span><span style=${{minWidth:0}}><b style=${{fontSize:14,display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:130}}>${user.nombre.split(' ')[0]}</b><small>${user.uni.replace(/\s*\(.*\)/,'')}</small></span></button></nav>
+    <nav className="dock" aria-label="Principal"><div className="brand"><span className="logo">N</span>Nexus</div><div className="pill">${NAV.map(([k,l,ic,w])=>html`<button key=${k} className=${'dk'+(w?' dk-wide':'')} aria-current=${cur===k?'page':null} onClick=${()=>setTab(k)}><${Icon} n=${ic} s=${21}/><span>${l}</span></button>`)}</div><div className="round"><button className="dk" aria-current=${cur==='tutor'?'page':null} onClick=${()=>setTab('tutor')}><${Icon} n="msg" s=${21}/><span>Tutor</span></button></div><button className="me" onClick=${A.openPerfil} aria-label="Mi perfil"><span className="av">${initials(user.nombre)}</span><span style=${{minWidth:0}}><b style=${{fontSize:14,display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:130}}>${user.nombre.split(' ')[0]}</b><small>${user.uni.replace(/\s*\(.*\)/,'')}</small></span></button></nav>
     ${perfil&&html`<${Perfil} a=${A} onClose=${()=>setPerfil(false)}/>`}
     ${editing&&html`<${Welcome} edit=${true} initial=${user} onDone=${(p)=>{onUser(p);setPrefs(x=>({...x,carrera:p.carrera,uni:p.uni,anio:p.anio,maxH:p.horas||x.maxH}));setEditing(false);toast('Datos actualizados')}} onClose=${()=>setEditing(false)}/>`}
     ${onb&&html`<${Onboarding} a=${A} start=${typeof onb==='number'?onb:0} onClose=${()=>setOnb(false)}/>`}
