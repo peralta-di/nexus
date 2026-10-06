@@ -1667,6 +1667,7 @@ function sbApi(c){
     groups:k=>q('groups?select=*&subj=eq.'+e(k)+'&order=ts.desc&limit=60'),
     createGroup:g=>q('groups',{method:'POST',body:g}),
     members:id=>q('members?select=*&group_id=eq.'+e(id)+'&order=ts.asc'),
+    membersOf:ids=>ids.length?q('members?select=*&group_id=in.('+ids.map(e).join(',')+')&order=ts.asc&limit=1000'):Promise.resolve([]),
     myGroups:uid=>q('members?select=group_id&uid=eq.'+e(uid)),
     join:m=>q('members',{method:'POST',prefer:'resolution=ignore-duplicates,return=minimal',body:m}),
     leave:(id,uid)=>q('members?group_id=eq.'+e(id)+'&uid=eq.'+e(uid),{method:'DELETE'}),
@@ -1715,6 +1716,7 @@ function demoApi(subjects){
     groups:k=>w(d=>d.groups.filter(g=>g.subj===k).sort((x,y)=>y.ts-x.ts)),
     createGroup:g=>w(d=>{d.groups.push(g)}),
     members:id=>w(d=>d.members.filter(m=>m.group_id===id)),
+    membersOf:ids=>w(d=>d.members.filter(m=>ids.includes(m.group_id))),
     myGroups:uid=>w(d=>d.members.filter(m=>m.uid===uid).map(m=>({group_id:m.group_id}))),
     join:m=>w(d=>{if(!d.members.some(x=>x.group_id===m.group_id&&x.uid===m.uid))d.members.push(m)}),
     leave:(id,uid)=>w(d=>{d.members=d.members.filter(x=>!(x.group_id===id&&x.uid===uid))}),
@@ -1750,6 +1752,7 @@ function GroupChat({a,api,me,g,onBack,onLeave}){
   const [msgs,setMsgs]=useState([]),[mem,setMem]=useState([]),[txt,setTxt]=useState(''),[share,setShare]=useState(false),[open,setOpen]=useState(null),[err,setErr]=useState(null),[saveTo,setSaveTo]=useState({});
   const last=useRef(0),endRef=useRef(null);
   const pull=async()=>{try{const n=await api.messages(g.id,last.current);if(n&&n.length){last.current=n[n.length-1].ts;setMsgs(x=>{const ids=new Set(x.map(m=>m.id));return [...x,...n.filter(m=>!ids.has(m.id))]})}setErr(null)}catch(e){setErr('No pude actualizar el chat. Reviso de nuevo en unos segundos.')}};
+  useEffect(()=>{if(g.dm)return;const load=()=>api.members(g.id).then(setMem).catch(()=>{});const id=setInterval(load,api.online?10000:2500);return()=>clearInterval(id)},[g.id]);
   useEffect(()=>{last.current=0;setMsgs([]);pull();if(!g.dm)api.members(g.id).then(setMem).catch(()=>{});const id=setInterval(pull,api.online?4000:1500);return()=>clearInterval(id)},[g.id]);
   useEffect(()=>{if(endRef.current)endRef.current.scrollIntoView({block:'nearest'});if(msgs.length)readMap.mark(g.id,msgs[msgs.length-1].ts)},[msgs.length]);
   const post=async extra=>{const t=txt.trim();if(!t&&!extra)return;const m={id:gid(),group_id:g.id,uid:me.uid,name:me.name,text:t||'',ts:Date.now(),...(extra||{})};setTxt('');try{await api.send(m);pull()}catch(e){setErr('No se pudo enviar. Probá de nuevo.');setTxt(t)}};
@@ -1778,7 +1781,7 @@ function GroupChat({a,api,me,g,onBack,onLeave}){
   return html`<div className="fl" style=${{gap:14}}>
     <button className="back" onClick=${onBack}><${Icon} n="chevL" s=${16}/> ${g.dm?'Mensajes':'Grupos'}</button>
     ${g.dm?html`<div className="row" style=${{gap:12}}><button title="Ver perfil" onClick=${()=>a.showProfile({...pOf(other,g.name),name:(profs[other]||{}).name||g.name})} style=${{border:0,background:'transparent',padding:0}}><${PAv} p=${pOf(other,g.name)} size=${52}/></button><div><div className="eyebrow">Mensaje directo</div><h1 style=${{fontSize:'clamp(22px,6vw,28px)',fontWeight:700}}>${g.name}</h1>${g.descr&&html`<p className="mut" style=${{fontSize:13}}>${g.descr}</p>`}</div></div>`:html`<div><div className="eyebrow">${g.subj_name}${g.slot?' · '+g.slot:''}</div><h1 style=${{fontSize:'clamp(22px,6vw,28px)',fontWeight:700,marginTop:4}}>${g.name}</h1>${g.descr&&html`<p className="mut" style=${{fontSize:14,marginTop:4}}>${g.descr}</p>`}</div>`}
-    ${!g.dm&&html`<div className="row wrap" style=${{gap:6}}>${mem.map(m=>html`<button key=${m.uid} className="chip" style=${{padding:'3px 10px 3px 3px',fontSize:12.5,gap:6}} title=${(m.carrera||'')+(m.uni?' · '+m.uni:'')} onClick=${()=>m.uid===me.uid?a.showProfile(me):a.showProfile({...m,...(profs[m.uid]||{})})}><${PAv} p=${m.uid===me.uid?me:pOf(m.uid,m.name)} size=${24}/>${m.uid===me.uid?'Vos':m.name}</button>`)}<span className="mut" style=${{fontSize:12.5,alignSelf:'center'}}>${mem.length} integrante${mem.length===1?'':'s'}</span></div>`}
+    ${!g.dm&&html`<div className="fl" style=${{gap:6}}><span className="eyebrow">Integrantes (${mem.length})</span><div className="row wrap" style=${{gap:6}}>${mem.map(m=>html`<button key=${m.uid} className="chip" style=${{padding:'3px 10px 3px 3px',fontSize:12.5,gap:6}} title=${(m.carrera||'')+(m.uni?' · '+m.uni:'')} onClick=${()=>m.uid===me.uid?a.showProfile(me):a.showProfile({...m,...(profs[m.uid]||{})})}><${PAv} p=${m.uid===me.uid?me:pOf(m.uid,m.name)} size=${24}/>${m.uid===me.uid?'Vos':m.name}</button>`)}</div></div>`}
     <div className="card fl" style=${{gap:10,minHeight:260,maxHeight:'55vh',overflow:'auto'}}>
       ${msgs.length===0&&html`<p className="mut" style=${{fontSize:13.5}}>${g.dm?'Todavía no se escribieron. Presentate y contale qué estás estudiando.':'Todavía no hay mensajes. Saludá al grupo o compartí un resumen.'}</p>`}
       ${msgs.map(m=>{const mine=m.uid===me.uid;return html`<div key=${m.id} className=${'bub '+(mine?'bub-u':'bub-t')} style=${{maxWidth:'88%'}}>
@@ -1970,12 +1973,15 @@ function Match({a}){
   const {subjects,prefs,user}=a;
   const api=useApi(subjects),me=useMe(a);
   const [sid,setSid]=useState(subjects[0].id),[ppl,setPpl]=useState(null),[grs,setGrs]=useState(null),[mine,setMine]=useState([]),[open,setOpen]=useState(null),[form,setForm]=useState(null),[err,setErr]=useState(null),[tick,setTick]=useState(0);
-  const [view,setView]=useState('grupos'),[inbox,setInbox]=useState([]),[profs,setProfs]=useState({});
+  const [view,setView]=useState('grupos'),[inbox,setInbox]=useState([]),[profs,setProfs]=useState({}),[gm,setGm]=useState({}),[seeM,setSeeM]=useState(null);
   const names=useRef((()=>{try{return JSON.parse(localStorage.getItem('ea-dmnames')||'{}')}catch(e){return {}}})());
   useEffect(()=>{if(open)return;let ok=true;const load=()=>api.inbox(me.uid).then(r=>{if(ok)setInbox(r||[])}).catch(()=>{});load();const id=setInterval(load,api.online?10000:3000);return()=>{ok=false;clearInterval(id)}},[api,open,tick]);
   const threads=useMemo(()=>{const rd=readMap.get(),by={};inbox.forEach(m=>{const t=by[m.group_id]||(by[m.group_id]={id:m.group_id,last:m,unread:0,name:''});if(m.uid!==me.uid){if(!t.name)t.name=m.name;if(m.ts>(rd[m.group_id]||0))t.unread++}});
     return Object.values(by).map(t=>({...t,name:t.name||names.current[t.id]||'Compañero/a'})).sort((x,y)=>y.last.ts-x.last.ts)},[inbox]);
   const unread=threads.reduce((x,t)=>x+t.unread,0);
+  const gkey=(grs||[]).map(g=>g.id).join(',');
+  useEffect(()=>{if(!gkey)return;let ok=true;api.membersOf(gkey.split(',')).then(async ms=>{if(!ok)return;const by={};(ms||[]).forEach(m=>{(by[m.group_id]=by[m.group_id]||[]).push(m)});setGm(by);const ids=[...new Set((ms||[]).map(m=>m.uid).filter(u=>u!==me.uid))];if(ids.length){const r=await api.profiles(ids).catch(()=>[]);if(ok)setProfs(x=>({...x,...Object.fromEntries((r||[]).map(p=>[p.uid,p]))}))}}).catch(()=>{});return()=>{ok=false}},[gkey,mine.join(',')]);
+  const memNames=list=>{const n=list.map(m=>m.uid===me.uid?'vos':m.name.split(' ')[0]);return n.length<=3?n.join(', ').replace(/, ([^,]*)$/,' y $1'):n.slice(0,2).join(', ')+' y '+(n.length-2)+' más'};
   const tkey=threads.map(t=>t.id).join(',');
   useEffect(()=>{const ids=threads.map(t=>t.id.split(':').slice(1).find(x=>x!==me.uid)).filter(Boolean);if(!ids.length)return;let ok=true;api.profiles(ids).then(r=>{if(ok)setProfs(Object.fromEntries((r||[]).map(x=>[x.uid,x])))}).catch(()=>{});return()=>{ok=false}},[tkey]);
   useEffect(()=>{if(a.dmInit){const d=a.dmInit;a.clearDm();if(d.uid&&d.uid!==me.uid)dm(d.uid,d.name,d.descr)}},[a.dmInit]);
@@ -2015,6 +2021,11 @@ function Match({a}){
         :grs.map(g=>{const inG=mine.includes(g.id);return html`<div key=${g.id} className=${'ccard '+thc(s.id)} style=${{padding:'14px 16px'}}>
           <div className="row wrap" style=${{justifyContent:'space-between',gap:8}}><b style=${{fontWeight:600,fontSize:15.5}}>${g.name}</b>${g.slot&&html`<span className="lvl" style=${{background:'var(--card)',color:'var(--ink)'}}>${g.slot}</span>`}</div>
           ${g.descr&&html`<p style=${{fontSize:13.5,marginTop:4}}>${g.descr}</p>`}
+          ${(()=>{const ms=gm[g.id]||[];return ms.length>0&&html`<div className="fl" style=${{gap:6,marginTop:8}}>
+            <button className="row" onClick=${()=>setSeeM(seeM===g.id?null:g.id)} aria-expanded=${seeM===g.id} style=${{gap:8,border:0,background:'transparent',padding:0,color:'var(--ink)',textAlign:'left'}}>
+              <span className="row" style=${{gap:0}}>${ms.slice(0,5).map((m,i)=>html`<span key=${m.uid} style=${{marginLeft:i?-10:0,borderRadius:'50%',boxShadow:'0 0 0 2px var(--tint)'}}><${PAv} p=${m.uid===me.uid?me:{...m,...(profs[m.uid]||{})}} size=${28}/></span>`)}</span>
+              <span style=${{fontSize:12.5}}><b>${ms.length} integrante${ms.length>1?'s':''}</b> · ${memNames(ms)}</span></button>
+            ${seeM===g.id&&html`<div className="row wrap" style=${{gap:6}}>${ms.map(m=>html`<button key=${m.uid} className="chip" style=${{padding:'3px 10px 3px 3px',fontSize:12.5,gap:6}} onClick=${()=>a.showProfile(m.uid===me.uid?me:{...m,...(profs[m.uid]||{})})}><${PAv} p=${m.uid===me.uid?me:{...m,...(profs[m.uid]||{})}} size=${24}/>${m.uid===me.uid?'Vos':m.name}</button>`)}</div>`}</div>`})()}
           <p className="mut" style=${{fontSize:12.5,marginTop:4}}>Creado por ${g.owner===me.uid?'vos':g.owner_name}${g.uni?' · '+g.uni:''}</p>
           <div style=${{marginTop:10}}>${inG?html`<button className="btn btn-sm btn-s" onClick=${()=>setOpen(g)}><${Icon} n="msg" s=${14}/> Abrir chat</button>`:html`<button className="btn btn-sm btn-s" onClick=${()=>join(g)}>Unirme</button>`}</div></div>`})}
     </div>
