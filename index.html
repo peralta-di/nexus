@@ -180,6 +180,9 @@ textarea{resize:vertical;min-height:96px;border-radius:18px}
 <script>
 /* ---------- IA propia (solo fuera de claude.ai): clave de Anthropic de la persona ---------- */
 const STANDALONE=!(window.claude&&window.claude.use);
+/* Vista previa en Claude: muestra suscripción y recordatorios en modo demo (pagos y emails simulados) */
+const PREVIEW=false;
+const SHOW_PAY=STANDALONE||PREVIEW;
 const aiKey={get:()=>{try{return localStorage.getItem('ea-key')||''}catch(e){return ''}},set:k=>{try{k?localStorage.setItem('ea-key',k):localStorage.removeItem('ea-key')}catch(e){}window.dispatchEvent(new Event('ea-ai'))}};
 /* Aulario dentro de Claude: el link del artifact publicado en claude.ai. Ahí la IA usa la cuenta de Claude de cada persona. */
 const CLAUDE_APP_URL='https://claude.ai/artifact/WsunKkPTN3zjemT6s3RUp4';
@@ -557,7 +560,7 @@ function Ahora({a}){
       <div className="grow"><h1 style=${{fontSize:'clamp(28px,8vw,34px)',fontWeight:700}}>${DNF[d0.getDay()]} ${d0.getDate()}</h1><p className="mut" style=${{fontSize:14,marginTop:2}}>${todayS.length?`${todayS.filter(b=>!b.done).length} de ${todayS.length} bloques pendientes`:'Tus próximos bloques'}</p></div>
       <div className="row" style=${{gap:8}}><button className="ibtn meav" onClick=${a.openPerfil} aria-label="Mi perfil" style=${{background:'var(--g-lilac)',color:'#fff',fontWeight:600,fontSize:14}}>${initials(a.user.nombre)}</button><button className="ibtn" onClick=${a.openOnb} aria-label="Configuración"><${Icon} n="settings" s=${19}/></button><button className="ibtn" onClick=${a.flipTheme} aria-label=${a.isDark?'Modo claro':'Modo oscuro'}><${Icon} n=${a.isDark?'sun':'moon'} s=${19}/></button></div></div>
     <p style=${{fontSize:14.5,fontWeight:500,marginTop:-10,textWrap:'balance'}}>No necesitás hacer todo. Necesitás saber qué hacer ahora.</p>
-    ${STANDALONE&&a.sub&&a.sub.in_trial&&!(a.sub.subscription&&a.sub.subscription.status==='authorized')&&html`<div className="alertbox row wrap" style=${{justifyContent:'space-between',gap:10,background:'var(--t-mint)'}}><span style=${{fontSize:13.5}}><b>Mes gratis: te quedan ${daysLeft(a.sub.trial_ends_at)} días.</b> Después, $${PAGOS.precio} por mes. Si te suscribís ahora, el primer cobro es cuando termina la prueba.</span><button className="btn btn-sm btn-s" onClick=${a.pay.subscribe}>Suscribirme</button></div>`}
+    ${SHOW_PAY&&a.sub&&a.sub.in_trial&&!(a.sub.subscription&&a.sub.subscription.status==='authorized')&&html`<div className="alertbox row wrap" style=${{justifyContent:'space-between',gap:10,background:'var(--t-mint)'}}><span style=${{fontSize:13.5}}><b>Mes gratis: te quedan ${daysLeft(a.sub.trial_ends_at)} días.</b> Después, $${PAGOS.precio} por mes. Si te suscribís ahora, el primer cobro es cuando termina la prueba.</span><button className="btn btn-sm btn-s" onClick=${a.pay.subscribe}>Suscribirme</button></div>`}
     ${hero}
     ${a.rescue?html`<div className="alertbox row wrap" style=${{justifyContent:'space-between'}}><span className="row"><${Icon} n="alert"/> <b>Modo Rescate activo</b></span><button className="btn btn-sm" onClick=${a.stopRescue}>Desactivar</button></div>`:html`<div className="banner"><span style=${{fontSize:34,lineHeight:1}}>🚨</span><div className="grow"><b style=${{fontSize:16}}>MODO RESCATE</b><p style=${{fontSize:12.5,opacity:.95}}>¿Parcial encima y poco tiempo? Armamos tu plan de hoy.</p></div><button className="btn btn-i btn-sm" onClick=${()=>a.go('rescate')}>Armar plan</button></div>`}
     ${list.length>0&&html`<div className="fl" style=${{gap:10}}><div className="row" style=${{justifyContent:'space-between'}}><h2 style=${{fontSize:20,fontWeight:600}}>${todayS.length?'Tu plan de hoy':'Próximos bloques'}</h2><button className="chip" onClick=${()=>a.go('calendario')}>Ver calendario</button></div>
@@ -1408,8 +1411,8 @@ function Perfil({a,onClose}){
     <div className="row" style=${{justifyContent:'space-between'}}><h2 style=${{fontSize:24,fontWeight:700}}>Mi perfil</h2><button className="ibtn" onClick=${onClose} aria-label="Cerrar"><${Icon} n="x" s=${18}/></button></div>
     <div className="card row" style=${{gap:14}}><span className="av" style=${{width:56,height:56,flexBasis:56,fontSize:20}}>${initials(u.nombre)}</span><div className="grow" style=${{minWidth:0}}><b style=${{fontSize:17,display:'block'}}>${u.nombre}</b><span className="mut" style=${{fontSize:13,overflowWrap:'anywhere'}}>${u.email}</span></div></div>
     <div className="card fl" style=${{gap:8,fontSize:14}}><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Universidad</span><b style=${{textAlign:'right'}}>${u.uni}</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Carrera</span><b>${u.carrera}</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Año</span><b>${u.anio}.º</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">País</span><b>${u.pais}</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Estudio por día</span><b>${u.horas||3} h</b></div></div>
-    ${STANDALONE&&html`<${MiSuscripcion} a=${a}/>`}
-    ${STANDALONE&&html`<${Recordatorios} a=${a}/>`}
+    ${SHOW_PAY&&html`<${MiSuscripcion} a=${a}/>`}
+    ${SHOW_PAY&&html`<${Recordatorios} a=${a}/>`}
     ${STANDALONE&&html`<div className="card fl" style=${{gap:8}}><b>✳️ Tu cuenta de Claude</b>
       <span className="mut" style=${{fontSize:13}}>${CLAUDE_APP_URL?'Abrí Aulario dentro de claude.ai: el tutor, la guía, los temas y los ejercicios usan tu propia cuenta de Claude, sin clave. Tu progreso de este navegador no se pasa solo: volvé a subir tus apuntes allá.':'Desde el tutor y tus apuntes podés tocar "Seguir en Claude": se abre claude.ai con tu cuenta y un pedido armado con tu carrera, tus parciales, tus temas flojos y tu material.'}</span>
       <div className="row wrap" style=${{gap:8}}>${CLAUDE_APP_URL&&html`<a className="btn btn-s btn-sm" href=${CLAUDE_APP_URL} target="_blank" rel="noopener">Abrir Aulario en Claude ↗</a>`}<button className="btn btn-sm" onClick=${()=>openInClaude('Quiero que seas mi tutor personal de estudio. '+perfilTxt(a)+'\nArmame un plan para esta semana priorizando lo que más me cuesta y lo que rindo antes, y después empecemos por el primer tema con método socrático. Español rioplatense.',a.toast)}>Estudiar en Claude ↗</button></div></div>`}
@@ -2079,7 +2082,7 @@ function Main({user,isNew,onUser}){
   const NAV=[['ahora','Inicio','home'],['calendario','Plan','calendar'],['materias','Materias','book'],['material','Apuntes','upload']];
   return html`<div className="stage"><div className="phone">
     <main className="pad">
-      ${STANDALONE&&sub&&!sub.active?html`<${Paywall} a=${A}/>`:html`<div>
+      ${SHOW_PAY&&sub&&!sub.active?html`<${Paywall} a=${A}/>`:html`<div>
       ${sec&&html`<button className="back" style=${{marginBottom:16}} onClick=${()=>setTab('ahora')}><${Icon} n="chevL" s=${16}/> Inicio</button>`}
       ${tab==='ahora'&&html`<${Ahora} a=${A}/>`}
       ${tab==='calendario'&&html`<${Calendario} a=${A}/>`}
