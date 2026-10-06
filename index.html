@@ -395,6 +395,8 @@ lock:'<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0
 send:'<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',zap:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
 clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
 coffee:'<path d="M17 8h1a4 4 0 1 1 0 8h-1M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><path d="M6 2v2M10 2v2M14 2v2"/>',
+eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+eyeOff:'<path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c6.5 0 10 8 10 8a17.6 17.6 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24M17.94 17.94A10.07 10.07 0 0 1 12 20c-6.5 0-10-8-10-8a17.7 17.7 0 0 1 5.06-5.94M2 2l20 20"/>',
 sparkle:'<path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 3v4M17 5h4M5 17v4M3 19h4"/>'
 };
 const Icon=({n,s=18,sw=2})=>html`<svg width=${s} height=${s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth=${sw} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style=${{flex:'0 0 auto'}} dangerouslySetInnerHTML=${{__html:IC[n]||''}}/>`;
@@ -545,7 +547,9 @@ function Tutor({a}){
   const {subjects,prefs,mastery}=a;
   const [mode,setMode]=useState('cero');
   const [msgs,setMsgs]=useState([{k:'t',text:'Hola, soy tu tutor. Elegí un tema abajo o escribime tu duda y lo vemos paso a paso.'}]);
-  const [inp,setInp]=useState(''),[ai,setAi]=useState(null),[busy,setBusy]=useState(false);
+  const [inp,setInp]=useState(''),[ai,setAi]=useState(null),[busy,setBusy]=useState(false),[onlyMat,setOnlyMat0]=useState(false);
+  const onlyRef=useRef(false),setOnlyMat=v=>{onlyRef.current=v;setOnlyMat0(v)};
+  const hasMat=a.mats.some(m=>m.text&&m.text.trim().length>20);
   const asked=useRef(new Set()),endRef=useRef(null),ctl=useRef(null),focus=useRef(null),hist=useRef([]);
   const allT=subjects.flatMap(s=>s.topics);
   const push=(...m)=>setMsgs(x=>[...x,...m]);
@@ -555,11 +559,11 @@ function Tutor({a}){
     const weak=subjects.flatMap(s=>s.topics.map(t=>({t,s}))).filter(x=>mastery[x.t.id]<50&&x.t.level!=='comp').sort((x,y)=>mastery[x.t.id]-mastery[y.t.id]).slice(0,4).map(x=>`${x.t.name} (${x.s.name}, ${mastery[x.t.id]}%)`).join('; ');
     const ex=subjects.map(s=>`${s.name} en ${a.examOf(s)} días`).join(', ');
     const fs=focus.current?subjects.find(s=>s.topics.some(t=>t.id===focus.current)):null;
-    const ctx=(fs?a.matContext(fs.id,14000):subjects.map(s=>a.matContext(s.id,5000)).filter(Boolean).join('\n\n'));
+    const ctx=(fs?a.matContext(fs.id,onlyRef.current?30000:14000):subjects.map(s=>a.matContext(s.id,onlyRef.current?12000:5000)).filter(Boolean).join('\n\n'));
     return `Sos un tutor de estudio para una persona que cursa ${prefs.carrera}, año ${prefs.anio}, en ${prefs.uni}. Hablale en español rioplatense (vos), con calidez, claridad y sin relleno. Parciales: ${ex}. Temas donde le va peor: ${weak||'sin datos'}.${focus.current?` Tema en foco: ${tname(focus.current)}.`:''}
 Nivel pedido: ${mode==='cero'?'explicalo desde cero, con palabras simples':'nivel examen universitario, preciso y con la terminología correcta'}.
 Método socrático, de a un paso por mensaje cuando el tema es nuevo: 1) una analogía del mundo real, 2) la explicación técnica a nivel universitario, 3) UN ejercicio práctico corto (una sola pregunta, sin dar la respuesta), 4) cuando responda, corregí con retroalimentación concreta y hacele una pregunta que lo haga pensar.
-Respuestas de máximo 150 palabras, se leen en el celular. Usá **negrita** solo para términos clave. Si no estás seguro de un dato médico, decilo. No inventes datos de parciales.${ctx?`\nMaterial que subió el estudiante (apuntes, resúmenes y parciales): usalo como fuente principal y citá el archivo entre paréntesis cuando lo uses; si algo no está en su material, decilo.\n${ctx}`:''}
+Respuestas de máximo 150 palabras, se leen en el celular. Usá **negrita** solo para términos clave. Si no estás seguro de un dato médico, decilo. No inventes datos de parciales.${ctx?(onlyRef.current?`\nModo "solo mi material": respondé ÚNICAMENTE con la información del material que subió el estudiante (abajo) y citá el archivo entre paréntesis. Si algo no está en su material, decí "Eso no está en tu material" en vez de responder con conocimiento general. Si te pide que le preguntes, hacé preguntas sobre ese material y corregí según él.\n${ctx}`:`\nMaterial que subió el estudiante (apuntes, resúmenes y parciales): usalo como fuente principal y citá el archivo entre paréntesis cuando lo uses; si algo no está en su material, decilo.\n${ctx}`):''}
 Si en este mensaje corregís la respuesta del estudiante a un ejercicio, terminá con una última línea exacta: [[RESULTADO: correcto]] o [[RESULTADO: incorrecto]]. En cualquier otro caso terminá con [[RESULTADO: ninguno]].`};
   const askAI=async text=>{
     const id=Math.random();setBusy(true);
@@ -634,6 +638,8 @@ Si en este mensaje corregís la respuesta del estudiante a un ejercicio, termin�
   return html`<div className="fl" style=${{gap:16,minHeight:'calc(100vh - 150px)'}}>
     <${Head} eyebrow="Tutor" title="Aprendé de a un paso" right=${html`<span className="lvl" style=${{background:ai?'var(--t-mint)':'var(--surf2)',color:'var(--ink)',alignSelf:'center'}}>${ai===null?'Conectando…':ai?'IA conectada':'Modo guiado'}</span>`}/>
     <div className="chips" role="group" aria-label="Nivel de explicación"><button className="chip" aria-pressed=${mode==='cero'} onClick=${()=>setMode('cero')}>Explicámelo desde cero</button><button className="chip" aria-pressed=${mode==='examen'} onClick=${()=>setMode('examen')}>Explicámelo a nivel examen universitario</button></div>
+    ${ai&&hasMat&&html`<div className="chips" role="group" aria-label="Tu material"><button className="chip" aria-pressed=${onlyMat} onClick=${()=>setOnlyMat(!onlyMat)}>📎 Responder solo según mi material</button><button className="chip" disabled=${busy} onClick=${()=>{setOnlyMat(true);focus.current=null;push({k:'u',text:'Haceme una pregunta sobre mi material.'});setTimeout(()=>askAI('Haceme una pregunta sobre mi material, sin darme la respuesta. Cuando te responda, corregime según el material.'),0)}}><${Icon} n="sparkle" s=${13}/> Preguntame sobre mi material</button></div>`}
+    ${!ai&&ai!==null&&hasMat&&html`<div className="chips"><button className="chip" onClick=${()=>a.go('material')}>📎 Preguntas y ejercicios sobre mi material</button></div>`}
     <div className="fl grow" style=${{gap:12}}>${msgs.map(bub)}<div ref=${endRef}></div></div>
     <div style=${{position:'sticky',bottom:'var(--tutor-bottom)',background:'var(--bg)',padding:'10px 0 4px',margin:'0 -4px',paddingInline:4,zIndex:5}}>
       <div className="scrollx" style=${{paddingBottom:10}}>${allT.filter(t=>t.level!=='comp').map(t=>html`<button key=${t.id} className="chip" style=${{flex:'0 0 auto'}} onClick=${()=>teach(t.id)}>${t.name}</button>`)}</div>
@@ -823,16 +829,113 @@ function searchMats(mats,q){
   return out.slice(0,8);
 }
 
+/* Sin IA: frases del material, respuestas por coincidencia de palabras y ejercicios de completar / V-F */
+const STOPW=new Set('para como pero porque cuando donde entre sobre desde hasta este esta estos estas tiene tienen puede pueden tambien cada otro otra otros otras mismo misma ellos ellas habia hacer segun durante despues antes mientras siempre nunca todos todas parte forma manera cual cuales que quien explicame decime dame sobre esto eso aquello tengo hace hacen mucho muchos poco pocos donde'.split(' '));
+const keyWords=t=>[...new Set(fold(t).match(/[a-zñ]{4,}/g)||[])].filter(w=>!STOPW.has(w));
+const sentencesOf=t=>String(t||'').split(/\n+|(?<=[.!?])\s+/).map(x=>x.replace(/\s+/g,' ').replace(/^[-*•·\d.)\s]+/,'').trim()).filter(x=>x.length>=40&&x.length<=320);
+function localAnswer(mats,q){
+  const kw=keyWords(q).map(w=>w.length>6?w.slice(0,w.length-2):w);if(!kw.length)return null;
+  const hits=[];
+  mats.forEach(m=>sentencesOf(m.text).forEach((x,i)=>{const f=fold(x),sc=kw.filter(w=>f.includes(w)).length;if(sc)hits.push({m,i,x,sc})}));
+  const need=kw.length>2?2:1,top=hits.filter(h=>h.sc>=need).sort((x,y)=>y.sc-x.sc).slice(0,3);
+  if(!top.length)return null;
+  return top.sort((x,y)=>x.m===y.m?x.i-y.i:0).map(h=>'- '+h.x+' ('+h.m.name+')').join('\n');
+}
+function localQs(mats,n,sid,topics,type){
+  const all=[];
+  mats.forEach(m=>sentencesOf(m.text).forEach(x=>{const ws=[...new Set(x.match(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{7,}/g)||[])].filter(w=>!STOPW.has(fold(w)));if(ws.length)all.push({m,x,ws})}));
+  const pool=shuffle(all),used=new Set(),out=[],def=(topics.find(t=>t.level==='muy')||topics[0]).id;
+  const words=all.flatMap(c=>c.ws);
+  for(const c of pool){
+    if(out.length>=n)break;
+    const w=c.ws.filter(x=>!used.has(fold(x))).sort((x,y)=>y.length-x.length)[Math.random()<.5?0:1]||c.ws[0];
+    if(used.has(fold(w)))continue;used.add(fold(w));
+    const i=c.x.indexOf(w),tid=localTopics(c.x,topics)[0]||def,lvl=w.length>10?2:1;
+    const base={id:'m'+(++MQ),s:sid,t:tid,lvl,mine:true,ex:'Según '+c.m.name+': '+c.x};
+    const asVf=type==='vf'||(type!=='sc'&&out.length%3===2);
+    if(asVf){
+      const alt=shuffle(words.filter(x=>fold(x)!==fold(w)&&!c.x.includes(x)))[0];
+      const truth=!alt||Math.random()<.5,txt=truth?c.x:c.x.slice(0,i)+alt+c.x.slice(i+w.length);
+      out.push({...base,type:'vf',q:'Verdadero o falso, según tu material: "'+txt+'"',opts:['Verdadero','Falso'],a:truth?0:1,ex:(truth?'Es así. ':'Es falso: la palabra correcta es "'+w+'". ')+base.ex});
+    }else out.push({...base,type:'sc',q:'Completá la frase de tu material ('+c.m.name+'):\n"'+c.x.slice(0,i)+'_____'+c.x.slice(i+w.length)+'"',a:[w.toLowerCase()]});
+  }
+  return out;
+}
+
+/* Chat sobre el material: el estudiante pregunta o el tutor le pregunta, siempre según sus archivos */
+function MatChat({a,s,ai,setAi,usable,ids}){
+  const [mode,setMode]=useState('ask'),[msgs,setMsgs]=useState([]),[inp,setInp]=useState(''),[busy,setBusy]=useState(false);
+  const hist=useRef([]),ctl=useRef(null),endRef=useRef(null),quiz=useRef(null);
+  const src=ids?usable.filter(m=>ids.includes(m.id)):usable;
+  const push=(...m)=>setMsgs(x=>[...x,...m]);
+  useEffect(()=>{if(msgs.length&&endRef.current)endRef.current.scrollIntoView({block:'nearest',behavior:'smooth'})},[msgs.length]);
+  const switchMode=m=>{if(busy)return;setMode(m);setMsgs([]);hist.current=[];quiz.current=null};
+  const rules=()=>{
+    const ctx=a.matContext(s.id,40000,null,ids);
+    const base='Sos un tutor de '+s.name+' para una persona que cursa '+a.prefs.carrera+', año '+a.prefs.anio+'. Hablale en español rioplatense (vos), claro y sin relleno, máximo 170 palabras. Usá **negrita** solo para términos clave. Usá SOLO la información del material que subió el estudiante (abajo) y citá el archivo entre paréntesis. No inventes nada que no esté en el material.\n';
+    const task=mode==='ask'
+      ?'Respondé las preguntas del estudiante según su material. Si la respuesta no está en el material, decí claramente "Eso no está en tu material" y contá qué parte relacionada sí aparece.'
+      :'Tomale examen sobre su material: hacé UNA pregunta por mensaje (variá entre conceptos, definiciones, relaciones y aplicación), sin dar la respuesta. Cuando responda, corregilo según el material: decí si está bien, qué le faltó y citá dónde está en el material; después hacé la siguiente pregunta. Si en este mensaje corregís una respuesta, agregá al final una línea exacta [[RESULTADO: correcto]] o [[RESULTADO: incorrecto]]; si no, [[RESULTADO: ninguno]].';
+    return base+task+'\n\nMATERIAL:\n'+ctx;
+  };
+  const askAI=async text=>{
+    const id=Math.random();setBusy(true);push({k:'ai',id,text:''});
+    const c=new AbortController();ctl.current=c;
+    const upd=p=>setMsgs(x=>x.map(m=>m.id===id?{...m,...p}:m));
+    try{
+      const turns=[{role:'user',content:rules()},{role:'assistant',content:'Entendido. Uso solo tu material.'},...hist.current.slice(-10),{role:'user',content:text}];
+      const {text:out}=await ai(turns,{cache:false,signal:c.signal,onText:({text:t})=>upd({text:stripMark(t)})});
+      const clean=stripMark(out),r=((out.match(/\[\[RESULTADO:\s*(correcto|incorrecto)/i)||[])[1]||'').toLowerCase();
+      upd({text:clean});
+      hist.current=[...hist.current,{role:'user',content:text},{role:'assistant',content:clean}].slice(-12);
+      if(r&&quiz.current){a.recordAnswer({t:quiz.current},r==='correcto')}
+      if(mode==='quiz'){const tid=localTopics(clean,s.topics)[0];quiz.current=tid||null}
+    }catch(e){
+      const code=e&&e.code,part=e&&e.text?stripMark(e.text):'';
+      if(code==='cancelled')upd({text:part||'(Frenado)'});
+      else{if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(code))setAi(()=>false);upd({text:(part?part+'\n\n':'')+aiErr(code)})}
+    }finally{setBusy(false);ctl.current=null}
+  };
+  const nextLocal=()=>{
+    const q=localQs(src,1,s.id,s.topics,'sc')[0];
+    if(!q){push({k:'t',text:'No encontré frases suficientes en tu material para preguntarte. Subí más texto.'});return}
+    quiz.current=q;push({k:'t',text:q.q+'\n\nEscribí la palabra que falta abajo.'});
+  };
+  const send=txt=>{
+    const text=(txt||inp).trim();if(!text||busy)return;setInp('');push({k:'u',text});
+    if(ai){askAI(text);return}
+    if(mode==='ask'){const r=localAnswer(src,text);push({k:'t',text:r?'Esto dice tu material:\n'+r:'No encontré eso en tu material. Probá con otras palabras o con un término que aparezca en tus apuntes.'});return}
+    const q=quiz.current;if(!q||typeof q!=='object'){nextLocal();return}
+    const ok=isRight(q,text);a.recordAnswer(q,ok);quiz.current=null;
+    push({k:'t',text:(ok?'**Correcto.** ':'**Todavía no.** La palabra era **'+q.a[0]+'**. ')+q.ex,next:true});
+  };
+  const startQuiz=()=>{if(ai)send('Empezá: haceme la primera pregunta sobre mi material.');else nextLocal()};
+  const SUG=['Resumime lo más importante','¿Cuáles son los conceptos clave?','Explicame la parte más difícil','¿Qué me podrían tomar en el parcial?'];
+  return html`<div className="card fl" style=${{gap:10}}>
+    <b>💬 Preguntá sobre tu material</b>
+    <span className="mut" style=${{fontSize:13}}>${ai?'El tutor responde solo con lo que dice'+(src.length===1?' '+src[0].name:' tu material')+' y te cita el archivo.':'Sin IA te muestro las partes de tu material que responden tu pregunta. Con la IA activada, el tutor te las explica.'}</span>
+    <div className="chips" role="group" aria-label="Modo">${[['ask','Yo pregunto'],['quiz','El tutor me pregunta']].map(([k,l])=>html`<button key=${k} className="chip" aria-pressed=${mode===k} onClick=${()=>switchMode(k)}>${l}</button>`)}</div>
+    ${msgs.length>0&&html`<div className="fl" style=${{gap:10,maxHeight:420,overflow:'auto',padding:'2px 0'}}>${msgs.map((m,i)=>m.k==='u'?html`<div key=${i} className="bub bub-u">${m.text}</div>`
+      :html`<div key=${m.id||i} className=${'bub '+(m.k==='ai'?'bub-ai':'bub-t')}>${m.k==='ai'&&html`<div className="eyebrow row" style=${{gap:6,marginBottom:6}}><${Icon} n="sparkle" s=${13}/> Tutor · tu material</div>`}${m.text?html`<${Md} text=${m.text}/>`:html`<span className="dots" aria-label="Pensando"><span></span><span></span><span></span></span>`}
+        ${m.next&&i===msgs.length-1&&html`<div className="chips" style=${{marginTop:10}}><button className="chip" onClick=${nextLocal}><${Icon} n="refresh" s=${13}/> Otra pregunta</button></div>`}</div>`)}<div ref=${endRef}></div></div>`}
+    ${mode==='ask'&&msgs.length===0&&html`<div className="chips">${SUG.slice(0,ai?4:2).map(x=>html`<button key=${x} className="chip" onClick=${()=>send(x)}>${x}</button>`)}</div>`}
+    ${mode==='quiz'&&msgs.length===0&&html`<div><button className="btn btn-s btn-sm" onClick=${startQuiz}><${Icon} n="play" s=${14}/> Empezar preguntas</button></div>`}
+    <form className="row" onSubmit=${e=>{e.preventDefault();send()}}><input aria-label="Pregunta sobre tu material" placeholder=${mode==='ask'?'Preguntá algo de tu material…':'Escribí tu respuesta…'} value=${inp} onInput=${e=>setInp(e.target.value)}/>${busy?html`<button className="ibtn" type="button" style=${{background:'var(--inv)',color:'var(--invfg)'}} aria-label="Frenar" onClick=${()=>ctl.current&&ctl.current.abort()}><${Icon} n="x" s=${18}/></button>`:html`<button className="ibtn" type="submit" style=${{background:'var(--inv)',color:'var(--invfg)'}} aria-label="Enviar"><${Icon} n="send" s=${18}/></button>`}</form>
+  </div>`;
+}
+
 function MaterialPanel({a,subj}){
   const s=a.subjects.find(x=>x.id===subj);
   const [ai,setAi]=useSample();
   const [kind,setKind]=useState('apuntes'),[over,setOver]=useState(false),[paste,setPaste]=useState(false),[pn,setPn]=useState(''),[pt,setPt]=useState('');
   const [job,setJob]=useState(null),[err,setErr]=useState(null),[open,setOpen]=useState(null),[q,setQ]=useState(''),[live,setLive]=useState(null),[note,setNote]=useState(null);
+  const [pick,setPick]=useState('all'),[xc,setXc]=useState({n:8,type:'mix',lvl:0,weak:true});
   const ctl=useRef(null),inId='mat-in-'+subj;
   const mats=a.mats.filter(m=>m.subj===subj),usable=mats.filter(m=>m.text&&m.text.trim().length>20);
   const exams=usable.filter(m=>m.kind==='examen'),newExams=exams.filter(m=>!m.analyzed),imgs=mats.filter(m=>(m.status==='img'||m.status==='scan')&&BLOBS.has(m.id));
   const mine=QBANK.filter(x=>x.mine&&x.s===subj).length,guide=live!=null?live:a.guides[subj];
   const d=a.examOf(s),hits=useMemo(()=>searchMats(mats,q),[a.mats,q]);
+  const ids=pick!=='all'&&usable.some(m=>m.id===pick)?[pick]:undefined;
 
   const addFiles=list=>{
     const arr=[...list];if(!arr.length)return;
@@ -870,15 +973,26 @@ function MaterialPanel({a,subj}){
     const r=await ai(p,{cache:false,signal:sig,onText:({text})=>setLive(text)});
     a.setGuide(subj,r.text);setLive(null);
   });
+  const XT={mix:'Mezclá los tipos: aproximadamente 40% mc, 20% vf, 20% sc y 20% caso',mc:'Todas de opción múltiple ("mc")',vf:'Todas verdadero o falso ("vf")',sc:'Todas de respuesta corta ("sc")',caso:'Todas casos prácticos ("caso"): una situación concreta (clínica si la carrera es de salud) con 4 opciones'};
   const makeQs=()=>run('qs',async sig=>{
-    const ctx=a.matContext(subj,50000);
-    const p='Armá 8 preguntas de práctica de '+s.name+' basadas SOLO en este material del estudiante (si es de parciales anteriores, imitá su estilo). Devolvé SOLO un array JSON. Cada elemento: {"type":"mc"|"vf"|"sc"|"caso","topic":"<id de tema>","lvl":1|2|3,"q":"enunciado","opts":["A","B","C","D"] (solo mc y caso),"a":valor,"ex":"explicación breve de por qué"}. En "a": para mc y caso el índice 0-3 de la opción correcta; para vf true o false; para sc un array de 1 a 4 palabras clave cortas en minúscula que debe contener una respuesta correcta. Mezclá: 3 mc, 2 vf, 2 sc, 1 caso clínico. Español rioplatense. Temas válidos (id = nombre): '+topicList+'.\n\nMATERIAL:\n'+ctx;
+    const ctx=a.matContext(subj,50000,null,ids);
+    const weak=s.topics.filter(t=>a.mastery[t.id]<60).sort((x,y)=>a.mastery[x.id]-a.mastery[y.id]).slice(0,4).map(t=>t.name+' ('+a.mastery[t.id]+'%)');
+    const failed=a.errors.slice(-12).map(e=>QBANK.find(x=>x.id===e.q)).filter(x=>x&&x.s===subj).slice(-5).map(x=>'"'+x.q.slice(0,140)+'"');
+    const lv=xc.lvl?'Todas de dificultad '+['','fácil (lvl 1: definiciones y reconocimiento)','media (lvl 2: relacionar conceptos)','difícil (lvl 3: aplicar, integrar y analizar)'][xc.lvl]+'.':'Escalá la dificultad: de fácil a difícil.';
+    const per=xc.weak&&(weak.length||failed.length)?' Personalizalo: alrededor de la mitad tiene que reforzar donde le va peor'+(weak.length?' — temas flojos: '+weak.join('; '):'')+(failed.length?' — conceptos de preguntas que falló: '+failed.join('; '):'')+', siempre que el material los cubra.':'';
+    const p='Armá '+xc.n+' ejercicios de práctica personalizados de '+s.name+' para alguien de '+a.prefs.carrera+' (año '+a.prefs.anio+'), con el parcial en '+d+' días, basados SOLO en este material del estudiante (si es de parciales anteriores, imitá su estilo). No repitas preguntas literales del material: hacé que piense. '+XT[xc.type]+'. '+lv+per+' En "ex" explicá por qué y citá el archivo del material entre paréntesis.\nDevolvé SOLO un array JSON. Cada elemento: {"type":"mc"|"vf"|"sc"|"caso","topic":"<id de tema>","lvl":1|2|3,"q":"enunciado","opts":["A","B","C","D"] (solo mc y caso),"a":valor,"ex":"explicación breve"}. En "a": para mc y caso el índice 0-3 de la opción correcta; para vf true o false; para sc un array de 1 a 4 palabras clave cortas en minúscula que debe contener una respuesta correcta. Español rioplatense. Temas válidos (id = nombre): '+topicList+'.\n\nMATERIAL:\n'+ctx;
     const r=await ai.json(p,{cache:false,signal:sig});
     const arr=Array.isArray(r)?r:(r&&Array.isArray(r.questions)?r.questions:[]);
     const ok=arr.map(x=>mkQ(x,subj,s.topics)).filter(Boolean);
-    if(!ok.length){setErr('No pude armar preguntas con ese material. Probá con más texto.');return}
-    QBANK.push(...ok);a.bumpQ();setNote('Listo: sumé '+ok.length+' preguntas de tu material al banco.');
+    if(!ok.length){setErr('No pude armar ejercicios con ese material. Probá con más texto.');return}
+    QBANK.push(...ok);a.bumpQ();setNote('Listo: sumé '+ok.length+' ejercicios personalizados de tu material. Tocá "Practicar" para resolverlos.');
   });
+  const makeLocalQs=()=>{
+    const src=ids?usable.filter(m=>ids.includes(m.id)):usable;
+    const ok=localQs(src,xc.n,subj,s.topics,xc.type==='vf'?'vf':xc.type==='sc'?'sc':'mix');
+    if(!ok.length){setErr('No encontré frases suficientes en tu material para armar ejercicios. Subí más texto.');return}
+    setErr(null);QBANK.push(...ok);a.bumpQ();setNote('Listo: armé '+ok.length+' ejercicios para completar y de verdadero o falso con tu material. Tocá "Practicar" para resolverlos.');
+  };
   const analyze=()=>run('exam',async sig=>{
     let items;
     if(ai){
@@ -939,20 +1053,25 @@ function MaterialPanel({a,subj}){
     ${imgs.length>0&&html`<div className="alertbox"><b>${imgs.length} archivo${imgs.length>1?'s':''} sin texto (fotos o PDF escaneados).</b> ${aiOk?'La IA puede transcribirlas para usarlas en la guía y las preguntas.':'Necesito la IA para leer fotos. Mientras tanto, pegá el texto.'}
       <div style=${{marginTop:8}}><button className="btn btn-sm btn-s" disabled=${!aiOk||!!job} onClick=${readPhotos}>${job==='photo'?'Leyendo…':'Leer con IA'}</button></div></div>`}
 
-    ${ai===false&&html`<div className="alertbox" style=${{background:'var(--t-cream)'}}>La IA no está disponible en esta vista. Igual podés guardar tu material, buscar en él y analizar tus parciales. La guía y las preguntas nuevas necesitan la IA.</div>`}
+    ${ai===false&&html`<div className="alertbox" style=${{background:'var(--t-cream)'}}>La IA no está disponible en esta vista. Igual podés guardar tu material, buscar en él y analizar tus parciales. Sin IA, las preguntas sobre tu material te muestran las partes que responden y los ejercicios son para completar o de verdadero o falso. La guía necesita la IA.</div>`}
 
     ${ready&&html`<div className="fl" style=${{gap:10}}>
       <h3 style=${{fontSize:18,fontWeight:700}}>Usá tu material</h3>
+      ${usable.length>1&&html`<div><div className="eyebrow" style=${{marginBottom:8}}>Preguntas y ejercicios sobre</div><div className="chips">${[['all','Todo mi material'],...usable.map(m=>[m.id,KIND[m.kind].e+' '+m.name])].map(([k,l])=>html`<button key=${k} className="chip" aria-pressed=${(ids?ids[0]:'all')===k} onClick=${()=>setPick(k)} style=${{maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${l}</button>`)}</div></div>`}
+      <${MatChat} key=${(ids?ids[0]:'all')+String(!!ai)} a=${a} s=${s} ai=${ai} setAi=${setAi} usable=${usable} ids=${ids}/>
       <div className="card fl" style=${{gap:8}}><b>📘 Guía de estudio</b><span className="mut" style=${{fontSize:13}}>Un resumen ordenado por prioridad, armado con tus archivos.</span>
         <div className="row wrap"><button className="btn btn-s btn-sm" disabled=${!aiOk||!!job} onClick=${makeGuide}>${job==='guide'?'Armando…':guide?'Armar de nuevo':'Armar guía'}</button>${job==='guide'&&html`<button className="btn btn-sm" onClick=${stop}>Frenar</button>`}</div>
         ${guide&&html`<div style=${{fontSize:14,background:'var(--card)',borderRadius:16,padding:14}}><${Md} text=${guide}/></div>`}</div>
-      <div className="card fl" style=${{gap:8}}><b>✏️ Practicar con tu material</b><span className="mut" style=${{fontSize:13}}>Preguntas nuevas sobre lo que subiste. Si fallás, se programa el repaso.${mine?' Ya tenés '+mine+' en el banco.':''}</span>
-        <div className="row wrap"><button className="btn btn-s btn-sm" disabled=${!aiOk||!!job} onClick=${makeQs}>${job==='qs'?'Armando…':mine?'Generar más':'Generar preguntas'}</button>
+      <div className="card fl" style=${{gap:10}}><b>✏️ Ejercicios personalizados</b><span className="mut" style=${{fontSize:13}}>${aiOk?'Armados con tu material, a tu medida: elegí cuántos, de qué tipo y qué tan difíciles. Si fallás, se programa el repaso.':'Sin IA armo ejercicios para completar y de verdadero o falso con las frases de tu material. Con la IA activada, son a tu medida.'}${mine?' Ya tenés '+mine+' en el banco.':''}</span>
+        <div className="fl" style=${{gap:8}}>
+          <div className="row wrap" style=${{gap:6}}><span className="mut" style=${{fontSize:12.5,minWidth:70}}>Cantidad</span>${[5,8,12].map(v=>html`<button key=${v} className="chip" aria-pressed=${xc.n===v} onClick=${()=>setXc({...xc,n:v})}>${v}</button>`)}</div>
+          <div className="row wrap" style=${{gap:6}}><span className="mut" style=${{fontSize:12.5,minWidth:70}}>Tipo</span>${(aiOk?[['mix','Mezcla'],['mc','Opción múltiple'],['vf','V o F'],['sc','Respuesta corta'],['caso','Casos']]:[['mix','Mezcla'],['sc','Completar'],['vf','V o F']]).map(([k,l])=>html`<button key=${k} className="chip" aria-pressed=${xc.type===k} onClick=${()=>setXc({...xc,type:k})}>${l}</button>`)}</div>
+          ${aiOk&&html`<div className="row wrap" style=${{gap:6}}><span className="mut" style=${{fontSize:12.5,minWidth:70}}>Dificultad</span>${[[0,'Progresiva'],[1,'Fácil'],[2,'Media'],[3,'Difícil']].map(([k,l])=>html`<button key=${k} className="chip" aria-pressed=${xc.lvl===k} onClick=${()=>setXc({...xc,lvl:k})}>${l}</button>`)}</div>`}
+          ${aiOk&&html`<label className="row" style=${{gap:8,fontSize:13.5,cursor:'pointer'}}><input type="checkbox" checked=${xc.weak} onChange=${e=>setXc({...xc,weak:e.target.checked})} style=${{width:18,height:18,flex:'0 0 18px',accentColor:'var(--ink)'}}/> Reforzar mis temas flojos y lo que fallé</label>`}</div>
+        <div className="row wrap"><button className="btn btn-s btn-sm" disabled=${!!job} onClick=${aiOk?makeQs:makeLocalQs}>${job==='qs'?'Armando…':mine?'Generar más':'Generar ejercicios'}</button>
           ${mine>0&&html`<button className="btn btn-sm" onClick=${()=>a.openPractice(subj)}>Practicar (${mine})</button>`}${mine>0&&html`<button className="btn btn-sm" onClick=${()=>a.openSim(subj)}>Simulacro con mi material</button>`}</div></div>
       ${exams.length>0&&html`<div className="card fl" style=${{gap:8}}><b>🧾 Analizar mis parciales</b><span className="mut" style=${{fontSize:13}}>Detecta qué temas toman más y ajusta las prioridades de tu plan.</span>
         <div><button className="btn btn-s btn-sm" disabled=${!!job||newExams.length===0} onClick=${analyze}>${job==='exam'?'Analizando…':newExams.length?'Analizar '+newExams.length+(newExams.length>1?' parciales':' parcial'):'Todo analizado'}</button></div></div>`}
-      <div className="card fl" style=${{gap:8}}><b>💬 Preguntale al tutor</b><span className="mut" style=${{fontSize:13}}>El tutor usa tu material como fuente principal cuando le preguntás.</span>
-        <div><button className="btn btn-sm" onClick=${()=>a.go('tutor')}>Ir al tutor</button></div></div>
     </div>`}
 
     ${(job&&job!=='guide'&&job!=='photo')&&html`<div className="mut" style=${{textAlign:'center',fontSize:13}}>Trabajando… puede tardar unos segundos.</div>`}
@@ -991,6 +1110,12 @@ async function hashPw(pw,saltHex){
     const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:Uint8Array.from(salt.match(/../g).map(h=>parseInt(h,16))),iterations:100000,hash:'SHA-256'},key,256);
     return {ph:hexOf(bits),salt};
   }catch(e){return {ph:'w:'+btoa(unescape(encodeURIComponent(pw))),salt:''}}
+}
+/* Campo de contraseña con botón para mostrarla u ocultarla */
+function PwInput({id,value,onInput,placeholder,autoComplete}){
+  const [show,setShow]=useState(false);
+  return html`<div style=${{position:'relative'}}><input id=${id} type=${show?'text':'password'} placeholder=${placeholder} value=${value} onInput=${onInput} autoComplete=${autoComplete} autoCapitalize="off" autoCorrect="off" spellCheck=${false} style=${{paddingRight:52}}/>
+    <button type="button" className="ibtn" onClick=${()=>setShow(!show)} aria-label=${show?'Ocultar contraseña':'Mostrar contraseña'} aria-pressed=${show} title=${show?'Ocultar contraseña':'Mostrar contraseña'} style=${{position:'absolute',right:4,top:'50%',transform:'translateY(-50%)',width:36,height:36,flexBasis:36,background:'transparent'}}><${Icon} n=${show?'eyeOff':'eye'} s=${18}/></button></div>`;
 }
 const EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -1042,7 +1167,7 @@ function Welcome({initial,edit,onDone,onClose}){
       ${(tab==='new'||edit)?html`<form className="fl" style=${{gap:14}} onSubmit=${submit} noValidate>
         ${fld('au-n','Nombre y apellido','nombre',{placeholder:'Ej: Diana Peralta',autoComplete:'name'})}
         ${fld('au-e','Email','email',{type:'email',placeholder:'tu@email.com',autoComplete:'email',disabled:!!edit})}
-        ${!edit&&html`<div><label htmlFor="au-pw" style=${{fontWeight:600,fontSize:14}}>Contraseña</label><input id="au-pw" type="password" placeholder="Mínimo 6 caracteres" value=${pass} onInput=${e=>{setPass(e.target.value);setErr(null)}} autoComplete="new-password"/>${E('pass')}</div>`}
+        ${!edit&&html`<div><label htmlFor="au-pw" style=${{fontWeight:600,fontSize:14}}>Contraseña</label><${PwInput} id="au-pw" placeholder="Mínimo 6 caracteres" value=${pass} onInput=${e=>{setPass(e.target.value);setErr(null)}} autoComplete="new-password"/>${E('pass')}</div>`}
         <div className="grid2" style=${{gap:14}}>${fld('au-p','País','pais',{list:'dl-p'})}${fld('au-u','Universidad','uni',{list:'dl-u',placeholder:'Elegí o escribí la tuya'})}</div>
         ${fld('au-c','Carrera','carrera',{list:'dl-c',placeholder:'Ej: Medicina'})}
         <div><div style=${{fontWeight:600,fontSize:14,marginBottom:8}}>Año que cursás</div><div className="chips">${[1,2,3,4,5,6,7].map(v=>html`<button type="button" key=${v} className="chip" aria-pressed=${f.anio===v} onClick=${()=>set({anio:v})}>${v}.º</button>`)}</div></div>
@@ -1052,7 +1177,7 @@ function Welcome({initial,edit,onDone,onClose}){
         <p className="mut" style=${{fontSize:12.5}}>Tus datos y tu contraseña (guardada cifrada) quedan solo en este navegador, sin servidor. Si borrás los datos del sitio, tendrás que registrarte de nuevo.</p></form>`
       :html`<form className="fl" style=${{gap:14}} onSubmit=${login} noValidate>
         <div><label htmlFor="au-le" style=${{fontWeight:600,fontSize:14}}>Email</label><input id="au-le" type="email" placeholder="tu@email.com" value=${lemail} onInput=${e=>{setLemail(e.target.value);setErr(null)}} autoComplete="email"/>${E('login')}</div>
-        <div><label htmlFor="au-lp" style=${{fontWeight:600,fontSize:14}}>Contraseña</label><input id="au-lp" type="password" value=${lpass} onInput=${e=>{setLpass(e.target.value);setErr(null)}} autoComplete="current-password"/>${E('lpass')}</div>
+        <div><label htmlFor="au-lp" style=${{fontWeight:600,fontSize:14}}>Contraseña</label><${PwInput} id="au-lp" value=${lpass} onInput=${e=>{setLpass(e.target.value);setErr(null)}} autoComplete="current-password"/>${E('lpass')}</div>
         <p className="mut" style=${{fontSize:13}}>¿No tenés cuenta? <button type="button" className="btn btn-sm btn-g" onClick=${()=>{setTab('new');setErr(null)}}>Registrate</button></p>
         <button className="btn btn-s btn-big" type="submit">${busy?'Un momento…':'Entrar'} <${Icon} n="arrow" s=${18}/></button></form>`}
     </div></div></div>`;
