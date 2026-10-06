@@ -328,16 +328,19 @@ const SUBJ0=[
   T('lip','β-oxidación',50,['Ocurre en la matriz mitocondrial.','Se transportan con la lanzadera de carnitina.','Cada vuelta acorta la cadena en 2 carbonos y da acetil-CoA.'],'Un cortador que va sacando rodajas de dos carbonos de una cadena larga.','Los ácidos grasos activados entran a la mitocondria por la carnitina palmitoiltransferasa I; cada ciclo de cuatro reacciones libera acetil-CoA, NADH y FADH₂.'),
   T('vit','Vitaminas Liposolubles',65,['A, D, E y K.','Se almacenan en el tejido adiposo.','Detalle de deficiencias por vitamina.'],'Las que viajan con la grasa.','Se absorben con los lípidos de la dieta y se almacenan; el exceso puede ser tóxico.')]}
 ];
-function initSubjects(){return SUBJ0.map(s=>({...s,topics:s.topics.map(t=>{const c=s.past.filter(p=>p.t.includes(t.id)).length,f=Math.round(100*c/s.past.length);return {...t,sid:s.id,count:c,total:s.past.length,freq:f,level:f>=70?'muy':f>=40?'imp':'comp'}})}))}
+function initSubjects(){return SUBJ0.map(s=>({...s,sample:true,topics:s.topics.map(t=>{const c=s.past.filter(p=>p.t.includes(t.id)).length,f=Math.round(100*c/s.past.length);return {...t,sid:s.id,count:c,total:s.past.length,freq:f,level:f>=70?'muy':f>=40?'imp':'comp'}})}))}
 function genSubject(name,diff,exam){const id='x'+Math.random().toString(36).slice(2,6);const lv=[['muy',80],['imp',50],['comp',20]];return {id,name,emoji:'📘',diff,exam,past:[],topics:lv.map((l,i)=>({id:id+i,sid:id,name:'Unidad '+(i+1),m0:45,pts:['Contenido central de la unidad.','Ejercicios típicos de parciales.','Resumen cargado desde tus materiales.'],ana:'Una pieza del rompecabezas de la materia.',tec:'Contenido a cargar desde tus materiales.',count:0,total:0,freq:l[1],level:l[0]}))}}
 function perfilTxt(a,sid){
   const p=a.prefs,subs=sid?a.subjects.filter(s=>s.id===sid):a.subjects;
   const weak=subs.flatMap(s=>visT(s).map(t=>({s,t}))).filter(x=>(a.mastery[x.t.id]??50)<55).sort((x,y)=>a.mastery[x.t.id]-a.mastery[y.t.id]).slice(0,6).map(x=>x.t.name+' ('+x.s.name+', '+a.mastery[x.t.id]+'%)');
   const fails=a.errors.slice(-8).map(e=>(findT(a.subjects,e.topic)||{t:{name:''}}).t.name).filter(Boolean);
   return 'Soy estudiante de '+p.carrera+', '+p.anio+'.º año, en '+p.uni+'. Estudio hasta '+p.maxH+' h por día. '
-    +'Materias y parciales: '+subs.map(s=>s.name+' en '+a.examOf(s)+' días (temas: '+visT(s).map(t=>t.name).join(', ')+')').join('; ')+'. '
+    +'Materias y parciales: '+subs.map(s=>s.name+' '+examTxt(a.examOf(s))+' (temas: '+visT(s).map(t=>t.name).join(', ')+')').join('; ')+'. '
     +(weak.length?'Lo que más me cuesta: '+weak.join('; ')+'. ':'')+(fails.length?'Últimos errores en: '+[...new Set(fails)].join(', ')+'. ':'');
 }
+/* Texto de la fecha del parcial (si ya pasó, se pide actualizarla) */
+const examTxt=d=>d<0?'ya pasó':d===0?'hoy':d===1?'mañana':'en '+d+' días';
+const pastNote=s=>s.sample&&!s.past.some(p=>p.mine)?' (de ejemplo)':'';
 const visT=s=>s.onlyMat?s.topics.filter(t=>t.fromMat):s.topics;
 const findT=(subs,id)=>{for(const s of subs){const t=s.topics.find(x=>x.id===id);if(t)return {s,t}}return null};
 
@@ -583,8 +586,8 @@ function Ahora({a}){
   const todayS=plan.filter(b=>b.type==='study'&&b.day===0);
   const list=todayS.length?todayS:plan.filter(b=>b.type==='study'&&!b.done).slice(0,4);
   const why=b=>{const {s,t}=findT(subjects,b.topic),l=[];
-    l.push(t.fromMat?`Es un tema de tu material (${t.src||'tus apuntes'}): calculamos ~${t.blocks||1} bloques de 45 min.`:t.total?`Aparece en ${t.count} de ${t.total} parciales anteriores (${t.freq}%).`:'Es una unidad central de la materia.');
-    l.push(`${s.name} rinde en ${a.examOf(s)} días y hoy dominás este tema en un ${mastery[t.id]}%.`);
+    l.push(t.fromMat?`Es un tema de tu material (${t.src||'tus apuntes'}): calculamos ~${t.blocks||1} bloques de 45 min.`:t.total?`Aparece en ${t.count} de ${t.total} parciales anteriores${pastNote(s)} (${t.freq}%).`:'Es una unidad central de la materia.');
+    l.push(`${s.name} rinde ${examTxt(a.examOf(s))} y hoy dominás este tema en un ${mastery[t.id]}%.`);
     if(b.review)l.push('Es un repaso: fallaste una pregunta de este tema.');
     if(a.slow[t.id])l.push('Subió de prioridad porque tardaste más de lo previsto.');
     return l};
@@ -636,13 +639,13 @@ function Ahora({a}){
       <div className="pgrid">${dTopics.map(t=>{const s=subjects.find(x=>x.id===t.sid)||subjects.find(x=>x.topics.includes(t))||subjects[0];return html`<button key=${t.id} className=${'pcard '+thc(s.id)} onClick=${()=>a.openTutor(t.id)}>
         <div className="row" style=${{justifyContent:'space-between',gap:8}}><span className="ictag"><i>${s.emoji}</i>${s.name}</span><span className="wpill">${t.level==='muy'?'⭐ Muy importante':'Importante'}</span></div>
         <h3>${t.name}</h3>
-        <span className="mut" style=${{fontSize:12.5,marginTop:'auto'}}>${t.fromMat?'📎 De tu material · ~'+(t.blocks||1)+' bloques':t.total?t.count+' de '+t.total+' parciales':'Unidad central'} · dominio ${mastery[t.id]??0}%</span></button>`})}</div></div>
+        <span className="mut" style=${{fontSize:12.5,marginTop:'auto'}}>${t.fromMat?'📎 De tu material · ~'+(t.blocks||1)+' bloques':t.total?t.count+' de '+t.total+' parciales'+(pastNote(s)?' de ejemplo':''):'Unidad central'} · dominio ${mastery[t.id]??0}%</span></button>`})}</div></div>
     ${list.length>0&&html`<div className="fl" style=${{gap:10}}><div className="row" style=${{justifyContent:'space-between'}}><h2 style=${{fontSize:18,fontWeight:600}}>${todayS.length?'Hoy':'Próximos bloques'}</h2><button className="chip" onClick=${()=>a.go('calendario')}>Ver plan completo</button></div>
       ${list.filter(b=>b!==nb).slice(0,3).map(b=>{const f=findT(subjects,b.topic);if(!f)return null;const {s,t}=f;return html`<div key=${b.id} className=${'rowt '+thc(s.id)}><span className="tile">${s.emoji}</span><div className="grow" style=${{minWidth:0}}><b style=${{fontWeight:500,display:'block'}}>${t.name}</b><span className="mut num" style=${{fontSize:13}}>${todayS.length?hhmm(b.start):dayLabel(b.day)+' '+hhmm(b.start)} · ${b.dur} min${b.review?' · repaso':''}</span></div>${b.done?html`<span className="pillb"><${Icon} n="check" s=${14}/> Hecho</span>`:html`<button className="pillb" disabled=${!!run} onClick=${()=>a.startRun(b)}>Empezar</button>`}</div>`})}</div>`}
     <div className="fl" style=${{gap:8}}><h2 style=${{fontSize:18,fontWeight:600}}>Parciales</h2>
-      <div className="chips">${exams.map(s=>{const d=a.examOf(s);return html`<button key=${s.id} className="lvl" onClick=${()=>a.go('calendario')} style=${{border:0,background:d<=10?'var(--t-rose)':d<=20?'var(--t-cream)':'var(--t-blue)',color:'var(--ink)',fontSize:13,padding:'.4rem .8rem'}}>${s.emoji} ${s.name} · <b className="num">${d===1?'mañana':'en '+d+' días'}</b></button>`})}</div></div>
+      <div className="chips">${exams.map(s=>{const d=a.examOf(s);return html`<button key=${s.id} className="lvl" onClick=${()=>d<0?a.openOnb(3):a.go('calendario')} style=${{border:0,background:d<0?'var(--surf2)':d<=10?'var(--t-rose)':d<=20?'var(--t-cream)':'var(--t-blue)',color:'var(--ink)',fontSize:13,padding:'.4rem .8rem'}}>${s.emoji} ${s.name} · <b className="num">${d<0?'ya pasó · tocá para poner la nueva fecha':examTxt(d)}</b></button>`})}</div></div>
     <div className="chips" role="group" aria-label="Accesos rápidos">
-      ${[['ejercicios','✏️ Practicar'+(reviews.length?' ('+reviews.length+')':'')],['simulador','⏱️ Simulacro'],['material','📎 Mis apuntes'],['rescate','🚨 Modo rescate'],['logros','🔥 Racha de '+stats.streak+' días']].map(([k,l])=>html`<button key=${k} className="chip" onClick=${()=>a.go(k)}>${l}</button>`)}
+      ${[['ejercicios','✏️ Practicar'+(reviews.length?' ('+reviews.length+')':'')],['simulador','⏱️ Simulacro'],['material','📎 Mis apuntes'],['rescate','🚨 Modo rescate'],['logros','🔥 Racha de '+a.streak+' días']].map(([k,l])=>html`<button key=${k} className="chip" onClick=${()=>a.go(k)}>${l}</button>`)}
       <button className="chip qimp" aria-expanded=${showC} onClick=${()=>setShowC(!showC)}>🎯 Qué importa más</button></div>
     ${showC&&html`<div className="fl qimp" style=${{gap:10}}>
       <div className="scrollx">${subjects.map(s=>html`<button key=${s.id} className="chip" style=${{flex:'0 0 auto'}} aria-pressed=${s.id===cs.id} onClick=${()=>setSub(s.id)}>${s.emoji} ${s.name}</button>`)}</div>
@@ -715,14 +718,14 @@ function Materias({a}){
   const avgOf=x=>Math.round(x.topics.reduce((p,t)=>p+mastery[t.id],0)/x.topics.length);
   if(!s)return html`<div className="screen" style=${{padding:0}}>
     <${Head} title="Tus materias" sub="Tocá una para ver resúmenes, tarjetas y parciales." right=${html`<button className="btn btn-sm btn-s" style=${{alignSelf:'center'}} onClick=${()=>a.openOnb(2)}><${Icon} n="plus" s=${14}/> Materias</button>`}/>
-    <div className="fl" style=${{gap:12}}>${subjects.map(x=>html`<button key=${x.id} className=${'rowt '+thc(x.id)} style=${{padding:16}} onClick=${()=>{setSid(x.id);setTab('res');setFi(0);setFlip(false)}}><span className="tile">${x.emoji}</span><span className="grow"><b style=${{fontSize:17,fontWeight:600,display:'block'}}>${x.name}</b><span className="mut" style=${{fontSize:13,display:'block'}}>Parcial en ${a.examOf(x)} días · dominio ${avgOf(x)}%</span><span style=${{display:'block',marginTop:8}}><${Bar} v=${avgOf(x)}/></span></span><${Icon} n="chevR"/></button>`)}</div></div>`;
-  const d=a.examOf(s),files=a.mats.filter(m=>m.subj===s.id),avg=avgOf(s),exp=d<=10;
+    <div className="fl" style=${{gap:12}}>${subjects.map(x=>html`<button key=${x.id} className=${'rowt '+thc(x.id)} style=${{padding:16}} onClick=${()=>{setSid(x.id);setTab('res');setFi(0);setFlip(false)}}><span className="tile">${x.emoji}</span><span className="grow"><b style=${{fontSize:17,fontWeight:600,display:'block'}}>${x.name}</b><span className="mut" style=${{fontSize:13,display:'block'}}>Parcial ${examTxt(a.examOf(x))} · dominio ${avgOf(x)}%</span><span style=${{display:'block',marginTop:8}}><${Bar} v=${avgOf(x)}/></span></span><${Icon} n="chevR"/></button>`)}</div></div>`;
+  const d=a.examOf(s),files=a.mats.filter(m=>m.subj===s.id),avg=avgOf(s),exp=d>=0&&d<=10;
   const card=deck[fi%deck.length];
   const TABS=[['mat','Materiales'],['res','Resumen'],['fc','Tarjetas'],['par','Parciales'],['pro','Progreso']];
   const body={
   mat:html`<${MaterialPanel} a=${a} subj=${s.id}/>`,
   res:html`<div className="fl" style=${{gap:12}}>
-    <div className="alertbox" style=${{background:'var(--t-lilac)'}}><b>${exp?'Resumen exprés':'Resumen completo'}</b> · parcial en ${d} días${files.length?` · con tu temario y ${files.length} archivo${files.length>1?'s':''}`:''}. ${exp?'Quedan afuera los temas secundarios.':'Incluye todos los temas por orden de importancia.'}</div>
+    <div className="alertbox" style=${{background:'var(--t-lilac)'}}><b>${exp?'Resumen exprés':'Resumen completo'}</b> · parcial ${examTxt(d)}${files.length?` · con tu temario y ${files.length} archivo${files.length>1?'s':''}`:''}. ${exp?'Quedan afuera los temas secundarios.':'Incluye todos los temas por orden de importancia.'}</div>
     ${visT(s).filter(t=>exp?t.level!=='comp':true).map(t=>html`<div key=${t.id} className=${'ccard '+thc(s.id)}>
       <div className="row wrap" style=${{justifyContent:'space-between'}}><h3 style=${{fontSize:17,fontWeight:600}}>${t.name}</h3><${LevelTag} lv=${t.level}/></div>
       <ul style=${{margin:'10px 0 0',paddingLeft:18,fontSize:14}}>${(exp&&t.level==='imp'?t.pts.slice(0,2):t.pts).map((p,i)=>html`<li key=${i} style=${{marginTop:4}}>${p}</li>`)}</ul></div>`)}
@@ -733,16 +736,16 @@ function Materias({a}){
       ${flip?html`<div><div className="eyebrow">Respuesta</div><ul style=${{margin:'8px 0 0',paddingLeft:18}}>${card.pts.map((p,i)=>html`<li key=${i} style=${{marginTop:4}}>${p}</li>`)}</ul></div>`:html`<div><div className="eyebrow">Pregunta</div><h3 style=${{fontSize:'clamp(22px,6vw,28px)',fontWeight:700,color:'#fff',margin:'8px 0'}}>¿Qué tenés que saber de ${card.name}?</h3><span style=${{fontSize:13,opacity:.9}}>Tocá para ver la respuesta</span></div>`}</button>
     <div className="row wrap"><button className="btn" onClick=${()=>{a.nudge(card.id,-2);setFlip(false);setFi(fi+1)}}>Repasar de nuevo</button><button className="btn btn-s" onClick=${()=>{a.nudge(card.id,3);setFlip(false);setFi(fi+1)}}><${Icon} n="check" s=${16}/> La sabía</button></div></div>`,
   par:html`<div className="fl" style=${{gap:16}}>
-    <p className="mut" style=${{fontSize:14}}>Analizamos ${s.past.length} parciales de ${s.name}. Estos temas son los que más se repiten.</p>
+    <p className="mut" style=${{fontSize:14}}>${pastNote(s)?html`<b>Estos parciales son de ejemplo.</b> Subí parciales anteriores reales en Materiales y tocá "Analizar mis parciales" para ver qué temas se repiten en tu facultad.`:`Analizamos ${s.past.length} parciales de ${s.name}. Estos temas son los que más se repiten.`}</p>
     <div className="fl" style=${{gap:10}}>${[...s.topics].sort((x,y)=>y.freq-x.freq).map(t=>html`<div key=${t.id} className="row"><span style=${{width:'40%',minWidth:110,fontSize:13.5}}>${t.name}</span><span className="grow"><${Bar} v=${t.freq}/></span><span className="num" style=${{width:42,textAlign:'right',fontSize:13,fontWeight:600}}>${t.freq}%</span></div>`)}</div>
     <div className="fl" style=${{gap:8}}>${s.past.map(p=>html`<div key=${p.l} className=${'ccard '+thc(s.id)}><b style=${{fontWeight:600}}>${p.l}</b>${p.mine?' · de tu material':''}<div className="chips" style=${{marginTop:8}}>${p.t.map(id=>{const t=s.topics.find(x=>x.id===id);return html`<span key=${id} className=${'lvl lvl-'+t.level}>${t.name}</span>`})}</div></div>`)}</div></div>`,
   pro:html`<div className="fl" style=${{gap:14}}>
     <div className="grid2"><div className=${'ccard '+thc(s.id)}><div className="eyebrow">Dominio general</div><div className="num" style=${{fontWeight:700,fontSize:48,lineHeight:1.15}}>${avg}%</div><${Bar} v=${avg}/></div>
-    <div className=${'ccard '+thc(s.id)}><div className="eyebrow">Parcial en</div><div className="num" style=${{fontWeight:700,fontSize:48,lineHeight:1.15}}>${d} <span style=${{fontSize:18,fontWeight:500}}>días</span></div><p className="mut" style=${{fontSize:13}}>${a.errors.filter(e=>s.topics.some(t=>t.id===e.topic)).length} errores registrados</p></div></div>
+    <div className=${'ccard '+thc(s.id)}><div className="eyebrow">Parcial</div><div className="num" style=${{fontWeight:700,fontSize:d<0?28:48,lineHeight:1.15}}>${d<0?'Ya pasó':d===0?'Hoy':html`${d} <span style=${{fontSize:18,fontWeight:500}}>${d===1?'día':'días'}</span>`}</div><p className="mut" style=${{fontSize:13}}>${a.errors.filter(e=>s.topics.some(t=>t.id===e.topic)).length} errores registrados</p></div></div>
     ${s.topics.map(t=>html`<div key=${t.id} className="row"><span style=${{width:'40%',minWidth:110,fontSize:13.5}}>${t.name}${a.flagged.includes(t.id)?' ⚠️':''}</span><span className="grow"><${Bar} v=${mastery[t.id]}/></span><span className="num" style=${{width:42,textAlign:'right',fontSize:13,fontWeight:600}}>${mastery[t.id]}%</span></div>`)}</div>`};
   return html`<div className="screen" style=${{padding:0,gap:18}}>
     <button className="back" onClick=${()=>setSid(null)}><${Icon} n="chevL" s=${16}/> Materias</button>
-    <div className="row"><span className=${'tile '+thc(s.id)} style=${{background:'var(--tint)'}}>${s.emoji}</span><div><h1 style=${{fontSize:'clamp(24px,7vw,30px)',fontWeight:700}}>${s.name}</h1><p className="mut" style=${{fontSize:14}}>Parcial en ${d} días</p></div></div>
+    <div className="row"><span className=${'tile '+thc(s.id)} style=${{background:'var(--tint)'}}>${s.emoji}</span><div><h1 style=${{fontSize:'clamp(24px,7vw,30px)',fontWeight:700}}>${s.name}</h1><p className="mut" style=${{fontSize:14}}>Parcial ${examTxt(d)}</p></div></div>
     <div className="tabs" role="tablist">${TABS.map(([k,l])=>html`<button key=${k} role="tab" className="tab" aria-selected=${tab===k} onClick=${()=>{setTab(k);setFlip(false)}}>${l}</button>`)}</div>
     <div>${body[tab]}</div></div>`;
 }
@@ -764,7 +767,7 @@ function Tutor({a}){
   const tname=id=>(allT.find(t=>t.id===id)||{name:''}).name;
   const rules=()=>{
     const weak=subjects.flatMap(s=>s.topics.map(t=>({t,s}))).filter(x=>mastery[x.t.id]<50&&x.t.level!=='comp').sort((x,y)=>mastery[x.t.id]-mastery[y.t.id]).slice(0,4).map(x=>`${x.t.name} (${x.s.name}, ${mastery[x.t.id]}%)`).join('; ');
-    const ex=subjects.map(s=>`${s.name} en ${a.examOf(s)} días`).join(', ');
+    const ex=subjects.map(s=>`${s.name} ${examTxt(a.examOf(s))}`).join(', ');
     const fs=focus.current?subjects.find(s=>s.topics.some(t=>t.id===focus.current)):null;
     const ctx=(fs?a.matContext(fs.id,onlyRef.current?30000:14000):subjects.map(s=>a.matContext(s.id,onlyRef.current?12000:5000)).filter(Boolean).join('\n\n'));
     return `Sos un tutor de estudio para una persona que cursa ${prefs.carrera}, año ${prefs.anio}, en ${prefs.uni}. Hablale en español rioplatense (vos), con calidez, claridad y sin relleno. Parciales: ${ex}. Temas donde le va peor: ${weak||'sin datos'}.${focus.current?` Tema en foco: ${tname(focus.current)}.`:''}
@@ -864,7 +867,8 @@ Si en este mensaje corregís la respuesta del estudiante a un ejercicio, termin�
 /* ---------- 7 · EJERCICIOS Y REPETICIÓN ESPACIADA ---------- */
 function Ejercicios({a}){
   const {subjects,reviews}=a;
-  const [f,setF]=useState(()=>a.exInit||{s:'fis',lvl:0,type:'all',src:'all'}),[qid,setQid]=useState(null),[res,setRes]=useState(null),[txt,setTxt]=useState('');
+  const firstQ=(subjects.find(s=>QBANK.some(q=>q.s===s.id))||subjects[0]||{}).id;
+  const [f,setF]=useState(()=>a.exInit||{s:firstQ,lvl:0,type:'all',src:'all'}),[qid,setQid]=useState(null),[res,setRes]=useState(null),[txt,setTxt]=useState('');
   const pool=useMemo(()=>QBANK.filter(q=>q.s===f.s&&(f.lvl===0||q.lvl===f.lvl)&&(f.type==='all'||q.type===f.type)&&(f.src!=='mine'||q.mine)),[f,a.qv]);
   useEffect(()=>{a.clearExInit()},[]);
   const hasMine=QBANK.some(x=>x.mine&&x.s===f.s);
@@ -895,7 +899,8 @@ function Ejercicios({a}){
 /* ---------- 8 · SIMULADOR DE PARCIALES ---------- */
 function Simulador({a}){
   const {subjects}=a;
-  const [ph,setPh]=useState('cfg'),[cfg,setCfg]=useState(()=>a.simInit||{s:'fis',n:10,min:20,ex:2,mine:false}),[run,setRun]=useState(null),[rep,setRep]=useState(null);
+  const firstQ=(subjects.find(s=>QBANK.some(q=>q.s===s.id))||subjects[0]||{}).id;
+  const [ph,setPh]=useState('cfg'),[cfg,setCfg]=useState(()=>a.simInit||{s:firstQ,n:10,min:20,ex:2,mine:false}),[run,setRun]=useState(null),[rep,setRep]=useState(null);
   useEffect(()=>{a.clearSimInit()},[]);
   const pool=QBANK.filter(q=>q.s===cfg.s&&(cfg.mine?q.mine:q.lvl<=cfg.ex)),n=Math.min(cfg.n,pool.length);
   const finish=r=>{
@@ -1823,18 +1828,20 @@ function Perfil({a,onClose}){
   </div></div>`;
 }
 /* ---------- 9 · LOGROS ---------- */
-const HEAT0=[0,45,90,90,0,45,135,90,45,90,135,90,45];
+/* Racha real: días seguidos (terminando hoy o ayer) con al menos un bloque completado */
+const minOf=(hist,d)=>Object.values((hist||{})[ymd(d)]||{}).reduce((x,y)=>x+y,0);
+const streakOf=hist=>{let d=minOf(hist,0)>0?0:-1,n=0;while(minOf(hist,d)>0){n++;d--}return n};
 function Logros({a}){
   const {stats,kept,subjects,mastery,prefs}=a;
   const todayMin=kept.filter(k=>k.day===0).reduce((x,k)=>x+k.dur,0);
-  const heat=[...HEAT0,todayMin];
+  const heat=[...Array(14)].map((_,i)=>minOf(a.hist,i-13));
   let run=0;for(let i=heat.length-1;i>=0;i--){if(heat[i]>0&&heat[i]<=prefs.maxH*60)run++;else break}
   const muyAvg=s=>{const t=s.topics.filter(x=>x.level==='muy');return t.reduce((x,y)=>x+mastery[y.id],0)/(t.length||1)};
   const recov=Math.max(0,...subjects.filter(s=>a.risk0.includes(s.id)).map(s=>muyAvg(s)/60));
   const gain=Math.max(0,...subjects.flatMap(s=>s.topics.map(t=>(mastery[t.id]-t.m0)/20)));
   const L=[
     ['Primer paso','Completá tu primer bloque de estudio.',Math.min(1,kept.length)],
-    ['Constancia','Cumplí tus bloques 7 días seguidos.',Math.min(1,stats.streak/7)],
+    ['Constancia','Cumplí tus bloques 7 días seguidos.',Math.min(1,a.streak/7)],
     ['Descansos sagrados','Respetá 3 descansos obligatorios completos.',Math.min(1,stats.rests/3)],
     ['Materia recuperada','Llevá una materia en riesgo a 60% en sus temas clave.',Math.min(1,recov)],
     ['Tema débil, tema fuerte','Subí 20 puntos en un tema que te costaba.',Math.min(1,gain)],
@@ -1844,7 +1851,7 @@ function Logros({a}){
   return html`<div>
     <${Head} eyebrow="Constancia" title="Tu racha" sub="Contamos los días que cumplís tus bloques y descansás. Pasarte de horas no suma."/>
     <div className="grid2" style=${{marginBottom:20}}>
-      <div className="card-i row" style=${{gap:18}}><${Icon} n="flame" s=${52} sw=${1.5}/><div><div className="num" style=${{fontFamily:"'DM Sans',sans-serif",fontWeight:800,fontSize:72,lineHeight:1}}>${stats.streak}</div><div style=${{opacity:.8}}>días seguidos${stats.credited?' · hoy ya cuenta':' · hoy falta un bloque'}</div></div></div>
+      <div className="card-i row" style=${{gap:18}}><${Icon} n="flame" s=${52} sw=${1.5}/><div><div className="num" style=${{fontFamily:"'DM Sans',sans-serif",fontWeight:800,fontSize:72,lineHeight:1}}>${a.streak}</div><div style=${{opacity:.8}}>días seguidos${stats.credited?' · hoy ya cuenta':' · hoy falta un bloque'}</div></div></div>
       <div className="card"><div className="eyebrow" style=${{marginBottom:10}}>Últimos 14 días</div><div style=${{display:'grid',gridTemplateColumns:'repeat(14,minmax(0,1fr))',gap:4}}>${heat.map((m,i)=>html`<div key=${i} className="sq" title=${`${m} min`} style=${{background:m?`color-mix(in srgb,#9c82f7 ${Math.min(100,25+m/180*75)}%,var(--surf))`:'var(--surf)',outline:i===heat.length-1?'2px solid var(--ink)':'none',outlineOffset:1}}></div>`)}</div><p className="mut" style=${{fontSize:12.5,marginTop:10}}>Más oscuro, más minutos. Hoy: ${todayMin} min de ${prefs.maxH*60} posibles.</p></div></div>
     <div className="grid2">${L.map(([n,d,p])=>html`<div key=${n} className=${'ach '+(p>=1?'on':'off')}><${Icon} n=${p>=1?'trophy':'lock'} s=${24}/><div className="grow"><b>${n}</b><p style=${{fontSize:13.5,opacity:.85}}>${d}</p>${p<1&&html`<div style=${{marginTop:8}}><${Bar} v=${p*100}/></div>`}</div></div>`)}</div></div>`;
 }
@@ -2055,7 +2062,7 @@ const contactUrl=l=>{const c=String(l.contact||'').trim();
 function scoreListing(l,a,me){
   const sub=a.subjects.find(s=>keyOf(s.name)===l.subj);let sc=0;const why=[];
   if(sub){sc+=50;why.push('Cursás '+sub.name);
-    const d=a.examOf(sub);if(d<=14){sc+=12;why.push('Tu parcial es en '+d+' días')}
+    const d=a.examOf(sub);if(d>=0&&d<=14){sc+=12;why.push('Tu parcial es '+examTxt(d))}
     const tk=keyWords(l.topics+' '+l.title),weak=visT(sub).filter(t=>(a.mastery[t.id]??50)<55&&keyWords(t.name).some(w=>tk.some(k=>k.startsWith(w.slice(0,5))||w.startsWith(k.slice(0,5)))));
     if(weak.length){sc+=15*Math.min(2,weak.length);why.push('Te cuesta '+weak[0].name)}}
   if(l.years&&l.years.includes('|'+me.anio+'|')){sc+=8;why.push('Para '+me.anio+'.º año')}
@@ -2319,10 +2326,10 @@ function Onboarding({a,onClose,start=0}){
   const steps=[
     ['¿Qué estudiás y dónde?',html`<div className="fl" style=${{gap:12}}><div><label htmlFor="ob-c" style=${{fontWeight:600}}>Carrera</label><input id="ob-c" value=${d.carrera} onInput=${e=>setD({...d,carrera:e.target.value})}/></div><div><label htmlFor="ob-u" style=${{fontWeight:600}}>Universidad</label><input id="ob-u" value=${d.uni} onInput=${e=>setD({...d,uni:e.target.value})}/></div></div>`],
     ['¿En qué año cursás?',html`<div className="chips">${[1,2,3,4,5,6,7].map(v=>html`<button key=${v} className="chip btn-big" style=${{fontSize:18,padding:'.5rem 1.2rem'}} aria-pressed=${d.anio===v} onClick=${()=>setD({...d,anio:v})}>${v}.º</button>`)}</div>`],
-    ['¿Qué materias cursás ahora?',html`<div className="fl" style=${{gap:8}}>${d.subjects.map(s=>html`<div key=${s.id} className="card row"><span className="grow" style=${{fontWeight:600}}>${s.emoji} ${s.name}</span><button className="btn btn-sm btn-g" disabled=${d.subjects.length<2} aria-label=${'Quitar '+s.name} onClick=${()=>setD({...d,subjects:d.subjects.filter(x=>x.id!==s.id)})}><${Icon} n="x" s=${14}/></button></div>`)}
+    ['¿Qué materias cursás ahora?',html`<div className="fl" style=${{gap:8}}>${d.subjects.some(s=>s.sample)&&html`<div className="alertbox" style=${{background:'var(--t-cream)',fontSize:13.5}}>Fisiología, Anatomía Humana y Bioquímica vienen <b>de ejemplo</b>, con parciales de muestra. Quitá las que no cursás y agregá las tuyas.</div>`}${d.subjects.map(s=>html`<div key=${s.id} className="card row"><span className="grow" style=${{fontWeight:600}}>${s.emoji} ${s.name}</span><button className="btn btn-sm btn-g" disabled=${d.subjects.length<2} aria-label=${'Quitar '+s.name} onClick=${()=>setD({...d,subjects:d.subjects.filter(x=>x.id!==s.id)})}><${Icon} n="x" s=${14}/></button></div>`)}
       ${(cat??/rep[uú]blica|udelar/i.test(d.uni+' '+a.user.uni))?html`<${UdelarPicker} list=${d.subjects} setList=${l=>setD({...d,subjects:l.length?l:d.subjects})}/>`:html`<button className="btn btn-sm" style=${{alignSelf:'flex-start'}} onClick=${()=>setCat(true)}>🩺 Ver materias de Medicina · UdelaR</button>`}
       <form className="row" onSubmit=${e=>{e.preventDefault();if(nm.trim()){const c=UDELAR_MED.find(x=>keyOf(x.n)===keyOf(nm));setD({...d,subjects:[...d.subjects,c?catSubject(c):genSubject(nm.trim(),3,21)]});setNm('')}}}><input id="ob-n" list="dl-udelar" aria-label="Agregar materia" placeholder="Agregar otra materia" value=${nm} onInput=${e=>setNm(e.target.value)}/><button className="btn" type="submit"><${Icon} n="plus" s=${16}/> Agregar</button></form><datalist id="dl-udelar">${UDELAR_MED.map(c=>html`<option key=${c.n} value=${c.n}/>`)}</datalist></div>`],
-    ['¿Cuándo son los parciales?',html`<div className="fl" style=${{gap:12}}>${d.subjects.map(s=>html`<div key=${s.id}><label htmlFor=${'ob-d-'+s.id} style=${{fontWeight:600}}>${s.name}</label><input id=${'ob-d-'+s.id} type="date" min=${ymd(1)} value=${ymd(s.exam)} onChange=${e=>{const v=e.target.value;if(!v)return;const t=new Date(v+'T00:00:00');upS(s.id,{exam:Math.max(1,Math.round((t-D0)/DAY))})}}/><span className="mut num" style=${{fontSize:13}}>En ${s.exam} días</span></div>`)}</div>`],
+    ['¿Cuándo son los parciales?',html`<div className="fl" style=${{gap:12}}>${d.subjects.map(s=>html`<div key=${s.id}><label htmlFor=${'ob-d-'+s.id} style=${{fontWeight:600}}>${s.name}</label><input id=${'ob-d-'+s.id} type="date" min=${ymd(1)} value=${ymd(s.exam)} onChange=${e=>{const v=e.target.value;if(!v)return;const t=new Date(v+'T00:00:00');upS(s.id,{exam:Math.max(1,Math.round((t-D0)/DAY))})}}/><span className="mut num" style=${{fontSize:13,color:s.exam<0?'var(--warn, #d9822b)':undefined}}>${s.exam<0?'Esta fecha ya pasó: elegí la nueva':s.exam===0?'Es hoy':'En '+s.exam+(s.exam===1?' día':' días')}</span></div>`)}</div>`],
     ['¿Qué tan difícil te resulta cada una?',html`<div className="fl" style=${{gap:14}}>${d.subjects.map(s=>html`<div key=${s.id}><b>${s.name}</b><div className="chips" style=${{marginTop:6}} role="group" aria-label=${'Dificultad de '+s.name}>${[1,2,3,4,5].map(v=>html`<button key=${v} className="chip" aria-pressed=${s.diff===v} onClick=${()=>upS(s.id,{diff:v})}>${v}</button>`)}<span className="mut" style=${{fontSize:12.5,alignSelf:'center'}}>1 fácil · 5 muy difícil</span></div></div>`)}</div>`],
     ['¿En qué horario preferís estudiar?',html`<div className="grid2"><div><label htmlFor="ob-f" style=${{fontWeight:600}}>Desde</label><select id="ob-f" value=${d.from} onChange=${e=>setD({...d,from:Math.min(+e.target.value,d.to-1)})}>${hrs.slice(0,-1).map(h=>html`<option key=${h} value=${h}>${hhmm(h*60)}</option>`)}</select></div><div><label htmlFor="ob-t" style=${{fontWeight:600}}>Hasta</label><select id="ob-t" value=${d.to} onChange=${e=>setD({...d,to:Math.max(+e.target.value,d.from+1)})}>${hrs.slice(1).map(h=>html`<option key=${h} value=${h}>${hhmm(h*60)}</option>`)}</select></div></div>`],
     ['¿Cuántas horas como máximo por día?',html`<div><div className="num" style=${{fontFamily:"'DM Sans',sans-serif",fontWeight:800,fontSize:80,lineHeight:1}}>${d.maxH}<span style=${{fontSize:26}}> h</span></div><input id="ob-h" type="range" min="1" max="8" step="1" aria-label="Horas máximas por día" value=${d.maxH} onInput=${e=>setD({...d,maxH:+e.target.value})}/><p className="mut" style=${{fontSize:13}}>Nunca te vamos a planificar más que esto.</p></div>`]];
@@ -2401,7 +2408,7 @@ function RPanel({a}){
       <span className="mut" style=${{fontSize:11.5}}>Color lleno: lo que estudiaste. Claro: lo planificado.</span></div>
     <div className="row" style=${{justifyContent:'space-between',marginTop:4}}><span className="mut" style=${{fontSize:13}}>Mis materias</span><button className="chip" style=${{padding:'.25rem .7rem',fontSize:12}} onClick=${()=>a.go('materias')}>Ver todas</button></div>
     ${subjects.map(s=>{const d=a.examOf(s);return html`<button key=${s.id} className=${'pcard '+thc(s.id)} style=${{minHeight:0,padding:'16px 18px',gap:10}} onClick=${()=>a.go('materias')}>
-      <div className="row" style=${{justifyContent:'space-between',gap:8}}><span className="ictag"><i>${s.emoji}</i>Parcial ${d===1?'mañana':'en '+d+' días'}</span><span className="wpill">★ ${avg(s)}%</span></div>
+      <div className="row" style=${{justifyContent:'space-between',gap:8}}><span className="ictag"><i>${s.emoji}</i>Parcial ${examTxt(d)}</span><span className="wpill">★ ${avg(s)}%</span></div>
       <h3 style=${{fontSize:18}}>${s.name}</h3></button>`})}
   </aside>`;
 }
@@ -2414,7 +2421,7 @@ function Main({user,isNew,onUser}){
   const [subjects,setSubjects]=useState(()=>SV.subjects||initSubjects());
   const [mastery,setMastery]=useState(()=>SV.mastery||Object.fromEntries(SUBJ0.flatMap(s=>s.topics.map(t=>[t.id,t.m0]))));
   const [slow,setSlow]=useState(()=>SV.slow||{}),[kept,setKept]=useState(()=>SV.kept||[]),[reviews,setReviews]=useState(()=>SV.reviews||[]),[errors,setErrors]=useState(()=>SV.errors||[]),[rescue,setRescue]=useState(()=>SV.rescue||null),[run,setRun]=useState(null);
-  const [stats,setStats]=useState(()=>SV.stats||{streak:6,rests:0,sims:0,rescueUsed:false,credited:false});
+  const [stats,setStats]=useState(()=>SV.stats||{rests:0,sims:0,rescueUsed:false});
   const [mats,setMats]=useState(()=>SV.mats||EX_MATS),[guides,setGuides]=useState(()=>SV.guides||{}),[qv,setQv]=useState(0),[exInit,setExInit]=useState(null),[simInit,setSimInit]=useState(null);
   const [perfil,setPerfil]=useState(false),[editing,setEditing]=useState(false);
   const [authReq,setAuthReq]=useState(null),[sub,setSub]=useState(null),[seller,setSeller]=useState(null),[dmInit,setDmInit]=useState(null),[shopInit,setShopInit]=useState(null);
@@ -2519,7 +2526,8 @@ function Main({user,isNew,onUser}){
     try{const all=acctLoad();delete all[user.email];localStorage.setItem('ea-accounts',JSON.stringify(all));['ea-data-','ea-sub-','ea-rem-','ea-sb-','ea-uid-','ea-mp-'].forEach(k=>localStorage.removeItem(k+user.email))}catch(e){}
     sessionEnd();onUser(null);return true;
   };
-  const A={acceptLegal,showLegal:setLegalDoc,downloadData,deleteAccount,setPhoto,setBio,showProfile:setPubP,hist,events,addEvent,delEvent,user,pay,sub,seller,ensureAuth,rem,setRem,sendTestReminder,remPreview,dmInit,shopInit,clearDm:()=>setDmInit(null),clearShop:()=>setShopInit(null),openDM:(uid,name,descr)=>{setDmInit({uid,name,descr});setTab('match')},tab,go:setTab,subjects,prefs,mastery,slow,plan,kept,reviews,errors,rescue,stats,run,mats,guides,qv,exInit,simInit,risk0,examOf,toast,nudge,slowTopic,tutorTopic,isDark,
+  const streak=streakOf(hist);
+  const A={streak,acceptLegal,showLegal:setLegalDoc,downloadData,deleteAccount,setPhoto,setBio,showProfile:setPubP,hist,events,addEvent,delEvent,user,pay,sub,seller,ensureAuth,rem,setRem,sendTestReminder,remPreview,dmInit,shopInit,clearDm:()=>setDmInit(null),clearShop:()=>setShopInit(null),openDM:(uid,name,descr)=>{setDmInit({uid,name,descr});setTab('match')},tab,go:setTab,subjects,prefs,mastery,slow,plan,kept,reviews,errors,rescue,stats,run,mats,guides,qv,exInit,simInit,risk0,examOf,toast,nudge,slowTopic,tutorTopic,isDark,
     openPerfil:()=>setPerfil(true),editPerfil:()=>{setPerfil(false);setEditing(true)},
     logout:()=>{sessionEnd();setPerfil(false);onUser(null)},
     flipTheme:flip,openOnb:st=>setOnb(typeof st==='number'?st:true),
@@ -2556,7 +2564,7 @@ function Main({user,isNew,onUser}){
     togglePause:()=>setRun(r=>({...r,paused:!r.paused})),
     slower:()=>{slowTopic(run.block.topic);setRun(r=>({...r,left:r.left+600,total:r.total+600}))},
     finishRun:()=>{const b=run.block;{const k=ymd(0),m=Math.max(1,Math.round((run.total-run.left)/60))||b.dur;setHist(h=>{const d={...(h[k]||{})};d[b.subj]=(d[b.subj]||0)+m;const n={...h,[k]:d};Object.keys(n).sort().slice(0,-60).forEach(x=>delete n[x]);return n})}setKept(k=>[...k,{id:b.id,day:b.day,start:b.start,dur:b.dur,type:'study',subj:b.subj,topic:b.topic,review:b.review}]);nudge(b.topic,10);if(b.review)setReviews(r=>r.filter(x=>x.topic!==b.topic));
-      if(!stats.credited){setStats(s=>({...s,streak:s.streak+1,credited:true}));toast('Bloque completado. Tu racha sube a '+(stats.streak+1)+' días')}else toast('Bloque completado');
+      if(minOf(hist,0)===0)toast('Bloque completado. Tu racha sube a '+(streakOf(hist)+1)+(streakOf(hist)+1===1?' día':' días'));else toast('Bloque completado');
       setRun({phase:'rest',left:600,total:600})},
     endRest:()=>{setStats(s=>({...s,rests:s.rests+1}));setRun(null);toast('Descanso cumplido')},
     skipRest:()=>setRun(null),
@@ -2600,7 +2608,7 @@ function loadData(email){
   try{
     const d=JSON.parse(localStorage.getItem(dkey(email))||'null');if(!d)return null;
     const el=Math.max(0,Math.round((D0.getTime()-(d.day||D0.getTime()))/DAY));
-    if(el>0){d.subjects=(d.subjects||[]).map(s=>({...s,exam:Math.max(1,s.exam-el)}));d.kept=(d.kept||[]).filter(k=>k.day>=el).map(k=>({...k,day:k.day-el}));d.rescue=null}
+    if(el>0){d.subjects=(d.subjects||[]).map(s=>({...s,exam:Math.max(-60,s.exam-el)}));d.kept=(d.kept||[]).filter(k=>k.day>=el).map(k=>({...k,day:k.day-el}));d.rescue=null}
     d.mats=(d.mats||[]).map(m=>['img','scan','reading'].includes(m.status)?{...m,status:'empty',why:'Volvé a subir este archivo para leerlo.'}:m);
     (d.qmine||[]).forEach(q=>{if(!QBANK.some(x=>x.id===q.id)){QBANK.push(q);const n=parseInt(String(q.id).slice(1))||0;if(n>MQ)MQ=n}});
     return d;
