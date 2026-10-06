@@ -1259,6 +1259,8 @@ function Welcome({initial,edit,onDone,onClose}){
   const [tab,setTab]=useState('new');
   const [f,setF]=useState(()=>({nombre:'',email:'',pais:'Uruguay',uni:'',carrera:'',anio:1,horas:3,...(initial||{})}));
   const [err,setErr]=useState(null),[lemail,setLemail]=useState(''),[lpass,setLpass]=useState(''),[pass,setPass]=useState(''),[busy,setBusy]=useState(false);
+  const [ver,setVer]=useState(null),[code,setCode]=useState(''),[now,setNow]=useState(Date.now());
+  useEffect(()=>{if(!ver)return;const id=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(id)},[ver]);
   const set=p=>{setF({...f,...p});setErr(null)};
   const submit=async e=>{
     e.preventDefault();if(busy)return;
@@ -1272,12 +1274,31 @@ function Welcome({initial,edit,onDone,onClose}){
     if(!p.pais)return setErr({k:'pais',m:'Indicá tu país.'});
     if(!p.uni)return setErr({k:'uni',m:'Indicá tu universidad.'});
     if(!p.carrera)return setErr({k:'carrera',m:'Indicá en qué carrera estás.'});
+    if(!edit&&mailCfg()){
+      setBusy(true);
+      try{await sendCode(p.email);setVer({p,sentAt:Date.now()});setCode('');setErr(null)}
+      catch(e2){setErr({k:'email',m:codeErr(e2)})}
+      finally{setBusy(false)}
+      return;
+    }
+    await finish(p,false);
+  };
+  const finish=async(p,verified)=>{
     setBusy(true);
-    if(!edit){const h=await hashPw(pass);p.ph=h.ph;p.salt=h.salt}
+    if(!edit){const h=await hashPw(pass);p.ph=h.ph;p.salt=h.salt;if(verified)p.verified=Date.now()}
     setBusy(false);
-    p.created=(prev&&prev.created)||Date.now();
+    const prev=acctLoad()[p.email];p.created=(prev&&prev.created)||Date.now();
     acctSave(p);onDone(p,!edit);
   };
+  const confirmCode=async e=>{
+    e.preventDefault();if(busy)return;
+    const c=code.replace(/\D/g,'');if(c.length<6)return setErr({k:'code',m:'Escribí el código de 6 dígitos que te llegó por email.'});
+    setBusy(true);
+    try{await checkCode(ver.p.email,c);setBusy(false);await finish(ver.p,true)}
+    catch(e2){setBusy(false);setErr({k:'code',m:codeErr(e2)})}
+  };
+  const resend=async()=>{if(busy)return;setBusy(true);try{await sendCode(ver.p.email);setVer({...ver,sentAt:Date.now()});setErr({k:'code',m:'Te mandamos un código nuevo.'})}catch(e2){setErr({k:'code',m:codeErr(e2)})}finally{setBusy(false)}};
+  const wait=ver?Math.min(60,Math.max(0,60-Math.floor((now-ver.sentAt)/1000))):0;
   const login=async e=>{
     e.preventDefault();if(busy)return;
     const em=lemail.trim().toLowerCase(),p=acctLoad()[em];
@@ -1300,7 +1321,12 @@ function Welcome({initial,edit,onDone,onClose}){
       ${edit?html`<div className="row" style=${{justifyContent:'space-between'}}><h2 style=${{fontSize:24,fontWeight:700}}>Mis datos</h2><button className="ibtn" onClick=${onClose} aria-label="Cerrar"><${Icon} n="x" s=${18}/></button></div>`
       :html`<div className="fl" style=${{gap:18}}><div><div className="eyebrow">Bienvenido/a</div><h2 style=${{fontSize:'clamp(26px,6vw,32px)',fontWeight:700,marginTop:4}}>${tab==='new'?'Creá tu cuenta':'Entrá a tu cuenta'}</h2><p className="mut" style=${{fontSize:14,marginTop:4}}>${tab==='new'?'Con tus datos armamos un plan a tu medida. Son 30 segundos.':'Ingresá con el email y la contraseña con los que te registraste en este navegador.'}</p></div>
       <div className="tabs" role="tablist">${[['new','Crear cuenta'],['login','Ya tengo cuenta']].map(([k,l])=>html`<button key=${k} role="tab" className="tab" aria-selected=${tab===k} onClick=${()=>{setTab(k);setErr(null)}}>${l}</button>`)}</div></div>`}
-      ${(tab==='new'||edit)?html`<form className="fl" style=${{gap:14}} onSubmit=${submit} noValidate>
+      ${ver?html`<form className="fl" style=${{gap:14}} onSubmit=${confirmCode} noValidate>
+        <div className="alertbox" style=${{background:'var(--t-lilac)'}}>Te mandamos un código a <b style=${{overflowWrap:'anywhere'}}>${ver.p.email}</b>. Escribilo para confirmar que el email es tuyo. Si no lo ves, revisá Spam o Promociones.</div>
+        <div><label htmlFor="au-code" style=${{fontWeight:600,fontSize:14}}>Código de verificación</label><input id="au-code" inputMode="numeric" autoComplete="one-time-code" placeholder="123456" maxLength="10" value=${code} onInput=${e=>{setCode(e.target.value.replace(/\D/g,''));setErr(null)}} style=${{fontSize:24,letterSpacing:'.3em',textAlign:'center',fontVariantNumeric:'tabular-nums'}}/>${E('code')}</div>
+        <button className="btn btn-s btn-big" type="submit">${busy?'Verificando…':'Confirmar y crear cuenta'} <${Icon} n="arrow" s=${18}/></button>
+        <div className="row wrap" style=${{gap:8}}><button type="button" className="btn btn-sm" disabled=${wait>0||busy} onClick=${resend}>${wait>0?'Reenviar en '+wait+' s':'Reenviar código'}</button><button type="button" className="btn btn-sm btn-g" onClick=${()=>{setVer(null);setErr(null)}}>Cambiar email</button></div></form>`
+      :(tab==='new'||edit)?html`<form className="fl" style=${{gap:14}} onSubmit=${submit} noValidate>
         ${fld('au-n','Nombre y apellido','nombre',{placeholder:'Ej: Diana Peralta',autoComplete:'name'})}
         ${fld('au-e','Email','email',{type:'email',placeholder:'tu@email.com',autoComplete:'email',disabled:!!edit})}
         ${!edit&&html`<div><label htmlFor="au-pw" style=${{fontWeight:600,fontSize:14}}>Contraseña</label><${PwInput} id="au-pw" placeholder="Mínimo 6 caracteres" value=${pass} onInput=${e=>{setPass(e.target.value);setErr(null)}} autoComplete="new-password"/>${E('pass')}</div>`}
@@ -1309,7 +1335,8 @@ function Welcome({initial,edit,onDone,onClose}){
         <div><div style=${{fontWeight:600,fontSize:14,marginBottom:8}}>Año que cursás</div><div className="chips">${[1,2,3,4,5,6,7].map(v=>html`<button type="button" key=${v} className="chip" aria-pressed=${f.anio===v} onClick=${()=>set({anio:v})}>${v}.º</button>`)}</div></div>
         <div><div style=${{fontWeight:600,fontSize:14,marginBottom:2}}>¿Cuántas horas por día le dedicás al estudio?</div><div className="mut" style=${{fontSize:12.5,marginBottom:8}}>Es tu máximo: nunca te planificamos más que esto.</div><div className="chips">${[1,2,3,4,5,6,7,8].map(v=>html`<button type="button" key=${v} className="chip" aria-pressed=${f.horas===v} onClick=${()=>set({horas:v})}>${v} h</button>`)}</div></div>
         <datalist id="dl-p">${PAISES.map(x=>html`<option key=${x} value=${x}/>`)}</datalist><datalist id="dl-u">${UNIS.map(x=>html`<option key=${x} value=${x}/>`)}</datalist><datalist id="dl-c">${CARRERAS.map(x=>html`<option key=${x} value=${x}/>`)}</datalist>
-        <button className="btn btn-s btn-big" type="submit">${busy?'Un momento…':edit?'Guardar cambios':'Crear cuenta y empezar'} <${Icon} n="arrow" s=${18}/></button>
+        <button className="btn btn-s btn-big" type="submit">${busy?'Un momento…':edit?'Guardar cambios':mailCfg()?'Continuar: verificar email':'Crear cuenta y empezar'} <${Icon} n="arrow" s=${18}/></button>
+        ${!edit&&mailCfg()&&html`<p className="mut" style=${{fontSize:12.5,marginTop:-6}}>Te vamos a mandar un código por email para confirmar que es tuyo.</p>`}
         <p className="mut" style=${{fontSize:12.5}}>Tus datos y tu contraseña (guardada cifrada) quedan solo en este navegador, sin servidor. Si borrás los datos del sitio, tendrás que registrarte de nuevo.</p></form>`
       :html`<form className="fl" style=${{gap:14}} onSubmit=${login} noValidate>
         <div><label htmlFor="au-le" style=${{fontWeight:600,fontSize:14}}>Email</label><input id="au-le" type="email" placeholder="tu@email.com" value=${lemail} onInput=${e=>{setLemail(e.target.value);setErr(null)}} autoComplete="email"/>${E('login')}</div>
@@ -1369,8 +1396,22 @@ function Logros({a}){
    Dos modos con la misma interfaz:
    · En línea: base Supabase propia (URL + clave pública en Mi perfil) → gente real, chat y material compartido.
    · Demo: todo en este navegador, con compañeros de ejemplo, para probar cómo funciona. */
-const grpCfg={get:()=>{try{return JSON.parse(localStorage.getItem('ea-grp')||'null')}catch(e){return null}},set:c=>{try{c?localStorage.setItem('ea-grp',JSON.stringify(c)):localStorage.removeItem('ea-grp')}catch(e){}}};
+/* Base Supabase del sitio (la completa quien publica Nexus; ver README). Activa la verificación por email, los grupos, los mensajes y la tienda para todos. */
+const SUPA={url:'',key:''};
+const grpCfg={get:()=>{try{const c=JSON.parse(localStorage.getItem('ea-grp')||'null');if(c)return c}catch(e){}return SUPA.url&&SUPA.key?SUPA:null},set:c=>{try{c?localStorage.setItem('ea-grp',JSON.stringify(c)):localStorage.removeItem('ea-grp')}catch(e){}}};
 const uidOf=email=>{const k='ea-uid-'+email;try{let v=localStorage.getItem(k);if(!v){v='u'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);localStorage.setItem(k,v)}return v}catch(e){return 'u'+keyOf(email).replace(/\s/g,'')}};
+/* Verificación del email con código (Supabase Auth: manda un código de 6 dígitos al correo) */
+const mailCfg=()=>{const c=grpCfg.get();return STANDALONE&&c&&c.url&&c.key?c:null};
+async function authCall(path,body){
+  const c=mailCfg();let r;
+  try{r=await fetch(c.url.replace(/\/+$/,'')+'/auth/v1/'+path,{method:'POST',headers:{apikey:c.key,'content-type':'application/json'},body:JSON.stringify(body)})}catch(e){throw {status:0}}
+  let j=null;try{j=await r.json()}catch(e){}
+  if(!r.ok)throw {status:r.status,msg:String((j&&(j.msg||j.error_description||j.message||j.error_code))||'')};
+  return j;
+}
+const sendCode=email=>authCall('otp',{email,create_user:true});
+const checkCode=(email,token)=>authCall('verify',{type:'email',email,token});
+const codeErr=e=>e.status===429||/rate|seconds/i.test(e.msg||'')?'Pediste muchos códigos seguidos. Esperá un minuto y probá de nuevo.':e.status===0?'No hay conexión. Revisá internet y probá de nuevo.':/expired|invalid|token/i.test(e.msg||'')||e.status===403||e.status===401?'El código no es correcto o ya venció. Revisalo o pedí uno nuevo.':/email/i.test(e.msg||'')&&e.status===400?'No pudimos mandar el correo a ese email. Revisá que esté bien escrito.':'No pudimos completar la verificación. Probá de nuevo en un momento.';
 const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 function sbApi(c){
   const base=c.url.replace(/\/+$/,'')+'/rest/v1/';
@@ -1385,7 +1426,8 @@ function sbApi(c){
     myGroups:uid=>q('members?select=group_id&uid=eq.'+e(uid)),
     join:m=>q('members',{method:'POST',prefer:'resolution=ignore-duplicates,return=minimal',body:m}),
     leave:(id,uid)=>q('members?group_id=eq.'+e(id)+'&uid=eq.'+e(uid),{method:'DELETE'}),
-    messages:(id,since)=>q('messages?select=*&group_id=eq.'+e(id)+'&ts=gt.'+(since||0)+'&order=ts.asc&limit=200'),
+    messages:(id,since)=>since?q('messages?select=*&group_id=eq.'+e(id)+'&ts=gte.'+since+'&order=ts.asc&limit=200'):q('messages?select=*&group_id=eq.'+e(id)+'&order=ts.desc&limit=200').then(r=>(r||[]).reverse()),
+    inbox:uid=>q('messages?select=id,group_id,uid,name,text,file_name,ts&group_id=like.'+e('dm:*'+uid+'*')+'&order=ts.desc&limit=400'),
     send:m=>q('messages',{method:'POST',body:m}),
     upload:async(path,file)=>{const r=await fetch(c.url.replace(/\/+$/,'')+'/storage/v1/object/archivos/'+path.split('/').map(e).join('/'),{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+c.key,'content-type':file.type||'application/octet-stream','x-upsert':'false'},body:file});if(!r.ok)throw new Error('HTTP '+r.status);return c.url.replace(/\/+$/,'')+'/storage/v1/object/public/archivos/'+path.split('/').map(e).join('/')},
     listings:()=>q('listings?select=*&active=eq.true&order=ts.desc&limit=300'),
@@ -1425,10 +1467,12 @@ function demoApi(subjects){
     myGroups:uid=>w(d=>d.members.filter(m=>m.uid===uid).map(m=>({group_id:m.group_id}))),
     join:m=>w(d=>{if(!d.members.some(x=>x.group_id===m.group_id&&x.uid===m.uid))d.members.push(m)}),
     leave:(id,uid)=>w(d=>{d.members=d.members.filter(x=>!(x.group_id===id&&x.uid===uid))}),
-    messages:(id,since)=>w(d=>d.messages.filter(m=>m.group_id===id&&m.ts>(since||0)&&m.ts<=Date.now()).sort((x,y)=>x.ts-y.ts)),
+    messages:(id,since)=>w(d=>d.messages.filter(m=>m.group_id===id&&m.ts>=(since||0)&&m.ts<=Date.now()).sort((x,y)=>x.ts-y.ts)),
+    inbox:uid=>w(d=>d.messages.filter(m=>m.group_id.startsWith('dm:')&&m.group_id.split(':').includes(uid)&&m.ts<=Date.now()).sort((x,y)=>y.ts-x.ts)),
     send:m=>w(d=>{d.messages.push(m);
-      const others=d.members.filter(x=>x.group_id===m.group_id&&x.uid!==m.uid&&x.uid.startsWith('demo'));
-      if(others.length&&Math.random()<.8){const o=others[Math.floor(Math.random()*others.length)];
+      const dmO=m.group_id.startsWith('dm:')?m.group_id.split(':').slice(1).filter(u=>u!==m.uid&&u.startsWith('demo')).map(u=>({uid:u,name:(d.students.find(x=>x.uid===u)||{name:'Compañero'}).name})):null;
+      const others=dmO||d.members.filter(x=>x.group_id===m.group_id&&x.uid!==m.uid&&x.uid.startsWith('demo'));
+      if(others.length&&(dmO||Math.random()<.8)){const o=others[Math.floor(Math.random()*others.length)];
         const txt=m.file_name?['¡Gracias por compartir '+m.file_name+'! Lo leo esta noche.','Buenísimo el material 🙌 ¿Lo repasamos juntos mañana?']:['¡Dale! Me sumo.','Buenísimo, ¿lo vemos en el próximo bloque?','Yo lo tengo flojo también, repasemos juntos.','👍'];
         d.messages.push({id:gid(),group_id:m.group_id,uid:o.uid,name:o.name,text:txt[Math.floor(Math.random()*txt.length)],ts:m.ts+1500+Math.floor(Math.random()*2000),demo:true})}}),
     upload:(path,file)=>file.size>1.5e6?Promise.resolve(null):new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result));r.onerror=()=>rej(r.error);r.readAsDataURL(file)}),
@@ -1440,14 +1484,16 @@ function demoApi(subjects){
     logEvent:ev=>w(d=>{d.events=[...(d.events||[]),ev].slice(-3000)}),
     events:ids=>w(d=>(d.events||[]).filter(ev=>ids.includes(ev.listing_id)))};
 }
+const dmId=(u1,u2)=>'dm:'+[u1,u2].sort().join(':');
+const readMap={get:()=>{try{return JSON.parse(localStorage.getItem('ea-read')||'{}')}catch(e){return {}}},mark:(id,ts)=>{try{const m=readMap.get();if(!(m[id]>=ts)){m[id]=ts;localStorage.setItem('ea-read',JSON.stringify(m))}}catch(e){}}};
 const fmtT=ts=>{const d=new Date(ts),t=d.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});return Date.now()-ts<864e5&&d.getDate()===new Date().getDate()?t:d.toLocaleDateString('es',{day:'numeric',month:'short'})+' '+t};
 
 function GroupChat({a,api,me,g,onBack,onLeave}){
   const [msgs,setMsgs]=useState([]),[mem,setMem]=useState([]),[txt,setTxt]=useState(''),[share,setShare]=useState(false),[open,setOpen]=useState(null),[err,setErr]=useState(null),[saveTo,setSaveTo]=useState({});
   const last=useRef(0),endRef=useRef(null);
   const pull=async()=>{try{const n=await api.messages(g.id,last.current);if(n&&n.length){last.current=n[n.length-1].ts;setMsgs(x=>{const ids=new Set(x.map(m=>m.id));return [...x,...n.filter(m=>!ids.has(m.id))]})}setErr(null)}catch(e){setErr('No pude actualizar el chat. Reviso de nuevo en unos segundos.')}};
-  useEffect(()=>{last.current=0;setMsgs([]);pull();api.members(g.id).then(setMem).catch(()=>{});const id=setInterval(pull,api.online?4000:1500);return()=>clearInterval(id)},[g.id]);
-  useEffect(()=>{if(endRef.current)endRef.current.scrollIntoView({block:'nearest'})},[msgs.length]);
+  useEffect(()=>{last.current=0;setMsgs([]);pull();if(!g.dm)api.members(g.id).then(setMem).catch(()=>{});const id=setInterval(pull,api.online?4000:1500);return()=>clearInterval(id)},[g.id]);
+  useEffect(()=>{if(endRef.current)endRef.current.scrollIntoView({block:'nearest'});if(msgs.length)readMap.mark(g.id,msgs[msgs.length-1].ts)},[msgs.length]);
   const post=async extra=>{const t=txt.trim();if(!t&&!extra)return;const m={id:gid(),group_id:g.id,uid:me.uid,name:me.name,text:t||'',ts:Date.now(),...(extra||{})};setTxt('');try{await api.send(m);pull()}catch(e){setErr('No se pudo enviar. Probá de nuevo.');setTxt(t)}};
   const [up,setUp]=useState(null),fileIn=useRef(null);
   const sendFile=async f=>{
@@ -1468,11 +1514,11 @@ function GroupChat({a,api,me,g,onBack,onLeave}){
   const mySub=a.subjects.find(s=>keyOf(s.name)===g.subj);
   const saveMat=(m,sid)=>{a.addMat({id:'mt'+gid(),subj:sid,kind:'resumen',name:m.file_name+' (de '+m.name.split(' ')[0]+')',size:m.file_text.length,text:m.file_text.slice(0,MAXCH),status:'ok',words:wordsOf(m.file_text)});a.toast('Guardado en tus apuntes')};
   return html`<div className="fl" style=${{gap:14}}>
-    <button className="back" onClick=${onBack}><${Icon} n="chevL" s=${16}/> Grupos</button>
-    <div><div className="eyebrow">${g.subj_name}${g.slot?' · '+g.slot:''}</div><h1 style=${{fontSize:'clamp(22px,6vw,28px)',fontWeight:700,marginTop:4}}>${g.name}</h1>${g.descr&&html`<p className="mut" style=${{fontSize:14,marginTop:4}}>${g.descr}</p>`}</div>
-    <div className="row wrap" style=${{gap:6}}>${mem.map(m=>html`<span key=${m.uid} className="lvl" style=${{background:'var(--surf2)',color:'var(--ink)'}} title=${(m.carrera||'')+(m.uni?' · '+m.uni:'')}>${m.uid===me.uid?'Vos':m.name}</span>`)}<span className="mut" style=${{fontSize:12.5,alignSelf:'center'}}>${mem.length} integrante${mem.length===1?'':'s'}</span></div>
+    <button className="back" onClick=${onBack}><${Icon} n="chevL" s=${16}/> ${g.dm?'Mensajes':'Grupos'}</button>
+    ${g.dm?html`<div className="row" style=${{gap:12}}><span className="av" aria-hidden="true">${initials(g.name)}</span><div><div className="eyebrow">Mensaje directo</div><h1 style=${{fontSize:'clamp(22px,6vw,28px)',fontWeight:700}}>${g.name}</h1>${g.descr&&html`<p className="mut" style=${{fontSize:13}}>${g.descr}</p>`}</div></div>`:html`<div><div className="eyebrow">${g.subj_name}${g.slot?' · '+g.slot:''}</div><h1 style=${{fontSize:'clamp(22px,6vw,28px)',fontWeight:700,marginTop:4}}>${g.name}</h1>${g.descr&&html`<p className="mut" style=${{fontSize:14,marginTop:4}}>${g.descr}</p>`}</div>`}
+    ${!g.dm&&html`<div className="row wrap" style=${{gap:6}}>${mem.map(m=>html`<span key=${m.uid} className="lvl" style=${{background:'var(--surf2)',color:'var(--ink)'}} title=${(m.carrera||'')+(m.uni?' · '+m.uni:'')}>${m.uid===me.uid?'Vos':m.name}</span>`)}<span className="mut" style=${{fontSize:12.5,alignSelf:'center'}}>${mem.length} integrante${mem.length===1?'':'s'}</span></div>`}
     <div className="card fl" style=${{gap:10,minHeight:260,maxHeight:'55vh',overflow:'auto'}}>
-      ${msgs.length===0&&html`<p className="mut" style=${{fontSize:13.5}}>Todavía no hay mensajes. Saludá al grupo o compartí un resumen.</p>`}
+      ${msgs.length===0&&html`<p className="mut" style=${{fontSize:13.5}}>${g.dm?'Todavía no se escribieron. Presentate y contale qué estás estudiando.':'Todavía no hay mensajes. Saludá al grupo o compartí un resumen.'}</p>`}
       ${msgs.map(m=>{const mine=m.uid===me.uid;return html`<div key=${m.id} className=${'bub '+(mine?'bub-u':'bub-t')} style=${{maxWidth:'88%'}}>
         ${!mine&&html`<div style=${{fontSize:12,fontWeight:600,marginBottom:2}}>${m.name}</div>`}
         ${m.text&&html`<div style=${{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>${m.text}</div>`}
@@ -1489,8 +1535,8 @@ function GroupChat({a,api,me,g,onBack,onLeave}){
       <input ref=${fileIn} type="file" accept=".pdf,.docx,.pptx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style=${{position:'absolute',width:1,height:1,opacity:0}} onChange=${e=>{const f=e.target.files[0];e.target.value='';setShare(false);sendFile(f)}}/>
       <button className="btn btn-s btn-sm" style=${{alignSelf:'flex-start'}} disabled=${!!up} onClick=${()=>fileIn.current&&fileIn.current.click()}>📄 Subir PDF o Word</button>
       <div className="eyebrow" style=${{marginTop:4}}>O uno de tus apuntes</div>${myMats.length===0?html`<p className="mut" style=${{fontSize:13}}>Todavía no tenés apuntes con texto. Subilos en "Apuntes".</p>`:myMats.map(m=>html`<button key=${m.id} className="opt" onClick=${()=>{post({file_name:m.name,file_text:m.text.slice(0,20000)});setShare(false)}}><span>${KIND[m.kind].e}</span><span className="grow" style=${{textAlign:'left'}}>${m.name}<span className="mut" style=${{fontSize:12,display:'block'}}>${(a.subjects.find(s=>s.id===m.subj)||{}).name||''} · ${wordsOf(m.text)} palabras</span></span></button>`)}</div>`}
-    <form className="row" onSubmit=${e=>{e.preventDefault();post()}}><button type="button" className="ibtn" aria-label="Compartir material" aria-pressed=${share} onClick=${()=>setShare(!share)}><${Icon} n="file" s=${18}/></button><input aria-label="Mensaje al grupo" placeholder="Escribile al grupo…" value=${txt} onInput=${e=>setTxt(e.target.value)} maxLength="2000"/><button className="ibtn" type="submit" style=${{background:'var(--inv)',color:'var(--invfg)'}} aria-label="Enviar"><${Icon} n="send" s=${18}/></button></form>
-    <div><button className="btn btn-sm btn-g" onClick=${()=>onLeave(g)}>Salir del grupo</button></div>
+    <form className="row" onSubmit=${e=>{e.preventDefault();post()}}><button type="button" className="ibtn" aria-label="Compartir material" aria-pressed=${share} onClick=${()=>setShare(!share)}><${Icon} n="file" s=${18}/></button><input aria-label="Mensaje" placeholder=${g.dm?'Escribile a '+g.name.split(' ')[0]+'…':'Escribile al grupo…'} value=${txt} onInput=${e=>setTxt(e.target.value)} maxLength="2000"/><button className="ibtn" type="submit" style=${{background:'var(--inv)',color:'var(--invfg)'}} aria-label="Enviar"><${Icon} n="send" s=${18}/></button></form>
+    ${!g.dm&&html`<div><button className="btn btn-sm btn-g" onClick=${()=>onLeave(g)}>Salir del grupo</button></div>`}
   </div>`;
 }
 
@@ -1604,6 +1650,13 @@ function Match({a}){
   const {subjects,prefs,user}=a;
   const api=useApi(subjects),me=useMe(a);
   const [sid,setSid]=useState(subjects[0].id),[ppl,setPpl]=useState(null),[grs,setGrs]=useState(null),[mine,setMine]=useState([]),[open,setOpen]=useState(null),[form,setForm]=useState(null),[err,setErr]=useState(null),[tick,setTick]=useState(0);
+  const [view,setView]=useState('grupos'),[inbox,setInbox]=useState([]);
+  const names=useRef((()=>{try{return JSON.parse(localStorage.getItem('ea-dmnames')||'{}')}catch(e){return {}}})());
+  useEffect(()=>{if(open)return;let ok=true;const load=()=>api.inbox(me.uid).then(r=>{if(ok)setInbox(r||[])}).catch(()=>{});load();const id=setInterval(load,api.online?10000:3000);return()=>{ok=false;clearInterval(id)}},[api,open,tick]);
+  const threads=useMemo(()=>{const rd=readMap.get(),by={};inbox.forEach(m=>{const t=by[m.group_id]||(by[m.group_id]={id:m.group_id,last:m,unread:0,name:''});if(m.uid!==me.uid){if(!t.name)t.name=m.name;if(m.ts>(rd[m.group_id]||0))t.unread++}});
+    return Object.values(by).map(t=>({...t,name:t.name||names.current[t.id]||'Compañero/a'})).sort((x,y)=>y.last.ts-x.last.ts)},[inbox]);
+  const unread=threads.reduce((x,t)=>x+t.unread,0);
+  const dm=(other,name,descr)=>{const id=dmId(me.uid,other);names.current[id]=name;try{localStorage.setItem('ea-dmnames',JSON.stringify(names.current))}catch(e){}setOpen({id,dm:true,name,descr:descr||''})};
   const s=subjects.find(x=>x.id===sid)||subjects[0],k=keyOf(s.name);
   useEffect(()=>{api.upsertMe(me).catch(()=>{})},[api,me]);
   useEffect(()=>{let ok=true;setPpl(null);setGrs(null);setErr(null);
@@ -1618,6 +1671,14 @@ function Match({a}){
   return html`<div className="fl" style=${{gap:18}}>
     <${Head} eyebrow="Grupos de estudio" title="Estudiá con otros" sub="Conocé gente que está cursando tu misma materia, armá grupos, chateá y compartí material."/>
     ${!api.online&&html`<div className="alertbox" style=${{background:'var(--t-cream)'}}><b>Modo demo.</b> Los compañeros y grupos son de ejemplo y todo queda en este navegador. ${STANDALONE?html`Para conocer gente real, activá <b>Grupos en línea</b> en Mi perfil.`:'Los grupos con gente real funcionan en el sitio web de Nexus (con Grupos en línea activado).'}</div>`}
+    <div className="tabs" role="tablist">${[['grupos','Grupos y gente'],['mensajes','Mensajes'+(unread?' ('+unread+')':'')]].map(([k2,l])=>html`<button key=${k2} role="tab" className="tab" aria-selected=${view===k2} onClick=${()=>setView(k2)}>${l}</button>`)}</div>
+    ${view==='mensajes'?html`<div className="fl" style=${{gap:8}}>
+      ${threads.length===0?html`<div className="card"><p className="mut">Todavía no tenés mensajes. En "Grupos y gente" tocá <b>Mensaje</b> al lado de alguien que cursa tu materia para escribirle.</p></div>`
+        :threads.map(t=>html`<button key=${t.id} className="card row" style=${{gap:12,textAlign:'left',border:0,width:'100%',color:'var(--ink)'}} onClick=${()=>setOpen({id:t.id,dm:true,name:t.name})}>
+          <span className="av" aria-hidden="true">${initials(t.name)}</span>
+          <span className="grow" style=${{minWidth:0}}><b style=${{display:'block'}}>${t.name}</b><span className="mut" style=${{fontSize:13,display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${t.last.uid===me.uid?'Vos: ':''}${t.last.file_name?'📎 '+t.last.file_name:t.last.text}</span></span>
+          <span className="fl" style=${{alignItems:'flex-end',gap:4}}><span className="mut" style=${{fontSize:11.5}}>${fmtT(t.last.ts)}</span>${t.unread>0&&html`<span className="lvl" style=${{background:'var(--inv)',color:'var(--invfg)'}}>${t.unread}</span>`}</span></button>`)}
+    </div>`:html`<div className="fl" style=${{gap:18}}>
     <div><div className="eyebrow" style=${{marginBottom:8}}>Materia</div><div className="chips">${subjects.map(x=>html`<button key=${x.id} className="chip" aria-pressed=${x.id===s.id} onClick=${()=>{setSid(x.id);setForm(null)}}>${x.emoji} ${x.name}</button>`)}</div></div>
     ${err&&html`<div className="alertbox" role="alert" style=${{background:'var(--t-rose)'}}>${err}</div>`}
     <div className="fl" style=${{gap:10}}>
@@ -1639,9 +1700,10 @@ function Match({a}){
       ${ppl===null?html`<p className="mut">Cargando…</p>`:ppl.length===0?html`<div className="card"><p className="mut">Todavía no encontramos a nadie más cursando ${s.name}${api.online?'. Compartí el link de Nexus con tus compañeros':''}.</p></div>`
         :ppl.map(p=>html`<div key=${p.uid} className="card row wrap" style=${{boxShadow:p.uni===me.uni?'inset 5px 0 0 #9c82f7':''}}>
           <span className="av" aria-hidden="true">${initials(p.name)}</span><div className="grow" style=${{minWidth:170}}><b>${p.name}</b> <span className="mut" style=${{fontSize:13}}>· ${p.slot||''}</span>${p.note&&html`<div className="mut" style=${{fontSize:13}}>${p.note}</div>`}<div className="mut" style=${{fontSize:12}}>${[p.carrera,p.anio?p.anio+'.º año':'',p.uni].filter(Boolean).join(' · ')}</div></div>
-          ${p.uni===me.uni&&html`<span className="lvl" style=${{background:'var(--t-lilac)',color:'var(--ink)'}}>Tu facultad</span>`}</div>`)}
-      ${ppl&&ppl.length>0&&html`<p className="mut" style=${{fontSize:12.5}}>Para estudiar con alguien, creá un grupo o sumate a uno: ahí pueden chatear y compartir material.</p>`}
-    </div></div>`;
+          ${p.uni===me.uni&&html`<span className="lvl" style=${{background:'var(--t-lilac)',color:'var(--ink)'}}>Tu facultad</span>`}
+          <button className="btn btn-sm btn-s" onClick=${()=>dm(p.uid,p.name,[p.carrera,p.anio?p.anio+'.º año':'',p.uni].filter(Boolean).join(' · '))}><${Icon} n="msg" s=${14}/> Mensaje</button></div>`)}
+      ${ppl&&ppl.length>0&&html`<p className="mut" style=${{fontSize:12.5}}>Escribile a alguien con <b>Mensaje</b>, o creá un grupo para estudiar juntos y compartir material.</p>`}
+    </div></div>`}</div>`;
 }
 
 /* ---------- 2 · MODO RESCATE ---------- */

@@ -29,8 +29,17 @@ En la configuración (o en **Materias → + Materias**) podés elegir las materi
 - **Seguir en Claude:** en el sitio publicado aparte, los botones "Seguir en Claude ↗" y "Estudiar este material en Claude ↗" abren claude.ai con la sesión de la persona y un pedido ya armado con su carrera, sus parciales, sus temas flojos, sus errores y su material.
 - **Clave de API (avanzado):** sigue estando en Mi perfil, para usar la IA dentro del sitio publicado aparte.
 
+## Verificación del email al registrarse
+Cuando el sitio tiene Supabase configurado, al crear la cuenta se manda un **código de 6 dígitos** al email, y la cuenta se crea recién cuando la persona lo escribe. Tiene reenvío (cada 60 segundos) y opción de cambiar el email. Sin Supabase configurado, el registro sigue funcionando sin verificar. Dentro de Claude no se pide código, porque ahí la persona ya entró con su cuenta.
+
+Para activarla:
+1. Hacé los pasos 1 y 2 de la sección de abajo (proyecto de Supabase y tablas).
+2. Escribí la URL y la clave `anon` del proyecto en el código, al principio del script: `const SUPA={url:'https://xxxx.supabase.co',key:'…'};`. Así funciona para todos desde el registro, sin que nadie tenga que pegar nada.
+3. En Supabase, **Authentication → Email Templates → Magic Link**, cambiá el cuerpo para que muestre el código, por ejemplo: `<h2>Tu código de Nexus</h2><p>Escribí este código en Nexus: <b>{{ .Token }}</b></p><p>Vence en 1 hora.</p>`
+4. **Importante:** el correo que trae Supabase por defecto solo envía a los emails del equipo del proyecto, y pocos por hora. Para que les llegue a todos, en **Authentication → SMTP Settings** conectá un servicio de correo (por ejemplo Resend o Brevo, que tienen plan gratis) con un remitente propio.
+
 ## Grupos de estudio y tienda en línea (opcional)
-Sin configurar nada, los grupos y la tienda funcionan en **modo demo**: hay compañeros y publicaciones de ejemplo, y todo queda en tu navegador. Para que se conozca gente real, se chatee, se compartan archivos y se publique material:
+Sin configurar nada, los grupos, los mensajes directos y la tienda funcionan en **modo demo**: hay compañeros y publicaciones de ejemplo, y todo queda en tu navegador. Para que se conozca gente real, se chatee, se compartan archivos y se publique material:
 1. Creá un proyecto gratis en supabase.com.
 2. En **SQL Editor**, ejecutá:
 ```sql
@@ -55,9 +64,10 @@ alter table messages add column file_url text, add column file_type text, add co
 ```
 y después ejecutá las líneas de `listings`, `listing_events` y `archivos`.
 
-3. En **Project Settings → API**, copiá la URL y la clave `anon` (pública) y pegalas en **Mi perfil → Grupos en línea**. Todos los que usen tu sitio tienen que poner los mismos datos (o podés escribirlos una vez en el código, en `grpCfg`).
+3. En **Project Settings → API**, copiá la URL y la clave `anon` (pública) y escribilas en `SUPA`, al principio del script, para que valga para todos. Para probar en tu navegador, también podés pegarlas en **Mi perfil → Grupos en línea**.
 
 **Importante:** con estas reglas, cualquiera que tenga la clave pública puede leer y escribir en los grupos y en la tienda, y los archivos subidos quedan públicos para quien tenga el link. Alcanza para un grupo de compañeros. Para abrirlo al público conviene sumar el inicio de sesión de Supabase, reglas más estrictas y moderación de la tienda.
+- Los **mensajes directos** (botón *Mensaje* al lado de cada persona, y la pestaña *Mensajes*) se guardan en la misma tabla `messages` que los chats de grupo, así que tampoco son privados frente a quien tenga la clave.
 - En los grupos y la tienda se comparte nombre, universidad, carrera, año y materias; nunca el email ni la contraseña.
 - En la tienda, además, se ve el contacto que cada persona elige publicar.
 - Nexus no cobra ni intermedia pagos.
