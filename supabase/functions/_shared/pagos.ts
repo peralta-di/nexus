@@ -1,11 +1,11 @@
-// Lógica de cobros de Nexus con Mercado Pago (Marketplace + suscripciones).
+// Lógica de cobros de Aulario con Mercado Pago (Marketplace + suscripciones).
 // Sin dependencias: solo fetch y Web Crypto, para que corra en Supabase Edge Functions (Deno).
 //
 // Variables de entorno (supabase secrets set ...):
 //   MP_ACCESS_TOKEN    access token de producción de TU cuenta de Mercado Pago (cobra suscripciones y recibe comisiones)
 //   MP_CLIENT_ID       client id de tu aplicación de Mercado Pago (para conectar cuentas de vendedores)
 //   MP_CLIENT_SECRET   client secret de esa aplicación
-//   SITE_URL           dirección pública de Nexus, por ejemplo https://nexus.netlify.app/
+//   SITE_URL           dirección pública de Aulario, por ejemplo https://aulario.netlify.app/
 //   STATE_SECRET       una frase larga al azar (firma el pedido de conexión de Mercado Pago)
 //   COMISION           opcional, por defecto 0.10 (10 %)
 //   SUB_PRECIO         opcional, por defecto 400
@@ -174,7 +174,7 @@ export async function handlePagos(req: Request): Promise<Response> {
         const p = await mp("/preapproval", env("MP_ACCESS_TOKEN"), {
           method: "POST",
           body: {
-            reason: "Suscripción mensual a Nexus", external_reference: u.id, payer_email: u.email,
+            reason: "Suscripción mensual a Aulario", external_reference: u.id, payer_email: u.email,
             back_url: c.site + "?r=suscripcion", status: "pending",
             auto_recurring: { frequency: 1, frequency_type: "months", transaction_amount: c.precio, currency_id: c.moneda, start_date: start.toISOString() },
           },
@@ -201,7 +201,7 @@ export async function handlePagos(req: Request): Promise<Response> {
         const pref = await mp("/checkout/preferences", env("MP_ACCESS_TOKEN"), {
           method: "POST",
           body: {
-            items: [{ id: "nexus-mes", title: "Nexus · 1 mes de suscripción", quantity: 1, unit_price: c.precio, currency_id: c.moneda }],
+            items: [{ id: "aulario-mes", title: "Aulario · 1 mes de suscripción", quantity: 1, unit_price: c.precio, currency_id: c.moneda }],
             external_reference: "sub|" + u.id,
             payer: { email: u.email },
             payment_methods: { excluded_payment_types: [{ id: "ticket" }, { id: "atm" }], installments: 1 },
@@ -296,7 +296,7 @@ export async function handleWebhook(req: Request): Promise<Response> {
   const c = cfg();
   try {
     if (topic === "payment" && !u.searchParams.get("seller")) {
-      // Pago de "1 mes" de suscripción, cobrado con la cuenta de Nexus.
+      // Pago de "1 mes" de suscripción, cobrado con la cuenta de Aulario.
       const p = await mp("/v1/payments/" + enc(id), env("MP_ACCESS_TOKEN"));
       const [k, authId] = String(p.external_reference || "").split("|");
       if (k !== "sub" || !authId) return json({ ok: true, ignored: "reference" });
