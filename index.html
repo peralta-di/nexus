@@ -1102,12 +1102,12 @@ function MaterialPanel({a,subj}){
         a.updMat(id,t.length>20?{text:t,status:'ok',words:wordsOf(t)}:{status:'empty'});
       }).catch(e=>{a.updMat(id,{status:'error',why:(e&&e.message&&e.message!=='timeout'?e.message:'No pude leerlo. Pegá el texto.')})});
     });
-    a.toast(arr.length+(arr.length>1?' archivos agregados':' archivo agregado'));
+    a.toast(arr.length+(arr.length>1?' archivos guardados':' archivo guardado')+' en '+s.name);
   };
   const savePaste=()=>{
     const t=pt.trim();if(t.length<20){setNote('Pegá un poco más de texto para que sirva.');return}
     a.addMat({id:'mt'+Date.now().toString(36),subj,kind,name:pn.trim()||('Texto pegado · '+KIND[kind].n),size:t.length,text:t.slice(0,MAXCH),status:'ok',words:wordsOf(t)});
-    setPt('');setPn('');setPaste(false);setNote(null);a.toast('Material guardado');
+    setPt('');setPn('');setPaste(false);setNote(null);a.toast('Material guardado en '+s.name);
   };
   const run=async(name,fn)=>{
     if(job)return;setJob(name);setErr(null);setNote(null);
@@ -1195,7 +1195,7 @@ function MaterialPanel({a,subj}){
     <div><div className="eyebrow" style=${{marginBottom:8}}>¿Qué vas a subir?</div>
       <div className="chips">${Object.entries(KIND).map(([k,v])=>html`<button key=${k} className="chip" aria-pressed=${kind===k} onClick=${()=>setKind(k)}>${v.e} ${v.n}</button>`)}</div></div>
     <label className=${'drop'+(over?' on':'')} htmlFor=${inId} onDragOver=${e=>{e.preventDefault();setOver(true)}} onDragLeave=${()=>setOver(false)} onDrop=${e=>{e.preventDefault();setOver(false);addFiles(e.dataTransfer.files)}} style=${{display:'block',cursor:'pointer'}}>
-      <${Icon} n="upload" s=${28}/><div style=${{fontWeight:600,marginTop:8}}>Arrastrá tus ${kind==='examen'?'parciales':kind==='resumen'?'resúmenes':'apuntes'} acá</div><div className="mut" style=${{fontSize:13}}>PDF, Word, PowerPoint, TXT o fotos</div></label>
+      <${Icon} n="upload" s=${28}/><div style=${{fontWeight:600,marginTop:8}}>Arrastrá tus ${kind==='examen'?'parciales':kind==='resumen'?'resúmenes':'apuntes'} de ${s.name} acá</div><div className="mut" style=${{fontSize:13}}>PDF, Word, PowerPoint, TXT o fotos · se guardan en ${s.emoji} ${s.name}</div></label>
     <input id=${inId} type="file" multiple accept=".pdf,.docx,.pptx,.txt,.md,.csv,.rtf,image/*" style=${{position:'absolute',width:1,height:1,opacity:0}} onChange=${e=>{addFiles(e.target.files);e.target.value=''}}/>
     <input id=${inId+'-cam'} type="file" accept="image/*" capture="environment" style=${{position:'absolute',width:1,height:1,opacity:0}} onChange=${e=>{addFiles(e.target.files);e.target.value=''}}/>
     <input id=${inId+'-gal'} type="file" multiple accept="image/*" style=${{position:'absolute',width:1,height:1,opacity:0}} onChange=${e=>{addFiles(e.target.files);e.target.value=''}}/>
@@ -1210,13 +1210,14 @@ function MaterialPanel({a,subj}){
       <textarea aria-label="Texto del material" rows="6" placeholder="Pegá acá tus apuntes, tu resumen o las preguntas del parcial" value=${pt} onInput=${e=>setPt(e.target.value)} style=${{width:'100%',font:'inherit',padding:12,borderRadius:16,border:'1.5px solid var(--line)',background:'var(--card)',color:'var(--ink)',resize:'vertical'}}></textarea>
       <div><button className="btn btn-s" onClick=${savePaste}><${Icon} n="check" s=${16}/> Guardar</button></div></div>`}
 
-    ${mats.length===0?html`<p className="mut" style=${{textAlign:'center'}}>Todavía no subiste nada de ${s.name}.</p>`:html`<div className="fl" style=${{gap:8}}>${mats.map(m=>html`<div key=${m.id} className=${'ccard '+thc(subj)} style=${{padding:'12px 14px'}}>
+    ${mats.length===0?html`<p className="mut" style=${{textAlign:'center'}}>Todavía no subiste nada de ${s.name}.</p>`:html`<div className="fl" style=${{gap:8}}><div className="eyebrow">Material de ${s.name} (${mats.length})</div>${mats.map(m=>html`<div key=${m.id} className=${'ccard '+thc(subj)} style=${{padding:'12px 14px'}}>
       <div className="row" style=${{gap:10}}><span style=${{fontSize:22}}>${KIND[m.kind].e}</span>
         <button className="grow" onClick=${()=>setOpen(open===m.id?null:m.id)} aria-expanded=${open===m.id} style=${{border:0,background:'transparent',textAlign:'left',color:'var(--ink)',minWidth:0,padding:0}}>
           <b style=${{fontWeight:600,fontSize:14.5,overflowWrap:'anywhere',display:'block'}}>${m.name}</b>
           <span className="mut" style=${{fontSize:12.5}}>${KIND[m.kind].n} · ${stat(m)}${m.example?' · ejemplo':''}${m.analyzed?' · analizado':''}</span></button>
         <button className="ibtn" style=${{width:32,height:32,flexBasis:32,background:'var(--card)'}} aria-label=${'Quitar '+m.name} onClick=${()=>{BLOBS.delete(m.id);a.delMat(m.id)}}><${Icon} n="x" s=${14}/></button></div>
-      ${open===m.id&&html`<div style=${{marginTop:10,fontSize:13,whiteSpace:'pre-wrap',maxHeight:220,overflow:'auto',background:'var(--card)',borderRadius:14,padding:12}}>${m.text?m.text.slice(0,2500)+(m.text.length>2500?'…':''):'Todavía no hay texto de este archivo.'}</div>`}</div>`)}</div>`}
+      ${open===m.id&&html`<div className="fl" style=${{gap:8,marginTop:10}}><div style=${{fontSize:13,whiteSpace:'pre-wrap',maxHeight:220,overflow:'auto',background:'var(--card)',borderRadius:14,padding:12}}>${m.text?m.text.slice(0,2500)+(m.text.length>2500?'…':''):'Todavía no hay texto de este archivo.'}</div>
+        ${a.subjects.length>1&&html`<label className="row wrap" style=${{gap:8,fontSize:13}}><span>¿Es de otra materia?</span><select aria-label=${'Mover '+m.name+' a otra materia'} value="" onChange=${e=>{const to=a.subjects.find(x=>x.id===e.target.value);if(!to)return;a.updMat(m.id,{subj:to.id,analyzed:false});setOpen(null);a.toast(m.name+' se movió a '+to.name)}} style=${{width:'auto',minWidth:170,padding:'.35rem .7rem',fontSize:13}}><option value="">Mover a…</option>${a.subjects.filter(x=>x.id!==subj).map(x=>html`<option key=${x.id} value=${x.id}>${x.emoji} ${x.name}</option>`)}</select></label>`}</div>`}</div>`)}</div>`}
 
     ${imgs.length>0&&html`<div className="alertbox"><b>${imgs.length} archivo${imgs.length>1?'s':''} sin texto (fotos o PDF escaneados).</b> ${aiOk?'La IA puede transcribirlas para usarlas en la guía y las preguntas.':'Necesito la IA para leer fotos. Mientras tanto, pegá el texto.'}
       <div style=${{marginTop:8}}><button className="btn btn-sm btn-s" disabled=${!aiOk||!!job} onClick=${readPhotos}>${job==='photo'?'Leyendo…':'Leer con IA'}</button></div></div>`}
@@ -1266,11 +1267,17 @@ function MaterialPanel({a,subj}){
 }
 
 function MaterialScreen({a}){
-  const [sid,setSid]=useState(a.subjects[0].id);
+  const [sid,setSid0]=useState(()=>{try{const v=localStorage.getItem('ea-mat-subj');if(v&&a.subjects.some(x=>x.id===v))return v}catch(e){}return a.subjects[0].id});
+  const setSid=v=>{setSid0(v);try{localStorage.setItem('ea-mat-subj',v)}catch(e){}};
   const s=a.subjects.find(x=>x.id===sid)||a.subjects[0];
+  const count=id=>a.mats.filter(m=>m.subj===id).length;
   return html`<div className="screen" style=${{padding:0}}><div className="fl" style=${{gap:16}}>
-    <${Head} eyebrow="Mi material" title="Subí lo tuyo" sub="Apuntes, resúmenes y parciales anteriores. Los uso para tu guía, tus ejercicios y el simulador."/>
-    <div className="chips">${a.subjects.map(x=>html`<button key=${x.id} className="chip" aria-pressed=${s.id===x.id} onClick=${()=>setSid(x.id)}>${x.emoji} ${x.name}</button>`)}</div>
+    <${Head} eyebrow="Mi material" title="Subí lo tuyo" sub="Apuntes, resúmenes y parciales anteriores, ordenados por materia. Los uso para tu guía, tus ejercicios y el simulador."/>
+    <div className="fl" style=${{gap:8}}><div className="row" style=${{gap:8}}><b className="num" style=${{width:24,height:24,borderRadius:'50%',background:'var(--inv)',color:'var(--invfg)',display:'grid',placeItems:'center',fontSize:13}}>1</b><b style=${{fontSize:16}}>¿De qué materia es?</b></div>
+      <div role="radiogroup" aria-label="Materia" className="grid2" style=${{gap:8}}>${a.subjects.map(x=>{const on=x.id===s.id,n=count(x.id);return html`<button key=${x.id} role="radio" aria-checked=${on} className=${'rowt '+thc(x.id)} onClick=${()=>setSid(x.id)} style=${{padding:'10px 12px',textAlign:'left',outline:on?'3px solid var(--ink)':'none',outlineOffset:2,opacity:on?1:.85}}>
+        <span className="tile" style=${{width:38,height:38,fontSize:19,flex:'0 0 38px'}}>${x.emoji}</span><span className="grow" style=${{minWidth:0}}><b style=${{fontWeight:600,display:'block',fontSize:14.5,overflowWrap:'anywhere'}}>${x.name}</b><span className="mut" style=${{fontSize:12}}>${n?n+' archivo'+(n>1?'s':''):'Sin archivos'}</span></span>${on&&html`<${Icon} n="check" s=${18}/>`}</button>`})}
+        <button className="rowt" onClick=${()=>a.openOnb(2)} style=${{padding:'10px 12px',textAlign:'left',borderStyle:'dashed'}}><span className="tile" style=${{width:38,height:38,fontSize:19,flex:'0 0 38px'}}>➕</span><span><b style=${{fontWeight:600,display:'block',fontSize:14.5}}>Otra materia</b><span className="mut" style=${{fontSize:12}}>Agregala a tu lista</span></span></button></div></div>
+    <div className="row" style=${{gap:8}}><b className="num" style=${{width:24,height:24,borderRadius:'50%',background:'var(--inv)',color:'var(--invfg)',display:'grid',placeItems:'center',fontSize:13}}>2</b><b style=${{fontSize:16}}>Subí tu material de ${s.emoji} ${s.name}</b></div>
     <${MaterialPanel} key=${s.id} a=${a} subj=${s.id}/></div></div>`;
 }
 /* ---------- INGRESO OBLIGATORIO + PERFIL ---------- */
