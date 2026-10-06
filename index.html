@@ -1480,6 +1480,24 @@ function squarePhoto(file,px=320){
     img.src=url;
   });
 }
+/* Perfil público: lo que ven los demás (nombre, foto chica, descripción, carrera y materias) */
+const PAv=({p,size=40})=>html`<span className="av" aria-hidden="true" style=${{width:size,height:size,flexBasis:size,fontSize:Math.round(size*.36),overflow:'hidden'}}>${p&&p.photo&&/^data:image\/(jpeg|png|webp);base64,/.test(p.photo)?html`<img src=${p.photo} alt="" style=${{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>`:initials(p&&p.name)}</span>`;
+const shrinkPhoto=(dataUrl,px=112)=>new Promise(res=>{if(!dataUrl)return res('');const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=px;c.getContext('2d').drawImage(img,0,0,px,px);res(c.toDataURL('image/jpeg',.82))};img.onerror=()=>res('');img.src=dataUrl});
+function PubProfile({a,p,onClose}){
+  const mineIds=a.subjects.filter(s=>String(p.subjects||'').includes('|'+keyOf(s.name)+'|'));
+  const self=p.uid===uidOf(a.user.email);
+  return html`<div className="overlay" role="dialog" aria-modal="true" aria-label=${'Perfil de '+p.name} style=${{display:'grid',placeItems:'start center'}}><div className="sheet" style=${{maxWidth:440,width:'100%'}}>
+    <div className="row" style=${{justifyContent:'flex-end'}}><button className="ibtn" onClick=${onClose} aria-label="Cerrar"><${Icon} n="x" s=${18}/></button></div>
+    <div className="fl" style=${{alignItems:'center',gap:10,textAlign:'center'}}>
+      <${PAv} p=${p} size=${112}/>
+      <h2 style=${{fontSize:26,fontWeight:600}}>${p.name}</h2>
+      <span className="mut" style=${{fontSize:13.5}}>${[p.carrera,p.anio?p.anio+'.º año':'',p.uni].filter(Boolean).join(' · ')}</span>
+      <p style=${{fontSize:15,maxWidth:360,whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>${p.note||html`<span className="mut">Todavía no escribió una descripción.</span>`}</p></div>
+    ${!self&&mineIds.length>0&&html`<div className="fl" style=${{gap:8}}><span className="eyebrow">Materias en común</span><div className="chips">${mineIds.map(s=>html`<span key=${s.id} className=${'lvl '+thc(s.id)} style=${{background:'var(--tint)',color:'var(--ink)',fontSize:12.5,padding:'5px 12px'}}>${s.emoji} ${s.name}</span>`)}</div></div>`}
+    ${self?html`<p className="mut" style=${{fontSize:13,textAlign:'center'}}>Así te ven los demás. Podés cambiarlo en Mi perfil.</p>`
+      :html`<div className="row" style=${{justifyContent:'center'}}><button className="btn btn-s" onClick=${()=>{onClose();a.openDM(p.uid,p.name,[p.carrera,p.anio?p.anio+'.º año':'',p.uni].filter(Boolean).join(' · '))}}><${Icon} n="msg" s=${16}/> Mandar mensaje</button></div>`}
+  </div></div>`;
+}
 const fdate=d=>d?new Date(d).toLocaleDateString('es',{day:'numeric',month:'long'}):'';
 function MiSuscripcion({a}){
   const [conf,setConf]=useState(false),[busy,setBusy]=useState(false);
@@ -1536,6 +1554,16 @@ function Recordatorios({a}){
       ${!a.pay.online&&html`<span className="mut" style=${{fontSize:12}}>Modo demo: para que los emails se envíen de verdad hay que configurar el servicio de correo (ver README).</span>`}</div>`}
   </div>`;
 }
+function BioCard({a}){
+  const u=a.user,[bio,setBio]=useState(u.bio||''),dirty=bio.trim()!==(u.bio||'').trim();
+  return html`<div className="card fl" style=${{gap:8}}><b>🪪 Tu perfil público</b>
+    <span className="mut" style=${{fontSize:13}}>En Grupos, Mensajes y la Tienda, los demás ven tu nombre, tu foto, esta descripción, tu carrera, año y facultad. Nunca tu email.</span>
+    <label htmlFor="pf-bio" style=${{fontWeight:600,fontSize:14}}>Sobre mí</label>
+    <textarea id="pf-bio" rows="3" maxLength="160" placeholder="Ej: Estudio Medicina en la UdelaR. Me gusta repasar con casos clínicos y busco grupo para Fisiología." value=${bio} onInput=${e=>setBio(e.target.value)} style=${{minHeight:80}}></textarea>
+    <div className="row wrap" style=${{justifyContent:'space-between',gap:8}}><span className="mut num" style=${{fontSize:12}}>${bio.length}/160</span>
+      <span className="row" style=${{gap:8}}><button className="btn btn-sm" onClick=${()=>a.showProfile({uid:uidOf(u.email),name:u.nombre,photo:u.photoSm||u.photo||'',note:(dirty?bio:u.bio||'').trim(),carrera:a.prefs.carrera,anio:a.prefs.anio,uni:a.prefs.uni||u.uni,subjects:''})}>Ver cómo me ven</button>
+      <button className="btn btn-sm btn-s" disabled=${!dirty} onClick=${()=>{a.setBio(bio.trim());a.toast('Descripción guardada')}}>Guardar</button></span></div></div>`;
+}
 function Perfil({a,onClose}){
   const u=a.user,[k,setK]=useState(''),[has,setHas]=useState(!!aiKey.get()),[gc,setGc]=useState(()=>grpCfg.get()),[gu,setGu]=useState(''),[gk,setGk]=useState('');
   return html`<div className="overlay" role="dialog" aria-modal="true" aria-label="Mi perfil"><div className="sheet">
@@ -1543,6 +1571,7 @@ function Perfil({a,onClose}){
     <div className="card row wrap" style=${{gap:14}}><label htmlFor="pf-photo" title="Cambiar foto" style=${{cursor:'pointer',position:'relative'}}><${Av} u=${u} size=${72}/><span aria-hidden="true" style=${{position:'absolute',right:-2,bottom:-2,width:26,height:26,borderRadius:'50%',background:'var(--inv)',color:'var(--invfg)',display:'grid',placeItems:'center',fontSize:13,boxShadow:'0 0 0 3px var(--card)'}}>📷</span></label>
       <input id="pf-photo" type="file" accept="image/*" style=${{position:'absolute',width:1,height:1,opacity:0}} onChange=${async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const d=await squarePhoto(f);a.setPhoto(d);a.toast('Foto de perfil actualizada')}catch(x){a.toast(x.message)}}}/><div className="grow" style=${{minWidth:0}}><b style=${{fontSize:17,display:'block'}}>${u.nombre}</b><span className="mut" style=${{fontSize:13,overflowWrap:'anywhere'}}>${u.email}</span>
       <div className="row wrap" style=${{gap:6,marginTop:6}}><label htmlFor="pf-photo" className="btn btn-sm" style=${{cursor:'pointer'}}>${u.photo?'Cambiar foto':'Agregar foto'}</label>${u.photo&&html`<button className="btn btn-sm btn-g" onClick=${()=>{a.setPhoto(null);a.toast('Foto quitada')}}>Quitar</button>`}</div></div></div>
+    <${BioCard} a=${a}/>
     <div className="card fl" style=${{gap:8,fontSize:14}}><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Universidad</span><b style=${{textAlign:'right'}}>${u.uni}</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Carrera</span><b>${u.carrera}</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Año</span><b>${u.anio}.º</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">País</span><b>${u.pais}</b></div><div className="row" style=${{justifyContent:'space-between'}}><span className="mut">Estudio por día</span><b>${u.horas||3} h</b></div></div>
     ${SHOW_PAY&&html`<${MiSuscripcion} a=${a}/>`}
     ${SHOW_PAY&&html`<${Recordatorios} a=${a}/>`}
@@ -1634,6 +1663,7 @@ function sbApi(c){
   return {online:true,
     upsertMe:me=>q('students',{method:'POST',prefer:'resolution=merge-duplicates,return=minimal',body:me}),
     students:k=>q('students?select=*&subjects=ilike.'+e('*|'+k+'|*')+'&order=ts.desc&limit=60'),
+    profiles:uids=>uids.length?q('students?select=*&uid=in.('+[...new Set(uids)].slice(0,100).map(e).join(',')+')'):Promise.resolve([]),
     groups:k=>q('groups?select=*&subj=eq.'+e(k)+'&order=ts.desc&limit=60'),
     createGroup:g=>q('groups',{method:'POST',body:g}),
     members:id=>q('members?select=*&group_id=eq.'+e(id)+'&order=ts.asc'),
@@ -1681,6 +1711,7 @@ function demoApi(subjects){
   return {online:false,
     upsertMe:me=>w(d=>{d.students=d.students.filter(x=>x.uid!==me.uid).concat(me)}),
     students:k=>w(d=>d.students.filter(x=>x.subjects.includes('|'+k+'|'))),
+    profiles:uids=>w(d=>d.students.filter(x=>uids.includes(x.uid))),
     groups:k=>w(d=>d.groups.filter(g=>g.subj===k).sort((x,y)=>y.ts-x.ts)),
     createGroup:g=>w(d=>{d.groups.push(g)}),
     members:id=>w(d=>d.members.filter(m=>m.group_id===id)),
@@ -1722,7 +1753,11 @@ function GroupChat({a,api,me,g,onBack,onLeave}){
   useEffect(()=>{last.current=0;setMsgs([]);pull();if(!g.dm)api.members(g.id).then(setMem).catch(()=>{});const id=setInterval(pull,api.online?4000:1500);return()=>clearInterval(id)},[g.id]);
   useEffect(()=>{if(endRef.current)endRef.current.scrollIntoView({block:'nearest'});if(msgs.length)readMap.mark(g.id,msgs[msgs.length-1].ts)},[msgs.length]);
   const post=async extra=>{const t=txt.trim();if(!t&&!extra)return;const m={id:gid(),group_id:g.id,uid:me.uid,name:me.name,text:t||'',ts:Date.now(),...(extra||{})};setTxt('');try{await api.send(m);pull()}catch(e){setErr('No se pudo enviar. Probá de nuevo.');setTxt(t)}};
-  const [up,setUp]=useState(null),fileIn=useRef(null);
+  const [up,setUp]=useState(null),fileIn=useRef(null),[profs,setProfs]=useState({});
+  const other=g.dm?g.id.split(':').slice(1).find(x=>x!==me.uid):null;
+  const pkey=[...new Set([...mem.map(m=>m.uid),...msgs.map(m=>m.uid),other].filter(x=>x&&x!==me.uid))].sort().join(',');
+  useEffect(()=>{if(!pkey)return;let ok=true;api.profiles(pkey.split(',')).then(r=>{if(ok)setProfs(Object.fromEntries((r||[]).map(x=>[x.uid,x])))}).catch(()=>{});return()=>{ok=false}},[pkey]);
+  const pOf=(uid,name)=>profs[uid]||{uid,name};
   const sendFile=async f=>{
     if(!f)return;const n=(f.name||'').toLowerCase();
     if(!/\.(pdf|docx|pptx|txt|md)$/.test(n)){setErr('Podés compartir PDF, Word (.docx), PowerPoint (.pptx) o texto.');return}
@@ -1742,12 +1777,12 @@ function GroupChat({a,api,me,g,onBack,onLeave}){
   const saveMat=(m,sid)=>{a.addMat({id:'mt'+gid(),subj:sid,kind:'resumen',name:m.file_name+' (de '+m.name.split(' ')[0]+')',size:m.file_text.length,text:m.file_text.slice(0,MAXCH),status:'ok',words:wordsOf(m.file_text)});a.toast('Guardado en tus apuntes')};
   return html`<div className="fl" style=${{gap:14}}>
     <button className="back" onClick=${onBack}><${Icon} n="chevL" s=${16}/> ${g.dm?'Mensajes':'Grupos'}</button>
-    ${g.dm?html`<div className="row" style=${{gap:12}}><span className="av" aria-hidden="true">${initials(g.name)}</span><div><div className="eyebrow">Mensaje directo</div><h1 style=${{fontSize:'clamp(22px,6vw,28px)',fontWeight:700}}>${g.name}</h1>${g.descr&&html`<p className="mut" style=${{fontSize:13}}>${g.descr}</p>`}</div></div>`:html`<div><div className="eyebrow">${g.subj_name}${g.slot?' · '+g.slot:''}</div><h1 style=${{fontSize:'clamp(22px,6vw,28px)',fontWeight:700,marginTop:4}}>${g.name}</h1>${g.descr&&html`<p className="mut" style=${{fontSize:14,marginTop:4}}>${g.descr}</p>`}</div>`}
-    ${!g.dm&&html`<div className="row wrap" style=${{gap:6}}>${mem.map(m=>html`<span key=${m.uid} className="lvl" style=${{background:'var(--surf2)',color:'var(--ink)'}} title=${(m.carrera||'')+(m.uni?' · '+m.uni:'')}>${m.uid===me.uid?'Vos':m.name}</span>`)}<span className="mut" style=${{fontSize:12.5,alignSelf:'center'}}>${mem.length} integrante${mem.length===1?'':'s'}</span></div>`}
+    ${g.dm?html`<div className="row" style=${{gap:12}}><button title="Ver perfil" onClick=${()=>a.showProfile({...pOf(other,g.name),name:(profs[other]||{}).name||g.name})} style=${{border:0,background:'transparent',padding:0}}><${PAv} p=${pOf(other,g.name)} size=${52}/></button><div><div className="eyebrow">Mensaje directo</div><h1 style=${{fontSize:'clamp(22px,6vw,28px)',fontWeight:700}}>${g.name}</h1>${g.descr&&html`<p className="mut" style=${{fontSize:13}}>${g.descr}</p>`}</div></div>`:html`<div><div className="eyebrow">${g.subj_name}${g.slot?' · '+g.slot:''}</div><h1 style=${{fontSize:'clamp(22px,6vw,28px)',fontWeight:700,marginTop:4}}>${g.name}</h1>${g.descr&&html`<p className="mut" style=${{fontSize:14,marginTop:4}}>${g.descr}</p>`}</div>`}
+    ${!g.dm&&html`<div className="row wrap" style=${{gap:6}}>${mem.map(m=>html`<button key=${m.uid} className="chip" style=${{padding:'3px 10px 3px 3px',fontSize:12.5,gap:6}} title=${(m.carrera||'')+(m.uni?' · '+m.uni:'')} onClick=${()=>m.uid===me.uid?a.showProfile(me):a.showProfile({...m,...(profs[m.uid]||{})})}><${PAv} p=${m.uid===me.uid?me:pOf(m.uid,m.name)} size=${24}/>${m.uid===me.uid?'Vos':m.name}</button>`)}<span className="mut" style=${{fontSize:12.5,alignSelf:'center'}}>${mem.length} integrante${mem.length===1?'':'s'}</span></div>`}
     <div className="card fl" style=${{gap:10,minHeight:260,maxHeight:'55vh',overflow:'auto'}}>
       ${msgs.length===0&&html`<p className="mut" style=${{fontSize:13.5}}>${g.dm?'Todavía no se escribieron. Presentate y contale qué estás estudiando.':'Todavía no hay mensajes. Saludá al grupo o compartí un resumen.'}</p>`}
       ${msgs.map(m=>{const mine=m.uid===me.uid;return html`<div key=${m.id} className=${'bub '+(mine?'bub-u':'bub-t')} style=${{maxWidth:'88%'}}>
-        ${!mine&&html`<div style=${{fontSize:12,fontWeight:600,marginBottom:2}}>${m.name}</div>`}
+        ${!mine&&html`<button onClick=${()=>a.showProfile(pOf(m.uid,m.name))} className="row" style=${{gap:6,fontSize:12,fontWeight:600,marginBottom:4,border:0,background:'transparent',padding:0,color:'var(--ink)'}}><${PAv} p=${pOf(m.uid,m.name)} size=${22}/>${m.name}</button>`}
         ${m.text&&html`<div style=${{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>${m.text}</div>`}
         ${m.file_name&&html`<div style=${{marginTop:m.text?8:0,background:mine?'rgba(255,255,255,.15)':'var(--card)',borderRadius:14,padding:'8px 10px'}}>
           <b style=${{fontSize:13.5,overflowWrap:'anywhere'}}>${/\.pdf$/i.test(m.file_name)?'📕':/\.docx$/i.test(m.file_name)?'📘':/\.pptx$/i.test(m.file_name)?'📙':'📎'} ${m.file_name}</b> <span style=${{fontSize:12,opacity:.75}}>· ${m.file_size?(m.file_size<1e6?Math.max(1,Math.round(m.file_size/1e3))+' KB':(m.file_size/1e6).toFixed(1)+' MB')+' · ':''}${wordsOf(m.file_text||'')} palabras</span>
@@ -1768,7 +1803,7 @@ function GroupChat({a,api,me,g,onBack,onLeave}){
 }
 
 function useApi(subjects){const cfg=STANDALONE?grpCfg.get():null;return useMemo(()=>cfg&&cfg.url&&cfg.key?sbApi(cfg):demoApi(subjects),[cfg&&cfg.url,cfg&&cfg.key,subjects.length])}
-function useMe(a){const {user,prefs,subjects}=a;return useMemo(()=>({uid:uidOf(user.email),name:user.nombre,uni:prefs.uni||user.uni,carrera:prefs.carrera,anio:prefs.anio,slot:prefs.from<12?'Mañana':prefs.from<18?'Tarde':'Noche',note:'',subjects:'|'+subjects.map(s=>keyOf(s.name)).join('|')+'|',ts:Date.now()}),[user.email,subjects])}
+function useMe(a){const {user,prefs,subjects}=a;return useMemo(()=>({uid:uidOf(user.email),name:user.nombre,uni:prefs.uni||user.uni,carrera:prefs.carrera,anio:prefs.anio,slot:prefs.from<12?'Mañana':prefs.from<18?'Tarde':'Noche',note:(user.bio||'').slice(0,160),photo:user.photoSm||'',subjects:'|'+subjects.map(s=>keyOf(s.name)).join('|')+'|',ts:Date.now()}),[user.email,subjects,user.bio,user.photoSm])}
 
 /* ---------- TIENDA DE MATERIAL: cada publicación le aparece a quien cursa esa materia ---------- */
 const LKIND={resumen:['📄','Resumen'],parciales:['🧾','Parciales resueltos'],curso:['🎓','Curso'],clases:['👩‍🏫','Clases de apoyo'],tarjetas:['🗂️','Tarjetas o esquemas'],otro:['📦','Otro']};
@@ -1813,7 +1848,7 @@ function Tienda({a}){
   };
   const card=({l,why,n})=>{const free=!(+l.price>0),fee=Math.round((+l.price||0)*PAGOS.comision*100)/100;return html`<div key=${l.id} className="card fl" style=${{gap:8}}>
     <div className="row" style=${{gap:12,alignItems:'flex-start'}}><span className="tile" style=${{width:46,height:46,fontSize:22,flex:'0 0 46px'}}>${(LKIND[l.kind]||LKIND.otro)[0]}</span>
-      <div className="grow" style=${{minWidth:0}}><b style=${{fontSize:16,display:'block',overflowWrap:'anywhere'}}>${l.title}</b><span className="mut" style=${{fontSize:12.5}}>${(LKIND[l.kind]||LKIND.otro)[1]} · ${l.subj_name} · ${l.seller_name}${l.seller_uni?' · '+l.seller_uni:''}</span></div>
+      <div className="grow" style=${{minWidth:0}}><b style=${{fontSize:16,display:'block',overflowWrap:'anywhere'}}>${l.title}</b><span className="mut" style=${{fontSize:12.5}}>${(LKIND[l.kind]||LKIND.otro)[1]} · ${l.subj_name} · <button onClick=${async()=>{const r=await api.profiles([l.uid]).catch(()=>[]);a.showProfile((r&&r[0])||{uid:l.uid,name:l.seller_name,uni:l.seller_uni,carrera:l.carrera})}} style=${{border:0,background:'transparent',padding:0,color:'var(--ink)',textDecoration:'underline',font:'inherit',cursor:'pointer'}}>${l.seller_name}</button>${l.seller_uni?' · '+l.seller_uni:''}</span></div>
       <span className="fl" style=${{alignItems:'flex-end',gap:2}}><b className="num" style=${{whiteSpace:'nowrap',fontSize:16}}>${free?'Gratis':money(l.price,l.currency)}</b>${n>0&&html`<span className="mut num" style=${{fontSize:12,whiteSpace:'nowrap'}}>🔥 ${n} vendido${n===1?'':'s'}</span>`}</span></div>
     ${why&&why.length>0&&html`<div className="chips">${why.slice(0,3).map(w=>html`<span key=${w} className="lvl" style=${{background:'var(--t-mint)',color:'var(--ink)'}}>${w}</span>`)}</div>`}
     ${open===l.id&&html`<div className="fl" style=${{gap:8,fontSize:14}}>${l.descr&&html`<p style=${{whiteSpace:'pre-wrap'}}>${l.descr}</p>`}${l.topics&&html`<p className="mut" style=${{fontSize:13}}>Temas: ${l.topics}</p>`}${l.has_file&&html`<p className="mut" style=${{fontSize:13}}>📎 Incluye un archivo para descargar después de la compra.</p>`}${l.preview&&html`<div style=${{background:'var(--surf)',borderRadius:14,padding:12,fontSize:13,whiteSpace:'pre-wrap',maxHeight:220,overflow:'auto'}}><div className="eyebrow" style=${{marginBottom:4}}>Vista previa</div>${l.preview}</div>`}</div>`}
@@ -1935,13 +1970,15 @@ function Match({a}){
   const {subjects,prefs,user}=a;
   const api=useApi(subjects),me=useMe(a);
   const [sid,setSid]=useState(subjects[0].id),[ppl,setPpl]=useState(null),[grs,setGrs]=useState(null),[mine,setMine]=useState([]),[open,setOpen]=useState(null),[form,setForm]=useState(null),[err,setErr]=useState(null),[tick,setTick]=useState(0);
-  const [view,setView]=useState('grupos'),[inbox,setInbox]=useState([]);
+  const [view,setView]=useState('grupos'),[inbox,setInbox]=useState([]),[profs,setProfs]=useState({});
   const names=useRef((()=>{try{return JSON.parse(localStorage.getItem('ea-dmnames')||'{}')}catch(e){return {}}})());
   useEffect(()=>{if(open)return;let ok=true;const load=()=>api.inbox(me.uid).then(r=>{if(ok)setInbox(r||[])}).catch(()=>{});load();const id=setInterval(load,api.online?10000:3000);return()=>{ok=false;clearInterval(id)}},[api,open,tick]);
   const threads=useMemo(()=>{const rd=readMap.get(),by={};inbox.forEach(m=>{const t=by[m.group_id]||(by[m.group_id]={id:m.group_id,last:m,unread:0,name:''});if(m.uid!==me.uid){if(!t.name)t.name=m.name;if(m.ts>(rd[m.group_id]||0))t.unread++}});
     return Object.values(by).map(t=>({...t,name:t.name||names.current[t.id]||'Compañero/a'})).sort((x,y)=>y.last.ts-x.last.ts)},[inbox]);
   const unread=threads.reduce((x,t)=>x+t.unread,0);
-  useEffect(()=>{if(a.dmInit){const d=a.dmInit;a.clearDm();if(d.uid&&d.uid!==me.uid)dm(d.uid,d.name,d.descr)}},[]);
+  const tkey=threads.map(t=>t.id).join(',');
+  useEffect(()=>{const ids=threads.map(t=>t.id.split(':').slice(1).find(x=>x!==me.uid)).filter(Boolean);if(!ids.length)return;let ok=true;api.profiles(ids).then(r=>{if(ok)setProfs(Object.fromEntries((r||[]).map(x=>[x.uid,x])))}).catch(()=>{});return()=>{ok=false}},[tkey]);
+  useEffect(()=>{if(a.dmInit){const d=a.dmInit;a.clearDm();if(d.uid&&d.uid!==me.uid)dm(d.uid,d.name,d.descr)}},[a.dmInit]);
   const dm=(other,name,descr)=>{const id=dmId(me.uid,other);names.current[id]=name;try{localStorage.setItem('ea-dmnames',JSON.stringify(names.current))}catch(e){}setOpen({id,dm:true,name,descr:descr||''})};
   const s=subjects.find(x=>x.id===sid)||subjects[0],k=keyOf(s.name);
   useEffect(()=>{api.upsertMe(me).catch(()=>{})},[api,me]);
@@ -1961,7 +1998,7 @@ function Match({a}){
     ${view==='mensajes'?html`<div className="fl" style=${{gap:8}}>
       ${threads.length===0?html`<div className="card"><p className="mut">Todavía no tenés mensajes. En "Grupos y gente" tocá <b>Mensaje</b> al lado de alguien que cursa tu materia para escribirle.</p></div>`
         :threads.map(t=>html`<button key=${t.id} className="card row" style=${{gap:12,textAlign:'left',border:0,width:'100%',color:'var(--ink)'}} onClick=${()=>setOpen({id:t.id,dm:true,name:t.name})}>
-          <span className="av" aria-hidden="true">${initials(t.name)}</span>
+          <${PAv} p=${profs[t.id.split(':').slice(1).find(x=>x!==me.uid)]||{name:t.name}} size=${44}/>
           <span className="grow" style=${{minWidth:0}}><b style=${{display:'block'}}>${t.name}</b><span className="mut" style=${{fontSize:13,display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${t.last.uid===me.uid?'Vos: ':''}${t.last.file_name?'📎 '+t.last.file_name:t.last.text}</span></span>
           <span className="fl" style=${{alignItems:'flex-end',gap:4}}><span className="mut" style=${{fontSize:11.5}}>${fmtT(t.last.ts)}</span>${t.unread>0&&html`<span className="lvl" style=${{background:'var(--inv)',color:'var(--invfg)'}}>${t.unread}</span>`}</span></button>`)}
     </div>`:html`<div className="fl" style=${{gap:18}}>
@@ -1985,7 +2022,7 @@ function Match({a}){
       <h2 style=${{fontSize:20,fontWeight:600}}>Cursando ${s.name}</h2>
       ${ppl===null?html`<p className="mut">Cargando…</p>`:ppl.length===0?html`<div className="card"><p className="mut">Todavía no encontramos a nadie más cursando ${s.name}${api.online?'. Compartí el link de Nexus con tus compañeros':''}.</p></div>`
         :ppl.map(p=>html`<div key=${p.uid} className="card row wrap" style=${{boxShadow:p.uni===me.uni?'inset 5px 0 0 #9c82f7':''}}>
-          <span className="av" aria-hidden="true">${initials(p.name)}</span><div className="grow" style=${{minWidth:170}}><b>${p.name}</b> <span className="mut" style=${{fontSize:13}}>· ${p.slot||''}</span>${p.note&&html`<div className="mut" style=${{fontSize:13}}>${p.note}</div>`}<div className="mut" style=${{fontSize:12}}>${[p.carrera,p.anio?p.anio+'.º año':'',p.uni].filter(Boolean).join(' · ')}</div></div>
+          <button onClick=${()=>a.showProfile(p)} title=${'Ver perfil de '+p.name} style=${{border:0,background:'transparent',padding:0}}><${PAv} p=${p} size=${44}/></button><button className="grow" onClick=${()=>a.showProfile(p)} style=${{minWidth:170,border:0,background:'transparent',padding:0,textAlign:'left',color:'var(--ink)'}}><b>${p.name}</b> <span className="mut" style=${{fontSize:13}}>· ${p.slot||''}</span>${p.note&&html`<div className="mut" style=${{fontSize:13}}>${p.note}</div>`}<div className="mut" style=${{fontSize:12}}>${[p.carrera,p.anio?p.anio+'.º año':'',p.uni].filter(Boolean).join(' · ')}</div></button>
           ${p.uni===me.uni&&html`<span className="lvl" style=${{background:'var(--t-lilac)',color:'var(--ink)'}}>Tu facultad</span>`}
           <button className="btn btn-sm btn-s" onClick=${()=>dm(p.uid,p.name,[p.carrera,p.anio?p.anio+'.º año':'',p.uni].filter(Boolean).join(' · '))}><${Icon} n="msg" s=${14}/> Mensaje</button></div>`)}
       ${ppl&&ppl.length>0&&html`<p className="mut" style=${{fontSize:12.5}}>Escribile a alguien con <b>Mensaje</b>, o creá un grupo para estudiar juntos y compartir material.</p>`}
@@ -2208,8 +2245,10 @@ function Main({user,isNew,onUser}){
     if(e.kind==='parcial'&&e.subj&&!e.weekly){const d=dayIdx(e.date);if(d>=1){setSubjects(ss=>ss.map(x=>x.id===e.subj?{...x,exam:d}:x));toast('Parcial agendado. Tu plan de estudio se reorganizó para llegar a esa fecha.');return}}
     toast('Agregado a tu calendario')};
   const delEvent=id=>{setEvents(x=>x.filter(e=>e.id!==id));toast('Quitado del calendario')};
-  const setPhoto=ph=>{const p={...user};if(ph)p.photo=ph;else delete p.photo;acctSave(p);onUser(p)};
-  const A={setPhoto,hist,events,addEvent,delEvent,user,pay,sub,seller,ensureAuth,rem,setRem,sendTestReminder,remPreview,dmInit,shopInit,clearDm:()=>setDmInit(null),clearShop:()=>setShopInit(null),openDM:(uid,name,descr)=>{setDmInit({uid,name,descr});setTab('match')},tab,go:setTab,subjects,prefs,mastery,slow,plan,kept,reviews,errors,rescue,stats,run,mats,guides,qv,exInit,simInit,risk0,examOf,toast,nudge,slowTopic,tutorTopic,isDark,
+  const setPhoto=async ph=>{const p={...user};if(ph){p.photo=ph;p.photoSm=await shrinkPhoto(ph)}else{delete p.photo;delete p.photoSm}acctSave(p);onUser(p)};
+  const setBio=b=>{const p={...user,bio:String(b||'').slice(0,160)};acctSave(p);onUser(p)};
+  const [pubP,setPubP]=useState(null);
+  const A={setPhoto,setBio,showProfile:setPubP,hist,events,addEvent,delEvent,user,pay,sub,seller,ensureAuth,rem,setRem,sendTestReminder,remPreview,dmInit,shopInit,clearDm:()=>setDmInit(null),clearShop:()=>setShopInit(null),openDM:(uid,name,descr)=>{setDmInit({uid,name,descr});setTab('match')},tab,go:setTab,subjects,prefs,mastery,slow,plan,kept,reviews,errors,rescue,stats,run,mats,guides,qv,exInit,simInit,risk0,examOf,toast,nudge,slowTopic,tutorTopic,isDark,
     openPerfil:()=>setPerfil(true),editPerfil:()=>{setPerfil(false);setEditing(true)},
     logout:()=>{sessionEnd();setPerfil(false);onUser(null)},
     flipTheme:flip,openOnb:st=>setOnb(typeof st==='number'?st:true),
@@ -2277,6 +2316,7 @@ function Main({user,isNew,onUser}){
     ${perfil&&html`<${Perfil} a=${A} onClose=${()=>setPerfil(false)}/>`}
     ${editing&&html`<${Welcome} edit=${true} initial=${user} onDone=${(p)=>{onUser(p);setPrefs(x=>({...x,carrera:p.carrera,uni:p.uni,anio:p.anio,maxH:p.horas||x.maxH}));setEditing(false);toast('Datos actualizados')}} onClose=${()=>setEditing(false)}/>`}
     ${onb&&(!SHOW_PAY||(sub&&sub.active))&&html`<${Onboarding} a=${A} start=${typeof onb==='number'?onb:0} onClose=${()=>setOnb(false)}/>`}
+    ${pubP&&html`<${PubProfile} a=${A} p=${pubP} onClose=${()=>setPubP(null)}/>`}
     ${authReq&&html`<${AuthModal} email=${user.email} onOk=${s=>{authReq.res(s);setAuthReq(null)}} onCancel=${()=>{authReq.rej({code:'cancelled'});setAuthReq(null)}}/>`}
     ${msg&&html`<div className="toast" role="status">${msg}</div>`}
   </div></div>`;
