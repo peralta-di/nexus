@@ -10,7 +10,7 @@
 //   COMISION           opcional, por defecto 0.10 (10 %)
 //   SUB_PRECIO         opcional, por defecto 400
 //   SUB_MONEDA         opcional, por defecto UYU
-//   PRUEBA_DIAS        opcional, por defecto 30
+//   PRUEBA_DIAS        opcional, por defecto 7 (días gratis desde que se suscribe; el primer cobro es al terminar)
 //   (La suscripción se cobra con MP_ACCESS_TOKEN: el dinero va directo a esa cuenta de Mercado Pago.)
 // SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY las pone Supabase solo.
 
@@ -29,7 +29,7 @@ export const cfg = () => ({
   comision: num("COMISION", 0.1),
   precio: num("SUB_PRECIO", 400),
   moneda: env("SUB_MONEDA", "UYU"),
-  prueba: num("PRUEBA_DIAS", 30),
+  prueba: num("PRUEBA_DIAS", 7),
   site: env("SITE_URL").replace(/\/?$/, "/"),
 });
 
@@ -129,16 +129,20 @@ async function sellerToken(authId: string): Promise<string | null> {
 }
 
 /* ---------- Suscripción ---------- */
-const trialEnd = (u: User) => new Date(new Date(u.created_at).getTime() + cfg().prueba * 864e5);
+/* Para usar la app hay que suscribirse. La primera suscripción trae una semana gratis:
+   se carga el medio de pago en Mercado Pago y el primer cobro es a los PRUEBA_DIAS días. */
 async function subStatus(u: User) {
   const sub = await one("subscriptions?select=*&auth_id=eq." + enc(u.id));
-  const te = trialEnd(u), now = Date.now();
+  const now = Date.now();
   const paidUntil = sub && sub.paid_until ? new Date(sub.paid_until).getTime() : 0;
-  const paid = !!sub && (sub.status === "authorized" || paidUntil > now);
+  const auto = !!sub && sub.status === "authorized";
+  const te = sub && sub.trial_ends_at ? new Date(sub.trial_ends_at).getTime() : 0;
   return {
-    trial_ends_at: te.toISOString(), in_trial: now < te.getTime(),
+    trial_available: !sub || !sub.trial_used,
+    trial_ends_at: te ? new Date(te).toISOString() : null,
+    in_trial: auto && te > now,
     subscription: sub ? { status: sub.status, next_payment_date: sub.next_payment_date, paid_until: sub.paid_until || null } : null,
-    active: paid || now < te.getTime(),
+    active: auto || paidUntil > now,
   };
 }
 async function syncPreapproval(id: string) {
@@ -146,7 +150,12 @@ async function syncPreapproval(id: string) {
   if (!p || !p.external_reference) return;
   await db("subscriptions?on_conflict=auth_id", {
     method: "POST", prefer: "resolution=merge-duplicates,return=minimal",
-    body: { auth_id: p.external_reference, email: p.payer_email || null, status: p.status, mp_preapproval_id: String(p.id), next_payment_date: p.next_payment_date || null, updated_at: new Date().toISOString() },
+    body: {
+      auth_id: p.external_reference, email: p.payer_email || null, status: p.status, mp_preapproval_id: String(p.id),
+      next_payment_date: p.next_payment_date || null, updated_at: new Date().toISOString(),
+      // La semana gratis se usa una sola vez: cuenta desde que Mercado Pago autoriza la suscripción.
+      ...(p.status === "authorized" ? { trial_used: true } : {}),
+    },
   });
 }
 
@@ -168,9 +177,10 @@ export async function handlePagos(req: Request): Promise<Response> {
       case "subscribe": {
         const st = await subStatus(u);
         if (st.subscription && st.subscription.status === "authorized") return json({ already: true });
-        // El primer cobro es cuando termina el mes gratis o lo ya pagado (o en unos minutos si ya terminó).
+        // Primera vez: semana gratis y el primer cobro al terminarla. Si ya la usó: se cobra al terminar lo ya pagado (o enseguida).
         const paidUntil = st.subscription && st.subscription.paid_until ? new Date(st.subscription.paid_until).getTime() : 0;
-        const start = new Date(Math.max(new Date(st.trial_ends_at).getTime(), paidUntil, Date.now() + 10 * 60e3));
+        const trialEnd = st.trial_available ? Date.now() + c.prueba * 864e5 : 0;
+        const start = new Date(Math.max(trialEnd, paidUntil, Date.now() + 10 * 60e3));
         const p = await mp("/preapproval", env("MP_ACCESS_TOKEN"), {
           method: "POST",
           body: {
@@ -181,9 +191,12 @@ export async function handlePagos(req: Request): Promise<Response> {
         });
         await db("subscriptions?on_conflict=auth_id", {
           method: "POST", prefer: "resolution=merge-duplicates,return=minimal",
-          body: { auth_id: u.id, email: u.email, status: p.status || "pending", mp_preapproval_id: String(p.id), updated_at: new Date().toISOString() },
+          body: {
+            auth_id: u.id, email: u.email, status: p.status || "pending", mp_preapproval_id: String(p.id), updated_at: new Date().toISOString(),
+            ...(trialEnd ? { trial_ends_at: new Date(trialEnd).toISOString() } : {}),
+          },
         });
-        return json({ url: p.init_point });
+        return json({ url: p.init_point, trial_ends_at: trialEnd ? new Date(trialEnd).toISOString() : null, first_charge: start.toISOString() });
       }
       case "cancel_subscription": {
         const sub = await one("subscriptions?select=*&auth_id=eq." + enc(u.id));
@@ -312,8 +325,6 @@ export async function handleWebhook(req: Request): Promise<Response> {
       const sub = await one("subscriptions?select=*&auth_id=eq." + enc(authId));
       let base = Date.now();
       if (sub && sub.paid_until) base = Math.max(base, new Date(sub.paid_until).getTime());
-      const ur = await fetch(SB() + "/auth/v1/admin/users/" + enc(authId), { headers: { apikey: SR(), Authorization: "Bearer " + SR() } });
-      if (ur.ok) { const au = await ur.json(); if (au && au.created_at) base = Math.max(base, trialEnd(au).getTime()); }
       const until = new Date(base); until.setMonth(until.getMonth() + 1);
       await db("subscriptions?on_conflict=auth_id", {
         method: "POST", prefer: "resolution=merge-duplicates,return=minimal",

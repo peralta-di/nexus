@@ -563,7 +563,7 @@ function Ahora({a}){
     <div className="row" style=${{justifyContent:'space-between',alignItems:'flex-start'}}>
       <div className="grow"><h1 style=${{fontSize:'clamp(28px,8vw,34px)',fontWeight:700}}>${DNF[d0.getDay()]} ${d0.getDate()}</h1><p className="mut" style=${{fontSize:14,marginTop:2}}>${todayS.length?`${todayS.filter(b=>!b.done).length} de ${todayS.length} bloques pendientes`:'Tus próximos bloques'}</p></div>
       <div className="row" style=${{gap:8}}><button className="ibtn meav" onClick=${a.openPerfil} aria-label="Mi perfil" style=${{background:'var(--g-lilac)',color:'#fff',fontWeight:600,fontSize:14}}>${initials(a.user.nombre)}</button><button className="ibtn" onClick=${a.openOnb} aria-label="Configuración"><${Icon} n="settings" s=${19}/></button><button className="ibtn" onClick=${a.flipTheme} aria-label=${a.isDark?'Modo claro':'Modo oscuro'}><${Icon} n=${a.isDark?'sun':'moon'} s=${19}/></button></div></div>
-    ${SHOW_PAY&&a.sub&&a.sub.in_trial&&!(a.sub.subscription&&a.sub.subscription.status==='authorized')&&daysLeft(a.sub.trial_ends_at)<=7&&html`<button className="alertbox" onClick=${a.openPerfil} style=${{textAlign:'left',border:0,width:'100%',color:'var(--ink)',background:'var(--t-mint)',fontSize:13.5}}>Te quedan <b>${daysLeft(a.sub.trial_ends_at)} días</b> de prueba gratis. Tocá para ver tu suscripción.</button>`}
+    ${SHOW_PAY&&a.sub&&a.sub.in_trial&&html`<button className="alertbox" onClick=${a.openPerfil} style=${{textAlign:'left',border:0,width:'100%',color:'var(--ink)',background:'var(--t-mint)',fontSize:13.5}}>Semana gratis: te quedan <b>${daysLeft(a.sub.trial_ends_at)} días</b>. El primer cobro de $${PAGOS.precio} es el ${fdate(a.sub.trial_ends_at)}.</button>`}
     ${a.rescue&&html`<div className="alertbox row wrap" style=${{justifyContent:'space-between'}}><span className="row"><${Icon} n="alert"/> <b>Modo Rescate activo</b></span><button className="btn btn-sm" onClick=${a.stopRescue}>Desactivar</button></div>`}
     ${hero}
     ${list.length>0&&html`<div className="fl" style=${{gap:10}}><div className="row" style=${{justifyContent:'space-between'}}><h2 style=${{fontSize:18,fontWeight:600}}>${todayS.length?'Hoy':'Próximos bloques'}</h2><button className="chip" onClick=${()=>a.go('calendario')}>Ver plan completo</button></div>
@@ -1405,10 +1405,11 @@ function MiSuscripcion({a}){
   const x=sb.subscription||{},st=x.status,np=x.next_payment_date,pu=x.paid_until&&new Date(x.paid_until).getTime()>Date.now()?x.paid_until:null;
   const auto=st==='authorized',pending=st==='pending';
   const until=(auto&&np)||pu||(sb.in_trial?sb.trial_ends_at:null);
-  const line=auto?html`<b>Débito automático activo</b> · $${PAGOS.precio} por mes${np?html`<br/>Próximo cobro: ${fdate(np)}`:''}`
+  const line=auto&&sb.in_trial?html`<b>Semana gratis</b> hasta el ${fdate(sb.trial_ends_at)}<br/>El primer cobro de $${PAGOS.precio} es ese día. Si cancelás antes, no se te cobra nada.`
+    :auto?html`<b>Débito automático activo</b> · $${PAGOS.precio} por mes${np?html`<br/>Próximo cobro: ${fdate(np)}`:''}`
     :pending?html`<b>Esperando a Mercado Pago</b><br/>Todavía no se confirmó tu débito automático.`
-    :pu?html`<b>Pagada hasta el ${fdate(pu)}</b>${st==='cancelled'?html`<br/>Cancelaste el débito automático: no se te cobra más.`:''}`
-    :sb.in_trial?html`<b>Mes gratis</b> · te quedan ${daysLeft(sb.trial_ends_at)} días (hasta el ${fdate(sb.trial_ends_at)})`
+    :pu?html`<b>${sb.trial_ends_at&&Math.abs(new Date(pu)-new Date(sb.trial_ends_at))<864e5?'Semana gratis hasta el '+fdate(pu):'Pagada hasta el '+fdate(pu)}</b>${st==='cancelled'?html`<br/>Cancelaste el débito automático: no se te cobra más.`:''}`
+    :false?null
     :html`<b>Sin suscripción activa</b>`;
   const doCancel=async()=>{setBusy(true);const ok=await a.pay.cancel();setBusy(false);if(ok!==false)setConf(false)};
   return html`<div className="card fl" style=${{gap:10}}><b>⭐ Mi suscripción</b>
@@ -1417,7 +1418,7 @@ function MiSuscripcion({a}){
     ${(auto||pending)?(conf?html`<div className="alertbox fl" style=${{gap:8,background:'var(--t-rose)'}}><span style=${{fontSize:13.5}}>¿Cancelar la suscripción? No se te va a cobrar más${until?' y vas a poder usar Nexus hasta el '+fdate(until):''}.</span><div className="row wrap" style=${{gap:8}}><button className="btn btn-sm btn-s" disabled=${busy} onClick=${doCancel}>${busy?'Cancelando…':'Sí, cancelar'}</button><button className="btn btn-sm" onClick=${()=>setConf(false)}>No, seguir suscripto</button></div></div>`
       :html`<div className="row wrap" style=${{gap:8}}><button className="btn btn-sm" onClick=${()=>setConf(true)}>Cancelar suscripción</button>${!sb.demo&&html`<button className="btn btn-sm btn-g" onClick=${a.pay.refresh}>Actualizar</button>`}</div>`)
     :html`<div className="row wrap" style=${{gap:8}}><button className="btn btn-sm btn-s" onClick=${a.pay.subscribe}>Activar débito automático</button><button className="btn btn-sm" onClick=${a.pay.payMonth}>Pagar 1 mes</button>${!sb.demo&&html`<button className="btn btn-sm btn-g" onClick=${a.pay.refresh}>Actualizar</button>`}</div>
-      <span className="mut" style=${{fontSize:12}}>Con débito automático se cobran $${PAGOS.precio} cada mes${sb.in_trial?', empezando cuando termina tu mes gratis':''}. Con "Pagar 1 mes" pagás una sola vez y no se renueva solo.</span>`}
+      <span className="mut" style=${{fontSize:12}}>Con débito automático se cobran $${PAGOS.precio} cada mes${sb.trial_available?', con '+PAGOS.prueba+' días gratis al empezar':''}. Con "Pagar 1 mes" pagás una sola vez y no se renueva solo.</span>`}
   </div>`;
 }
 const REM_DEF=[8,13,17,21];
@@ -1506,8 +1507,8 @@ function Logros({a}){
    · Demo: todo en este navegador, con compañeros de ejemplo, para probar cómo funciona. */
 /* Base Supabase del sitio (la completa quien publica Nexus; ver README). Activa la verificación por email, los grupos, los mensajes y la tienda para todos. */
 const SUPA={url:'',key:''};
-/* Cobros: suscripción mensual con mes gratis y comisión por cada venta de la tienda (los valores reales los define el servidor). */
-const PAGOS={precio:400,moneda:'UYU',prueba:30,comision:.10};
+/* Cobros: suscripción mensual obligatoria con 1 semana gratis y comisión por cada venta de la tienda (los valores reales los define el servidor). */
+const PAGOS={precio:400,moneda:'UYU',prueba:7,comision:.10};
 const grpCfg={get:()=>{try{const c=JSON.parse(localStorage.getItem('ea-grp')||'null');if(c)return c}catch(e){}return SUPA.url&&SUPA.key?SUPA:null},set:c=>{try{c?localStorage.setItem('ea-grp',JSON.stringify(c)):localStorage.removeItem('ea-grp')}catch(e){}}};
 const uidOf=email=>{const k='ea-uid-'+email;try{let v=localStorage.getItem(k);if(!v){v='u'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);localStorage.setItem(k,v)}return v}catch(e){return 'u'+keyOf(email).replace(/\s/g,'')}};
 /* Verificación del email con código (Supabase Auth: manda un código de 6 dígitos al correo) */
@@ -1990,13 +1991,17 @@ const money=(v,c)=>(c||'UYU')+' '+(+v||0).toLocaleString('es',{maximumFractionDi
 const subLocal={k:e=>'ea-sub-'+e,get(e){try{return JSON.parse(localStorage.getItem(this.k(e))||'null')}catch(x){return null}},set(e,v){try{v?localStorage.setItem(this.k(e),JSON.stringify(v)):localStorage.removeItem(this.k(e))}catch(x){}}};
 const daysLeft=iso=>Math.max(0,Math.ceil((new Date(iso).getTime()-Date.now())/864e5));
 function Paywall({a}){
-  const [busy,setBusy]=useState(false);
+  const [busy,setBusy]=useState(false),sb=a.sub||{},free=sb.trial_available!==false;
+  const first=new Date(Date.now()+PAGOS.prueba*864e5);
   return html`<div className="screen" style=${{padding:0,gap:18,maxWidth:560}}>
-    <div className="hero th-ana"><div className="eyebrow">Suscripción Nexus</div><h1 style=${{fontSize:'clamp(26px,7vw,34px)',fontWeight:700,marginTop:6,color:'#fff'}}>Terminó tu mes gratis</h1>
-      <p style=${{marginTop:8,fontSize:15}}>Para seguir con tu plan, el tutor, tus apuntes y los grupos, suscribite.</p>
-      <div className="num" style=${{fontWeight:800,fontSize:48,marginTop:14,lineHeight:1}}>$${PAGOS.precio}<span style=${{fontSize:18,fontWeight:500}}> por mes</span></div>
-      <div style=${{marginTop:10}}><${Medios} auto=${true} dark=${true}/></div><p style=${{fontSize:13,opacity:.9,marginTop:6}}>Cancelás cuando quieras desde Mi perfil.</p>
-      <div className="row wrap" style=${{marginTop:16}}><button className="btn btn-i btn-big" disabled=${busy} onClick=${async()=>{setBusy(true);await a.pay.subscribe();setBusy(false)}}>${busy?'Abriendo Mercado Pago…':'Suscribirme'}</button><button className="btn btn-ghost" onClick=${a.pay.payMonth}>Pagar solo 1 mes</button><button className="btn btn-ghost" onClick=${a.pay.refresh}>Ya pagué</button></div></div>
+    <div className="hero th-ana"><div className="eyebrow">Suscripción Nexus</div>
+      <h1 style=${{fontSize:'clamp(26px,7vw,34px)',fontWeight:700,marginTop:6,color:'#fff'}}>${free?'Empezá con '+PAGOS.prueba+' días gratis':'Suscribite para seguir'}</h1>
+      <p style=${{marginTop:8,fontSize:15}}>${free?'Para usar Nexus activá tu suscripción. Hoy no se te cobra nada: el primer cobro es el '+fdate(first)+'.':'Tu semana gratis ya se usó. Activá la suscripción para seguir con tu plan, el tutor, tus apuntes y los grupos.'}</p>
+      <div className="num" style=${{fontWeight:800,fontSize:48,marginTop:14,lineHeight:1}}>$${PAGOS.precio}<span style=${{fontSize:18,fontWeight:500}}> por mes</span></div>${free&&html`<p style=${{fontSize:13.5,marginTop:4,opacity:.9}}>después de la semana gratis</p>`}
+      <div style=${{marginTop:10}}><${Medios} auto=${true} dark=${true}/></div>
+      <p style=${{fontSize:13,opacity:.9,marginTop:6}}>${free?'Si cancelás antes del '+fdate(first)+' desde Mi perfil, no se te cobra nada.':'Cancelás cuando quieras desde Mi perfil.'}</p>
+      <div className="row wrap" style=${{marginTop:16}}><button className="btn btn-i btn-big" disabled=${busy} onClick=${async()=>{setBusy(true);await a.pay.subscribe();setBusy(false)}}>${busy?'Abriendo Mercado Pago…':free?'Activar mis '+PAGOS.prueba+' días gratis':'Suscribirme'}</button><button className="btn btn-ghost" onClick=${a.pay.refresh}>Ya me suscribí</button></div>
+      <p style=${{fontSize:12.5,opacity:.85,marginTop:12}}>¿Tu tarjeta de débito no acepta débito automático? <button className="btn btn-sm btn-ghost" style=${{padding:'.2rem .7rem'}} onClick=${a.pay.payMonth}>Pagar 1 mes ahora ($${PAGOS.precio})</button></p></div>
     <div className="row wrap"><button className="btn btn-sm" onClick=${a.openPerfil}>Mi perfil</button><button className="btn btn-sm btn-g" onClick=${a.logout}>Cerrar sesión</button></div></div>`;
 }
 
@@ -2014,26 +2019,26 @@ function Main({user,isNew,onUser}){
   const [authReq,setAuthReq]=useState(null),[sub,setSub]=useState(null),[seller,setSeller]=useState(null),[dmInit,setDmInit]=useState(null),[shopInit,setShopInit]=useState(null);
   const online=!!mailCfg();
   const ensureAuth=async()=>{const s=await liveSession(user.email);if(s)return s;return new Promise((res,rej)=>setAuthReq({res,rej}))};
-  const localStatus=()=>{const te=new Date((user.created||Date.now())+PAGOS.prueba*864e5).toISOString(),l=subLocal.get(user.email),inT=Date.now()<new Date(te).getTime();
+  const localStatus=()=>{const l=subLocal.get(user.email),auto=!!(l&&l.status==='authorized'),te=l&&l.trial_ends_at||null;
     const pu=l&&l.paid_until?new Date(l.paid_until).getTime():0;
-    return {trial_ends_at:te,in_trial:inT,subscription:l,active:inT||!!(l&&(l.status==='authorized'||pu>Date.now())),demo:true}};
+    return {trial_available:!(l&&l.trial_used),trial_ends_at:te,in_trial:auto&&!!te&&new Date(te).getTime()>Date.now(),subscription:l,active:auto||pu>Date.now(),demo:true}};
   const refreshPay=async(prompt)=>{
     if(!online){setSub(localStatus());try{setSeller(!!localStorage.getItem('ea-mp-'+user.email))}catch(e){setSeller(false)}return}
     const s=prompt?await ensureAuth().catch(()=>null):await liveSession(user.email);
-    if(!s){const l=localStatus();setSub({...l,active:l.in_trial,unknown:true});return}
-    try{const j=await callFn({action:'status'},s);setSub(j);setSeller(!!j.seller_connected)}catch(e){setSub(x=>x||{...localStatus(),unknown:true})}
+    if(!s){setSub(x=>x&&!x.unknown?x:{trial_available:true,trial_ends_at:null,in_trial:false,subscription:null,active:false,unknown:true});return}
+    try{const j=await callFn({action:'status'},s);setSub(j);setSeller(!!j.seller_connected)}catch(e){setSub(x=>x||{trial_available:true,trial_ends_at:null,in_trial:false,subscription:null,active:false,unknown:true})}
   };
   useEffect(()=>{refreshPay(false)},[]);
   const go=url=>{if(url)window.location.href=url};
   const pay={
     online,refresh:()=>refreshPay(true),
-    subscribe:async()=>{if(!online){const te=localStatus().trial_ends_at;subLocal.set(user.email,{status:'authorized',next_payment_date:new Date(Math.max(Date.now(),new Date(te).getTime())).toISOString(),demo:true});setSub(localStatus());toast('Suscripción activada (simulada en modo demo)');return}
+    subscribe:async()=>{if(!online){const l=subLocal.get(user.email)||{},st=localStatus(),te=st.trial_available?new Date(Date.now()+PAGOS.prueba*864e5).toISOString():null,first=new Date(Math.max(Date.now(),te?new Date(te).getTime():0,l.paid_until?new Date(l.paid_until).getTime():0)).toISOString();subLocal.set(user.email,{...l,status:'authorized',trial_used:true,trial_ends_at:te||l.trial_ends_at||null,next_payment_date:first,demo:true});setSub(localStatus());toast(te?'¡Listo! Tenés '+PAGOS.prueba+' días gratis. El primer cobro es el '+new Date(te).toLocaleDateString('es')+' (simulado en modo demo).':'Suscripción activada (simulada en modo demo)');return}
       try{const s=await ensureAuth();const j=await callFn({action:'subscribe'},s);if(j.already){toast('Ya tenés la suscripción activa');refreshPay(false)}else go(j.url)}catch(e){if(e&&e.code!=='cancelled')toast(payErr(e))}},
     cancel:async()=>{
       if(!online){const l=subLocal.get(user.email)||{},keep=Math.max(l.paid_until?new Date(l.paid_until).getTime():0,l.status==='authorized'&&l.next_payment_date?new Date(l.next_payment_date).getTime():0);subLocal.set(user.email,{...l,status:'cancelled',next_payment_date:null,paid_until:keep>Date.now()?new Date(keep).toISOString():null});setSub(localStatus());toast('Suscripción cancelada. No se te va a cobrar más.');return true}
       try{const s=await ensureAuth();const j=await callFn({action:'cancel_subscription'},s);toast(j.access_until?'Suscripción cancelada. Seguís con acceso hasta el '+new Date(j.access_until).toLocaleDateString('es')+'.':'Suscripción cancelada. No se te va a cobrar más.');await refreshPay(false);return true}catch(e){if(e&&e.code!=='cancelled')toast(payErr(e));return false}},
     payMonth:async()=>{
-      if(!online){const l=subLocal.get(user.email)||{},st=localStatus(),base=Math.max(Date.now(),new Date(st.trial_ends_at).getTime(),l.paid_until?new Date(l.paid_until).getTime():0),d=new Date(base);d.setMonth(d.getMonth()+1);subLocal.set(user.email,{...l,status:l.status==='authorized'?'authorized':'paid',paid_until:d.toISOString(),demo:true});setSub(localStatus());toast('Pago de 1 mes aprobado (simulado en modo demo)');return}
+      if(!online){const l=subLocal.get(user.email)||{},base=Math.max(Date.now(),l.paid_until?new Date(l.paid_until).getTime():0),d=new Date(base);d.setMonth(d.getMonth()+1);subLocal.set(user.email,{...l,status:l.status==='authorized'?'authorized':'paid',paid_until:d.toISOString(),demo:true});setSub(localStatus());toast('Pago de 1 mes aprobado (simulado en modo demo)');return}
       try{const s=await ensureAuth();const j=await callFn({action:'pay_month'},s);go(j.url)}catch(e){if(e&&e.code!=='cancelled')toast(payErr(e))}},
     connect:async()=>{if(!online){try{localStorage.setItem('ea-mp-'+user.email,'1')}catch(e){}setSeller(true);toast('Mercado Pago conectado (simulado en modo demo)');return}
       try{const s=await ensureAuth();const j=await callFn({action:'connect'},s);go(j.url)}catch(e){if(e&&e.code!=='cancelled')toast(payErr(e))}},
@@ -2135,7 +2140,7 @@ function Main({user,isNew,onUser}){
   const NAV=[['ahora','Inicio','home'],['calendario','Plan','calendar'],['materias','Materias','book'],['material','Apuntes','upload',1],['match','Grupos','users'],['tienda','Tienda','bag']];
   return html`<div className="stage"><div className="phone">
     <main className="pad">
-      ${SHOW_PAY&&sub&&!sub.active?html`<${Paywall} a=${A}/>`:html`<div>
+      ${SHOW_PAY&&!sub?html`<div className="screen" style=${{padding:0}}><p className="mut">Cargando tu suscripción…</p></div>`:SHOW_PAY&&!sub.active?html`<${Paywall} a=${A}/>`:html`<div>
       ${sec&&html`<button className="back" style=${{marginBottom:16}} onClick=${()=>setTab('ahora')}><${Icon} n="chevL" s=${16}/> Inicio</button>`}
       ${tab==='ahora'&&html`<${Ahora} a=${A}/>`}
       ${tab==='calendario'&&html`<${Calendario} a=${A}/>`}
@@ -2152,7 +2157,7 @@ function Main({user,isNew,onUser}){
     <nav className="dock" aria-label="Principal"><div className="brand"><span className="logo">N</span>Nexus</div><div className="pill">${NAV.map(([k,l,ic,w])=>html`<button key=${k} className=${'dk'+(w?' dk-wide':'')} aria-current=${cur===k?'page':null} onClick=${()=>setTab(k)}><${Icon} n=${ic} s=${21}/><span>${l}</span></button>`)}</div><div className="round"><button className="dk" aria-current=${cur==='tutor'?'page':null} onClick=${()=>setTab('tutor')}><${Icon} n="msg" s=${21}/><span>Tutor</span></button></div><button className="me" onClick=${A.openPerfil} aria-label="Mi perfil"><span className="av">${initials(user.nombre)}</span><span style=${{minWidth:0}}><b style=${{fontSize:14,display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:130}}>${user.nombre.split(' ')[0]}</b><small>${user.uni.replace(/\s*\(.*\)/,'')}</small></span></button></nav>
     ${perfil&&html`<${Perfil} a=${A} onClose=${()=>setPerfil(false)}/>`}
     ${editing&&html`<${Welcome} edit=${true} initial=${user} onDone=${(p)=>{onUser(p);setPrefs(x=>({...x,carrera:p.carrera,uni:p.uni,anio:p.anio,maxH:p.horas||x.maxH}));setEditing(false);toast('Datos actualizados')}} onClose=${()=>setEditing(false)}/>`}
-    ${onb&&html`<${Onboarding} a=${A} start=${typeof onb==='number'?onb:0} onClose=${()=>setOnb(false)}/>`}
+    ${onb&&(!SHOW_PAY||(sub&&sub.active))&&html`<${Onboarding} a=${A} start=${typeof onb==='number'?onb:0} onClose=${()=>setOnb(false)}/>`}
     ${authReq&&html`<${AuthModal} email=${user.email} onOk=${s=>{authReq.res(s);setAuthReq(null)}} onCancel=${()=>{authReq.rej({code:'cancelled'});setAuthReq(null)}}/>`}
     ${msg&&html`<div className="toast" role="status">${msg}</div>`}
   </div></div>`;

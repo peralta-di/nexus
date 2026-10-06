@@ -13,7 +13,7 @@ Hacé doble clic en `index.html` (necesita internet para cargar React, la tipogr
 Tiene que servirse por **HTTPS** (todos los de arriba lo hacen); lo necesita el cifrado de contraseñas del navegador.
 
 ## Qué funciona sin configurar nada
-Ingreso con cuenta, suscripción y tienda en modo demo (pagos simulados), onboarding, plan adaptativo, modo rescate, materias, ejercicios, simulador, logros, Study Match, y **subir apuntes** (PDF, Word, PowerPoint, TXT y fotos, también desde el celular y desde Drive vía el selector de archivos). El tutor funciona en modo guiado.
+Ingreso con cuenta, suscripción con semana gratis y tienda en modo demo (pagos simulados), onboarding, plan adaptativo, modo rescate, materias, ejercicios, simulador, logros, Study Match, y **subir apuntes** (PDF, Word, PowerPoint, TXT y fotos, también desde el celular y desde Drive vía el selector de archivos). El tutor funciona en modo guiado.
 
 ## Activar la IA (opcional)
 El tutor con IA, la guía de estudio, las preguntas desde tus apuntes y la lectura de fotos necesitan una clave de la API de Anthropic. Cada persona la pega en **Mi perfil → IA del tutor**. La clave se guarda solo en su navegador y se envía únicamente a api.anthropic.com. No pongas tu clave dentro del archivo.
@@ -73,10 +73,9 @@ y después ejecutá las líneas de `listings`, `listing_events` y `archivos`.
 - Nexus no cobra ni intermedia pagos.
 
 ## Cobros: suscripción y comisión por ventas (Mercado Pago)
-- **Suscripción:** $400 por mes, con el **primer mes gratis** contado desde que se crea la cuenta (no pide tarjeta para probar). Durante la prueba, Inicio muestra cuántos días quedan. Al terminar la prueba sin pagar, la app muestra la pantalla para suscribirse. Hay dos formas de pagar, y las dos depositan **directo en tu cuenta de Mercado Pago** (la del `MP_ACCESS_TOKEN`):
-  - **Débito automático mensual** (suscripción de Mercado Pago): se cobra solo cada mes. El primer cobro es cuando termina el mes gratis o lo ya pagado. Los medios que acepta los define Mercado Pago (tarjeta y dinero en cuenta; el débito depende de lo que tenga habilitado en Uruguay).
-  - **Pagar 1 mes:** un cobro único con tarjeta de **crédito, débito** o dinero en Mercado Pago (sin efectivo). Suma un mes y no se renueva solo.
-- **Mi perfil → Mi suscripción:** muestra el estado (mes gratis, débito automático con fecha del próximo cobro, pagada hasta tal fecha) y permite **cancelar en cualquier momento** con un paso de confirmación. Al cancelar no se cobra más, y la persona sigue con acceso hasta el final de lo que ya pagó.
+- **Suscripción obligatoria con 1 semana gratis:** apenas alguien se registra o inicia sesión, antes de usar la app, tiene que activar la suscripción en Mercado Pago. Ahí carga su tarjeta de crédito, débito o su cuenta de Mercado Pago, y **hoy no se le cobra nada**: el primer cobro de **$400** es a los 7 días, y después todos los meses. Si cancela durante la semana, no se le cobra y sigue usando Nexus hasta que termina la semana. La semana gratis se da una sola vez por persona. Todo el dinero va **directo a tu cuenta de Mercado Pago** (la del `MP_ACCESS_TOKEN`).
+  - **Alternativa:** si una tarjeta de débito no acepta débito automático, está **"Pagar 1 mes ahora"**, un cobro único de $400 con crédito, débito o dinero en Mercado Pago. Da acceso inmediato y no se renueva solo.
+- **Mi perfil → Mi suscripción:** muestra el estado (semana gratis, débito automático con fecha del próximo cobro, pagada hasta tal fecha) y permite **cancelar en cualquier momento** con un paso de confirmación. Al cancelar no se cobra más, y la persona sigue con acceso hasta el final de lo que ya pagó.
 - **Tienda:** quien compra paga dentro de Nexus con Mercado Pago. A quien vende le llega el 90 % a su propia cuenta y **Nexus se queda automáticamente con el 10 %** (comisión de Mercado Pago Marketplace). El archivo y el contacto se entregan recién cuando el pago está aprobado, en **Mis compras**. Antes de comprar, se puede preguntar por Mensajes. El material gratis no paga comisión.
 - **Orden de la tienda:** recomendado (según tus materias, temas flojos y parciales), más vendidos, más barato, más caro y más nuevo.
 - **Modo demo:** sin configurar nada, todo esto funciona simulado en el navegador para probarlo.
@@ -84,7 +83,7 @@ y después ejecutá las líneas de `listings`, `listing_events` y `archivos`.
 ### Activar los cobros reales
 Hace falta Supabase (ver arriba, con `SUPA` completado) y una cuenta de Mercado Pago.
 1. **Mercado Pago:** en developers.mercadopago.com creá una aplicación (modelo de integración: *Marketplace* / pagos online). Anotá el *Access Token de producción*, el *Client ID* y el *Client Secret*. En la configuración de la aplicación, poné como **Redirect URL** `https://TU-PROYECTO.supabase.co/functions/v1/mp-oauth`.
-2. **Base de datos:** en Supabase → SQL Editor, ejecutá en orden los archivos de `supabase/migrations/`: `20261006000000_pagos.sql`, `20261006010000_suscripcion_y_recordatorios.sql` y `20261006020000_recordatorios_4_por_dia.sql`. Esto también cierra la tabla `listings`: desde ahora solo quien publicó (con su email verificado) puede editar o borrar su publicación.
+2. **Base de datos:** en Supabase → SQL Editor, ejecutá en orden los archivos de `supabase/migrations/`: `20261006000000_pagos.sql`, `20261006010000_suscripcion_y_recordatorios.sql`, `20261006020000_recordatorios_4_por_dia.sql` y `20261006030000_semana_gratis.sql`. Esto también cierra la tabla `listings`: desde ahora solo quien publicó (con su email verificado) puede editar o borrar su publicación.
 3. **Funciones:** con la CLI de Supabase (`npm i -g supabase`, `supabase login`, `supabase link --project-ref TU-PROYECTO`):
 ```
 supabase secrets set MP_ACCESS_TOKEN=APP_USR-... MP_CLIENT_ID=... MP_CLIENT_SECRET=... SITE_URL=https://tu-sitio/ STATE_SECRET=una-frase-larga-al-azar
@@ -93,7 +92,7 @@ supabase functions deploy mp-oauth --no-verify-jwt
 supabase functions deploy mp-webhook --no-verify-jwt
 supabase functions deploy recordatorios --no-verify-jwt
 ```
-Opcionales: `COMISION` (0.10), `SUB_PRECIO` (400), `SUB_MONEDA` (UYU), `PRUEBA_DIAS` (30). Si los cambiás, cambiá también `PAGOS` al principio del script de `index.html`, que es lo que se muestra en pantalla.
+Opcionales: `COMISION` (0.10), `SUB_PRECIO` (400), `SUB_MONEDA` (UYU), `PRUEBA_DIAS` (7). Si los cambiás, cambiá también `PAGOS` al principio del script de `index.html`, que es lo que se muestra en pantalla.
 4. **Avisos de pago (webhooks):** en tu aplicación de Mercado Pago → Webhooks, poné `https://TU-PROYECTO.supabase.co/functions/v1/mp-webhook` con los eventos *Pagos* y *Planes y suscripciones*. Los pagos de la tienda también avisan solos a esa dirección.
 5. Probá primero con las **credenciales y usuarios de prueba** de Mercado Pago, y después cambiá a las de producción.
 
