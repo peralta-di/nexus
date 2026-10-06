@@ -1,9 +1,9 @@
 # Nexus — página web lista para publicar
 
-Esta carpeta es **todo el sitio**: un solo archivo, `index.html`. No hay que instalar nada ni compilar.
+Esta carpeta es **todo el sitio**: `index.html` más la carpeta `vendor/` (librerías y letra). No hay que instalar nada ni compilar.
 
 ## Probarlo en tu compu
-Hacé doble clic en `index.html` (necesita internet para cargar React, la tipografía y Tailwind desde sus CDN).
+Hacé doble clic en `index.html`. React, la letra (DM Sans) y las librerías para leer PDF y Word están en la carpeta `vendor/` (con sus licencias en `vendor/licencias/`): la página no carga nada de servidores de terceros.
 
 ## Publicarlo gratis (elegí una)
 - **Netlify Drop:** entrá a app.netlify.com/drop y arrastrá esta carpeta. Te da un link en segundos.
@@ -40,7 +40,7 @@ Para activarla:
 
 ## Grupos de estudio y tienda en línea (opcional)
 Sin configurar nada, los grupos, los mensajes directos y la tienda funcionan en **modo demo**: hay compañeros y publicaciones de ejemplo, y todo queda en tu navegador. Para que se conozca gente real, se chatee, se compartan archivos y se publique material:
-1. Creá un proyecto gratis en supabase.com.
+1. Creá un proyecto gratis en supabase.com y **elegí la región South America (São Paulo)**, que es la que figura en la Política de privacidad.
 2. En **SQL Editor**, ejecutá:
 ```sql
 create table students (uid text primary key, name text, uni text, carrera text, anio int, slot text, note text, subjects text, ts bigint);

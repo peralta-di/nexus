@@ -7,16 +7,15 @@
 <meta name="theme-color" content="#9c82f7">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='26' fill='%239c82f7'/%3E%3Ctext x='50' y='72' font-size='64' font-weight='700' text-anchor='middle' fill='white' font-family='Arial'%3EN%3C/text%3E%3C/svg%3E">
 <title>Nexus</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
 <script>/* Nexus abre en modo oscuro salvo que la persona haya elegido el claro */try{document.documentElement.setAttribute("data-theme",localStorage.getItem("ea-theme")||"dark")}catch(e){document.documentElement.setAttribute("data-theme","dark")}</script>
-<script src="https://cdn.tailwindcss.com"></script>
-<script>window.tailwind=window.tailwind||{};tailwind.config={theme:{extend:{colors:{bg:'var(--bg)',ink:'var(--ink)',card:'var(--card)',surf:'var(--surf)',line:'var(--line)',mute:'var(--mute)',inv:'var(--inv)'},fontFamily:{sans:['Poppins','Helvetica Neue','Arial','sans-serif']}}}}</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/htm.umd.js"></script>
 <style>
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:400;font-display:swap;src:url(vendor/fonts/dm-sans-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:500;font-display:swap;src:url(vendor/fonts/dm-sans-latin-500-normal.woff2) format('woff2')}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:600;font-display:swap;src:url(vendor/fonts/dm-sans-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:700;font-display:swap;src:url(vendor/fonts/dm-sans-latin-700-normal.woff2) format('woff2')}
 /* Concepto: fondo crema, tipografía DM Sans y tarjetas pastel por materia con texto oscuro; activo en negro. Celular: barra flotante abajo. Computadora: marco sobre menta, barra de íconos y panel derecho. */
 :root{--stage:#bfe9da;--bg:#f8f4ef;--bg2:#f8f4ef;--ink:#1b1b1f;--fg:#1b1b1f;--mute:#77716b;--line:#e6ddd3;--surf:#efe8e1;--surf2:#e5dcd3;--card:#fffdfa;--panel:#f0e8e0;--inv:#111114;--invfg:#ffffff;
  --t-blue:#cddff6;--t-mint:#bde6d3;--t-cream:#f8d9ae;--t-lilac:#d3cef7;--t-rose:#f6c9c8;
@@ -25,9 +24,9 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--stage:#06140f;--bg:#0c0c0e;--bg2:#0c0c0e;--ink:#f3efe9;--fg:#f3efe9;--mute:#9d978f;--line:#26262b;--surf:#1a1a1e;--surf2:#232328;--card:#141417;--panel:#121215;--inv:#f3efe9;--invfg:#0c0c0e;--t-blue:#1d2c42;--t-mint:#173a2f;--t-cream:#43341d;--t-lilac:#2c2846;--t-rose:#432528;--shadow:0 30px 80px rgba(0,0,0,.6);color-scheme:dark}}
 :root[data-theme="dark"]{--stage:#06140f;--bg:#0c0c0e;--bg2:#0c0c0e;--ink:#f3efe9;--fg:#f3efe9;--mute:#9d978f;--line:#26262b;--surf:#1a1a1e;--surf2:#232328;--card:#141417;--panel:#121215;--inv:#f3efe9;--invfg:#0c0c0e;--t-blue:#1d2c42;--t-mint:#173a2f;--t-cream:#43341d;--t-lilac:#2c2846;--t-rose:#432528;--shadow:0 30px 80px rgba(0,0,0,.6);color-scheme:dark}
 *{box-sizing:border-box}
-body{margin:0;background:var(--stage);color:var(--ink);font-family:'Poppins','Helvetica Neue',Arial,sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--stage);color:var(--ink);font-family:'DM Sans','Helvetica Neue',Arial,sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
 button{font:inherit;color:inherit;cursor:pointer}
-h1,h2,h3{font-family:'Poppins',sans-serif;letter-spacing:-.02em;text-wrap:balance;margin:0;line-height:1.15}
+h1,h2,h3{font-family:'DM Sans',sans-serif;letter-spacing:-.02em;text-wrap:balance;margin:0;line-height:1.15}
 p{margin:0}
 :focus-visible{outline:2.5px solid var(--ink);outline-offset:2px}
 input,select,textarea{font:inherit;color:var(--ink);background:var(--surf);border:1.5px solid transparent;border-radius:16px;padding:.7rem 1rem;width:100%;min-width:0}
@@ -884,7 +883,7 @@ function Ejercicios({a}){
     ${!q?html`<div className="card"><p>No hay preguntas con esos filtros. Probá con otro nivel o tipo.</p></div>`:html`<div className="card-o fl" style=${{gap:14}}>
       <div className="row wrap" style=${{justifyContent:'space-between'}}><span className="eyebrow">${tn(q.t)} · ${TYPE_N[q.type]}${q.mine?' · de tu material':''}</span><${Dots} n=${q.lvl}/></div>
       <h2 style=${{fontSize:'clamp(20px,3.6vw,26px)',fontWeight:700,lineHeight:1.25}}>${q.q}</h2>
-      ${q.type==='sc'?html`<form className="row" onSubmit=${e=>{e.preventDefault();txt.trim()&&submit(txt)}}><input id="ej-sc" aria-label="Tu respuesta" placeholder="Escribí tu respuesta" value=${txt} disabled=${!!res} onInput=${e=>setTxt(e.target.value)}/><button className="btn btn-s" disabled=${!!res||!txt.trim()}>Responder</button></form>`:html`<div className="fl" style=${{gap:8}}>${q.opts.map((o,j)=>html`<button key=${j} className=${'opt'+(res?(j===q.a?' ok':j===res.sel?' bad':''):'')} disabled=${!!res} onClick=${()=>submit(j)}><b className="num" style=${{fontFamily:"'Poppins',sans-serif"}}>${q.type==='vf'?(j?'F':'V'):'ABCD'[j]}</b><span>${o}</span></button>`)}</div>`}
+      ${q.type==='sc'?html`<form className="row" onSubmit=${e=>{e.preventDefault();txt.trim()&&submit(txt)}}><input id="ej-sc" aria-label="Tu respuesta" placeholder="Escribí tu respuesta" value=${txt} disabled=${!!res} onInput=${e=>setTxt(e.target.value)}/><button className="btn btn-s" disabled=${!!res||!txt.trim()}>Responder</button></form>`:html`<div className="fl" style=${{gap:8}}>${q.opts.map((o,j)=>html`<button key=${j} className=${'opt'+(res?(j===q.a?' ok':j===res.sel?' bad':''):'')} disabled=${!!res} onClick=${()=>submit(j)}><b className="num" style=${{fontFamily:"'DM Sans',sans-serif"}}>${q.type==='vf'?(j?'F':'V'):'ABCD'[j]}</b><span>${o}</span></button>`)}</div>`}
       ${res&&html`<div className="alertbox" style=${{borderLeftStyle:res.ok?'solid':'dashed'}}><b>${res.ok?'Correcto.':'Incorrecto.'}</b> ${!res.ok&&q.type==='sc'?`Una respuesta válida: ${q.a[0]}. `:''}${q.ex}
         ${!res.ok&&html`<p style=${{marginTop:8}}><b>⚠️ Este tema necesita refuerzo.</b> Repaso programado para dentro de ${Math.max(1,Math.round(((res.due||Date.now()+864e5)-Date.now())/36e5))} h.</p>`}</div>`}
       <div className="row wrap"><button className="btn btn-s" onClick=${nextQ}><${Icon} n="arrow" s=${16}/> ${res?'Siguiente pregunta':'Saltear'}</button><span className="mut num" style=${{fontSize:13}}>${pool.length} pregunta${pool.length===1?'':'s'} con estos filtros</span></div></div>`}
@@ -913,11 +912,11 @@ function Simulador({a}){
   if(ph==='run'&&run){
     const q=run.qs[run.i],v=run.ans[run.i],set=x=>setRun({...run,ans:{...run.ans,[run.i]:x}});
     return html`<div className="fl" style=${{gap:18}}>
-      <div className="card-i row wrap" style=${{justifyContent:'space-between',position:'sticky',top:'calc(env(safe-area-inset-top,0px) + 8px)',zIndex:10,padding:'12px 18px'}}><span className="eyebrow">Pregunta ${run.i+1} de ${run.qs.length}</span><span className="num" style=${{fontFamily:"'Poppins',sans-serif",fontSize:26,fontWeight:500}} aria-live="off">${mmss(run.left)}</span></div>
+      <div className="card-i row wrap" style=${{justifyContent:'space-between',position:'sticky',top:'calc(env(safe-area-inset-top,0px) + 8px)',zIndex:10,padding:'12px 18px'}}><span className="eyebrow">Pregunta ${run.i+1} de ${run.qs.length}</span><span className="num" style=${{fontFamily:"'DM Sans',sans-serif",fontSize:26,fontWeight:500}} aria-live="off">${mmss(run.left)}</span></div>
       <div className="row wrap" style=${{gap:6}}>${run.qs.map((_,i)=>html`<button key=${i} onClick=${()=>setRun({...run,i})} aria-label=${'Ir a la pregunta '+(i+1)} className="num" style=${{width:38,height:38,borderRadius:14,border:0,background:i===run.i?'var(--inv)':run.ans[i]!==undefined?'var(--t-lilac)':'var(--surf)',color:i===run.i?'var(--invfg)':'var(--fg)',fontWeight:600,fontSize:13}}>${i+1}</button>`)}</div>
       <div className="card-o fl" style=${{gap:14}}><div className="row wrap" style=${{justifyContent:'space-between'}}><span className="eyebrow">${TYPE_N[q.type]}</span><${Dots} n=${q.lvl}/></div>
         <h2 style=${{fontSize:'clamp(20px,3.6vw,26px)',fontWeight:700,lineHeight:1.25}}>${q.q}</h2>
-        ${q.type==='sc'?html`<input id="sim-sc" aria-label="Tu respuesta" placeholder="Escribí tu respuesta" value=${v||''} onInput=${e=>set(e.target.value)}/>`:html`<div className="fl" style=${{gap:8}}>${q.opts.map((o,j)=>html`<button key=${j} className="opt" aria-pressed=${v===j} style=${{background:v===j?'var(--inv)':undefined,color:v===j?'var(--invfg)':undefined}} onClick=${()=>set(j)}><b className="num" style=${{fontFamily:"'Poppins',sans-serif"}}>${q.type==='vf'?(j?'F':'V'):'ABCD'[j]}</b><span>${o}</span></button>`)}</div>`}</div>
+        ${q.type==='sc'?html`<input id="sim-sc" aria-label="Tu respuesta" placeholder="Escribí tu respuesta" value=${v||''} onInput=${e=>set(e.target.value)}/>`:html`<div className="fl" style=${{gap:8}}>${q.opts.map((o,j)=>html`<button key=${j} className="opt" aria-pressed=${v===j} style=${{background:v===j?'var(--inv)':undefined,color:v===j?'var(--invfg)':undefined}} onClick=${()=>set(j)}><b className="num" style=${{fontFamily:"'DM Sans',sans-serif"}}>${q.type==='vf'?(j?'F':'V'):'ABCD'[j]}</b><span>${o}</span></button>`)}</div>`}</div>
       <div className="row wrap" style=${{justifyContent:'space-between'}}><button className="btn" disabled=${run.i===0} onClick=${()=>setRun({...run,i:run.i-1})}><${Icon} n="chevL" s=${16}/> Anterior</button>
         ${run.i<run.qs.length-1?html`<button className="btn btn-s" onClick=${()=>setRun({...run,i:run.i+1})}>Siguiente <${Icon} n="chevR" s=${16}/></button>`:html`<button className="btn btn-s" onClick=${()=>finish(run)}><${Icon} n="check" s=${16}/> Entregar parcial</button>`}</div></div>`;
   }
@@ -925,8 +924,8 @@ function Simulador({a}){
     const strong=rep.rows.filter(r=>r.pc>=70),weak=rep.rows.filter(r=>r.pc<60).sort((x,y)=>x.pc-y.pc);
     return html`<div className="fl" style=${{gap:18}}>
       <${Head} eyebrow="Reporte diagnóstico" title=${rep.pct>=rep.th?'Aprobado en el simulacro':'Todavía te falta'} sub=${`Exigencia ${['','fácil','media','alta'][cfg.ex]}: se aprueba con ${rep.th}%.`}/>
-      <div className="grid2"><div className="card-i"><div className="eyebrow">Acierto</div><div className="num" style=${{fontFamily:"'Poppins',sans-serif",fontWeight:800,fontSize:72,lineHeight:1.05}}>${rep.pct}%</div><p style=${{opacity:.8}}>${rep.ok} de ${rep.total} correctas · nota ${(rep.pct/10).toFixed(1)} / 10</p></div>
-        <div className="card"><div className="eyebrow">Tiempo usado</div><div className="num" style=${{fontFamily:"'Poppins',sans-serif",fontWeight:800,fontSize:72,lineHeight:1.05}}>${Math.max(1,Math.round(rep.used/60))}<span style=${{fontSize:22}}> min</span></div><p className="mut">de ${cfg.min} disponibles</p></div></div>
+      <div className="grid2"><div className="card-i"><div className="eyebrow">Acierto</div><div className="num" style=${{fontFamily:"'DM Sans',sans-serif",fontWeight:800,fontSize:72,lineHeight:1.05}}>${rep.pct}%</div><p style=${{opacity:.8}}>${rep.ok} de ${rep.total} correctas · nota ${(rep.pct/10).toFixed(1)} / 10</p></div>
+        <div className="card"><div className="eyebrow">Tiempo usado</div><div className="num" style=${{fontFamily:"'DM Sans',sans-serif",fontWeight:800,fontSize:72,lineHeight:1.05}}>${Math.max(1,Math.round(rep.used/60))}<span style=${{fontSize:22}}> min</span></div><p className="mut">de ${cfg.min} disponibles</p></div></div>
       <div className="grid2"><div className="card-o"><div className="eyebrow">Fortalezas</div>${strong.length?strong.map(r=>html`<div key=${r.id} className="row" style=${{marginTop:8,justifyContent:'space-between'}}><span><${Icon} n="check" s=${15}/> ${tn(r.id)}</span><span className="num mut">${r.ok}/${r.n}</span></div>`):html`<p className="mut" style=${{marginTop:8}}>Ningún tema llegó al 70% todavía.</p>`}</div>
         <div className="card-o" style=${{borderStyle:'dashed'}}><div className="eyebrow">Repaso urgente</div>${weak.length?weak.map(r=>html`<div key=${r.id} className="row" style=${{marginTop:8,justifyContent:'space-between'}}><span><${Icon} n="alert" s=${15}/> ${tn(r.id)}</span><span className="num mut">${r.ok}/${r.n}</span></div>`):html`<p className="mut" style=${{marginTop:8}}>Nada urgente. Buen trabajo.</p>`}</div></div>
       <div className="row wrap">${weak.length>0&&html`<button className="btn btn-s" onClick=${()=>{a.scheduleReviews(weak.map(w=>w.id));a.toast('Repasos programados para dentro de 24–48 h')}}><${Icon} n="calendar" s=${16}/> Programar repasos</button>`}<button className="btn" onClick=${()=>{setPh('cfg');setRep(null)}}>Hacer otro simulacro</button></div></div>`;
@@ -944,9 +943,10 @@ function Simulador({a}){
 /* ---------- MI MATERIAL: apuntes, resúmenes y parciales propios ---------- */
 const BLOBS=new Map();
 const KIND={apuntes:{n:'Apuntes',e:'📝'},resumen:{n:'Resumen',e:'📄'},examen:{n:'Parcial anterior',e:'🧾'}};
-const PDFJS=['https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js','https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js','https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js'];
-const PDFW=['https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js','https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js','https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js'];
-const JSZ=['https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js','https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js','https://unpkg.com/jszip@3.10.1/dist/jszip.min.js'];
+/* Librerías propias del sitio (vendor/): Nexus no carga nada desde servidores de terceros */
+const PDFJS=['vendor/pdf.min.js'];
+const PDFW=['vendor/pdf.worker.min.js'];
+const JSZ=['vendor/jszip.min.js'];
 const _ls={};
 const loadOne=src=>_ls[src]||(_ls[src]=new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=()=>res();s.onerror=()=>{delete _ls[src];s.remove();rej(new Error('No se pudo cargar '+src))};document.head.appendChild(s)}));
 const loadScript=async urls=>{let e;for(const u of urls){try{await withTimeout(loadOne(u),15000);return u}catch(x){e=x}}throw e||new Error('No se pudo cargar la librería')};
@@ -1465,7 +1465,7 @@ Tratamos tus datos de acuerdo con la Ley 18.331 de Protección de Datos Personal
 - **Tienda:** publicaciones, compras, ventas y estadísticas de vistas y contactos.
 - **Pagos:** estado de tu suscripción y de tus compras y ventas, montos, fechas e identificadores de Mercado Pago. **Nunca recibimos los datos de tu tarjeta**: los procesa Mercado Pago.
 - **Recordatorios:** horarios elegidos, zona horaria y próximos bloques de estudio.
-- **Datos técnicos:** la información que se guarda en el almacenamiento de tu navegador para que la página funcione. No usamos cookies de publicidad ni herramientas de rastreo.
+- **Datos técnicos:** la información que se guarda en el almacenamiento de tu navegador para que la página funcione, y los datos que cualquier sitio web recibe al cargarse (dirección IP, tipo de navegador). No usamos cookies de publicidad ni herramientas de rastreo, y las letras y librerías de Nexus se sirven desde el propio sitio, sin Google Fonts ni otras redes de terceros.
 
 ## 3. Para qué los usamos
 - Crear y administrar tu cuenta y verificar tu email.
@@ -1486,16 +1486,19 @@ Tratamos tus datos con tu **consentimiento**, que das al registrarte o iniciar s
 - **Nunca mostramos tu email ni tu contraseña** a otros usuarios.
 
 ## 6. Con quién compartimos datos
-Usamos proveedores que tratan datos por cuenta nuestra, solo para prestar el servicio:
-- **Supabase** (base de datos, almacenamiento de archivos y verificación de email).
-- **Mercado Pago** (procesamiento de pagos).
-- **Resend** (envío de emails).
-- **Anthropic** (Claude), cuando usás funciones de inteligencia artificial: se envía el texto de tu consulta y el material necesario para responderte.
-- **GitHub** (alojamiento de la página) y proveedores de fuentes y librerías (Google Fonts, cdnjs, jsDelivr), que pueden recibir datos técnicos como tu dirección IP al cargar la página.
+No vendemos ni cedemos tus datos. Solo los compartimos con estos proveedores, que los tratan por cuenta nuestra y únicamente para prestar el servicio:
+- **Supabase Inc.** (base de datos, archivos y verificación del email). Recibe los datos de tu cuenta, tu perfil, tu plan, tus mensajes, tus grupos, tus publicaciones y los archivos que compartís o vendés. **Los datos se guardan en servidores ubicados en São Paulo, Brasil.** La empresa tiene sede en Estados Unidos.
+- **Mercado Pago** (cobro de la suscripción y de las ventas de la Tienda). Recibe tu email y los datos de cada pago; los datos de tu tarjeta los cargás directamente en Mercado Pago. Opera en **Uruguay** y aplica su propia política de privacidad.
+- **Resend Inc.** (envío de los códigos de verificación y de los recordatorios). Recibe tu email, tu nombre y el contenido de cada email (por ejemplo, tus próximos bloques de estudio). **Estados Unidos.**
+- **Anthropic PBC** (inteligencia artificial Claude), **solo cuando usás el tutor, la guía, los temarios o los ejercicios con IA dentro de Nexus**. Recibe tu pregunta, datos de tu plan (carrera, materias, temas y fechas) y el fragmento de tu material necesario para responder. **Estados Unidos.** Si usás "Seguir en Claude" o Nexus dentro de Claude, usás tu propia cuenta de Claude y se aplica directamente la política de privacidad de Anthropic.
+- **GitHub Inc.** (alojamiento de la página web). Recibe los datos técnicos de cada visita (dirección IP y navegador). **Estados Unidos.**
 También podemos entregar datos cuando lo exija una autoridad competente conforme a la ley.
 
 ## 7. Transferencia internacional de datos
-Varios de estos proveedores (Supabase, Resend, Anthropic, GitHub y Google) guardan o procesan datos **fuera de Uruguay**, principalmente en Estados Unidos o en la Unión Europea. Al aceptar esta política **consentís expresamente** esa transferencia internacional. Elegimos proveedores que aplican medidas de seguridad reconocidas.
+Para prestar el servicio, tus datos se envían y se guardan **fuera de Uruguay**:
+- en **Brasil**: la base de datos y los archivos (Supabase);
+- en **Estados Unidos**: el envío de emails (Resend), las funciones de inteligencia artificial (Anthropic) y el alojamiento de la página (GitHub).
+Estos países pueden no contar con un nivel de protección de datos equivalente al de Uruguay. Por eso, al registrarte o iniciar sesión **te pedimos tu consentimiento expreso** para esta transferencia, como lo prevé la Ley 18.331. Elegimos proveedores que aplican medidas de seguridad reconocidas (cifrado, control de accesos) y solo les enviamos los datos necesarios para cada función. Si no consentís la transferencia, no es posible usar Nexus.
 
 ## 8. Cuánto tiempo los guardamos
 - Mientras tu cuenta esté activa.
@@ -1841,7 +1844,7 @@ function Logros({a}){
   return html`<div>
     <${Head} eyebrow="Constancia" title="Tu racha" sub="Contamos los días que cumplís tus bloques y descansás. Pasarte de horas no suma."/>
     <div className="grid2" style=${{marginBottom:20}}>
-      <div className="card-i row" style=${{gap:18}}><${Icon} n="flame" s=${52} sw=${1.5}/><div><div className="num" style=${{fontFamily:"'Poppins',sans-serif",fontWeight:800,fontSize:72,lineHeight:1}}>${stats.streak}</div><div style=${{opacity:.8}}>días seguidos${stats.credited?' · hoy ya cuenta':' · hoy falta un bloque'}</div></div></div>
+      <div className="card-i row" style=${{gap:18}}><${Icon} n="flame" s=${52} sw=${1.5}/><div><div className="num" style=${{fontFamily:"'DM Sans',sans-serif",fontWeight:800,fontSize:72,lineHeight:1}}>${stats.streak}</div><div style=${{opacity:.8}}>días seguidos${stats.credited?' · hoy ya cuenta':' · hoy falta un bloque'}</div></div></div>
       <div className="card"><div className="eyebrow" style=${{marginBottom:10}}>Últimos 14 días</div><div style=${{display:'grid',gridTemplateColumns:'repeat(14,minmax(0,1fr))',gap:4}}>${heat.map((m,i)=>html`<div key=${i} className="sq" title=${`${m} min`} style=${{background:m?`color-mix(in srgb,#9c82f7 ${Math.min(100,25+m/180*75)}%,var(--surf))`:'var(--surf)',outline:i===heat.length-1?'2px solid var(--ink)':'none',outlineOffset:1}}></div>`)}</div><p className="mut" style=${{fontSize:12.5,marginTop:10}}>Más oscuro, más minutos. Hoy: ${todayMin} min de ${prefs.maxH*60} posibles.</p></div></div>
     <div className="grid2">${L.map(([n,d,p])=>html`<div key=${n} className=${'ach '+(p>=1?'on':'off')}><${Icon} n=${p>=1?'trophy':'lock'} s=${24}/><div className="grow"><b>${n}</b><p style=${{fontSize:13.5,opacity:.85}}>${d}</p>${p<1&&html`<div style=${{marginTop:8}}><${Bar} v=${p*100}/></div>`}</div></div>`)}</div></div>`;
 }
@@ -2286,14 +2289,14 @@ function Rescate({a}){
     <${Head} eyebrow="🚨 Modo Rescate" title="Contame qué pasó" sub="Escribí tu situación con tus palabras. Armamos un plan realista de hoy, con descansos, solo con lo que más rinde."/>
     <div className="fl" style=${{gap:14}}>
       <textarea id="rescate-txt" aria-label="Tu situación" value=${text} onInput=${e=>setText(e.target.value)}></textarea>
-      <div><label htmlFor="rescate-h" className="row wrap" style=${{justifyContent:'space-between'}}><b>Horas que podés estudiar hoy</b><span className="num" style=${{fontFamily:"'Poppins',sans-serif",fontWeight:500}}>${hours.toFixed(1).replace('.',',')} h</span></label><input id="rescate-h" type="range" min="2" max="5" step="0.5" value=${hours} onInput=${e=>setHours(+e.target.value)}/><p className="mut" style=${{fontSize:12.5}}>Máximo 5 horas, con descansos. Más que eso rinde menos.</p></div>
+      <div><label htmlFor="rescate-h" className="row wrap" style=${{justifyContent:'space-between'}}><b>Horas que podés estudiar hoy</b><span className="num" style=${{fontFamily:"'DM Sans',sans-serif",fontWeight:500}}>${hours.toFixed(1).replace('.',',')} h</span></label><input id="rescate-h" type="range" min="2" max="5" step="0.5" value=${hours} onInput=${e=>setHours(+e.target.value)}/><p className="mut" style=${{fontSize:12.5}}>Máximo 5 horas, con descansos. Más que eso rinde menos.</p></div>
       <div><button className="btn btn-s btn-big" onClick=${calc}><${Icon} n="zap" s=${18}/> Armar mi plan de emergencia</button></div></div>
     ${out&&out.err&&html`<div className="alertbox" style=${{marginTop:20}}>No encontré materias en tu texto. Probá con algo como: “Tengo parcial de Fisiología en 5 días”.</div>`}
     ${out&&out.plan&&html`<div className="fl" style=${{gap:18,marginTop:28}}>
       <div className="card-i"><div className="eyebrow">Plan de emergencia · hoy</div><h2 style=${{fontSize:'clamp(26px,5vw,38px)',fontWeight:800,marginTop:6}}>${nStudy} bloques de 45 minutos</h2><p style=${{opacity:.8,marginTop:6}} className="num">De ${hhmm(prefs.from*60)} a ${hhmm(out.plan.end)} · incluye descansos · ${out.p.items.map(i=>`${i.name.split(' ')[0]} en ${i.days} d`).join(' · ')}</p></div>
-      <div className="fl" style=${{gap:6}}>${out.plan.blocks.map((b,i)=>b.type==='rest'?html`<div key=${i} className="hatch row" style=${{padding:'6px 14px',borderRadius:4,fontSize:13}}><span className="num" style=${{fontFamily:"'Poppins',sans-serif"}}>${hhmm(b.start)}</span><span>Descanso de ${b.dur} min${b.dur>10?' (largo)':''}</span></div>`:html`<div key=${i} className=${'trow t-'+b.t.level} style=${{cursor:'default',alignItems:'flex-start'}}><span className="num" style=${{fontFamily:"'Poppins',sans-serif",fontSize:13,width:46,paddingTop:2}}>${hhmm(b.start)}</span><span className="grow"><b>${b.t.name}</b> <span className="mut">· ${b.s.name}</span><span className="mut" style=${{display:'block',fontSize:13}}>${b.rep?'Práctica con parciales anteriores del mismo tema.':b.t.total?`Aparece en ${b.t.count} de ${b.t.total} parciales anteriores.`:'Unidad central.'}</span></span><${LevelTag} lv=${b.t.level}/></div>`)}</div>
+      <div className="fl" style=${{gap:6}}>${out.plan.blocks.map((b,i)=>b.type==='rest'?html`<div key=${i} className="hatch row" style=${{padding:'6px 14px',borderRadius:4,fontSize:13}}><span className="num" style=${{fontFamily:"'DM Sans',sans-serif"}}>${hhmm(b.start)}</span><span>Descanso de ${b.dur} min${b.dur>10?' (largo)':''}</span></div>`:html`<div key=${i} className=${'trow t-'+b.t.level} style=${{cursor:'default',alignItems:'flex-start'}}><span className="num" style=${{fontFamily:"'DM Sans',sans-serif",fontSize:13,width:46,paddingTop:2}}>${hhmm(b.start)}</span><span className="grow"><b>${b.t.name}</b> <span className="mut">· ${b.s.name}</span><span className="mut" style=${{display:'block',fontSize:13}}>${b.rep?'Práctica con parciales anteriores del mismo tema.':b.t.total?`Aparece en ${b.t.count} de ${b.t.total} parciales anteriores.`:'Unidad central.'}</span></span><${LevelTag} lv=${b.t.level}/></div>`)}</div>
       <div className="card-o" style=${{borderStyle:'dashed'}}><div className="eyebrow">Lo que dejamos afuera, a propósito</div><div className="fl" style=${{gap:4,marginTop:8}}>${out.plan.dropped.map((d,i)=>html`<div key=${i} className="row wrap" style=${{justifyContent:'space-between',fontSize:14}}><span style=${{textDecoration:d.t.level==='comp'?'line-through':'none'}}>${d.t.name} <span className="mut">· ${d.s.name}</span></span><span className="mut" style=${{fontSize:12.5}}>${d.why}</span></div>`)}</div></div>
-      <div className="card"><div className="eyebrow">Días siguientes</div><div className="fl" style=${{gap:6,marginTop:8}}>${out.plan.perDay.map(p=>html`<div key=${p.s.id} className="row wrap" style=${{justifyContent:'space-between'}}><span><b>${p.s.name}</b> <span className="mut">· parcial en ${p.days} días</span></span><span className="num" style=${{fontFamily:"'Poppins',sans-serif"}}>~${p.min} min por día</span></div>`)}</div></div>
+      <div className="card"><div className="eyebrow">Días siguientes</div><div className="fl" style=${{gap:6,marginTop:8}}>${out.plan.perDay.map(p=>html`<div key=${p.s.id} className="row wrap" style=${{justifyContent:'space-between'}}><span><b>${p.s.name}</b> <span className="mut">· parcial en ${p.days} días</span></span><span className="num" style=${{fontFamily:"'DM Sans',sans-serif"}}>~${p.min} min por día</span></div>`)}</div></div>
       <div className="row wrap"><button className="btn btn-s" onClick=${()=>a.activateRescue({exam:Object.fromEntries(out.p.items.map(i=>[i.id,i.days])),hours:out.hours})}><${Icon} n="calendar" s=${16}/> Usar este plan en mi calendario</button></div></div>`}
   </div>`;
 }
@@ -2322,7 +2325,7 @@ function Onboarding({a,onClose,start=0}){
     ['¿Cuándo son los parciales?',html`<div className="fl" style=${{gap:12}}>${d.subjects.map(s=>html`<div key=${s.id}><label htmlFor=${'ob-d-'+s.id} style=${{fontWeight:600}}>${s.name}</label><input id=${'ob-d-'+s.id} type="date" min=${ymd(1)} value=${ymd(s.exam)} onChange=${e=>{const v=e.target.value;if(!v)return;const t=new Date(v+'T00:00:00');upS(s.id,{exam:Math.max(1,Math.round((t-D0)/DAY))})}}/><span className="mut num" style=${{fontSize:13}}>En ${s.exam} días</span></div>`)}</div>`],
     ['¿Qué tan difícil te resulta cada una?',html`<div className="fl" style=${{gap:14}}>${d.subjects.map(s=>html`<div key=${s.id}><b>${s.name}</b><div className="chips" style=${{marginTop:6}} role="group" aria-label=${'Dificultad de '+s.name}>${[1,2,3,4,5].map(v=>html`<button key=${v} className="chip" aria-pressed=${s.diff===v} onClick=${()=>upS(s.id,{diff:v})}>${v}</button>`)}<span className="mut" style=${{fontSize:12.5,alignSelf:'center'}}>1 fácil · 5 muy difícil</span></div></div>`)}</div>`],
     ['¿En qué horario preferís estudiar?',html`<div className="grid2"><div><label htmlFor="ob-f" style=${{fontWeight:600}}>Desde</label><select id="ob-f" value=${d.from} onChange=${e=>setD({...d,from:Math.min(+e.target.value,d.to-1)})}>${hrs.slice(0,-1).map(h=>html`<option key=${h} value=${h}>${hhmm(h*60)}</option>`)}</select></div><div><label htmlFor="ob-t" style=${{fontWeight:600}}>Hasta</label><select id="ob-t" value=${d.to} onChange=${e=>setD({...d,to:Math.max(+e.target.value,d.from+1)})}>${hrs.slice(1).map(h=>html`<option key=${h} value=${h}>${hhmm(h*60)}</option>`)}</select></div></div>`],
-    ['¿Cuántas horas como máximo por día?',html`<div><div className="num" style=${{fontFamily:"'Poppins',sans-serif",fontWeight:800,fontSize:80,lineHeight:1}}>${d.maxH}<span style=${{fontSize:26}}> h</span></div><input id="ob-h" type="range" min="1" max="8" step="1" aria-label="Horas máximas por día" value=${d.maxH} onInput=${e=>setD({...d,maxH:+e.target.value})}/><p className="mut" style=${{fontSize:13}}>Nunca te vamos a planificar más que esto.</p></div>`]];
+    ['¿Cuántas horas como máximo por día?',html`<div><div className="num" style=${{fontFamily:"'DM Sans',sans-serif",fontWeight:800,fontSize:80,lineHeight:1}}>${d.maxH}<span style=${{fontSize:26}}> h</span></div><input id="ob-h" type="range" min="1" max="8" step="1" aria-label="Horas máximas por día" value=${d.maxH} onInput=${e=>setD({...d,maxH:+e.target.value})}/><p className="mut" style=${{fontSize:13}}>Nunca te vamos a planificar más que esto.</p></div>`]];
   const [title,body]=steps[st];
   return html`<div className="overlay" role="dialog" aria-modal="true" aria-label="Configuración inicial"><div className="sheet">
     <div className="row" style=${{justifyContent:'space-between'}}><span className="eyebrow num">Paso ${st+1} de ${N}</span><button className="btn btn-sm btn-g" onClick=${onClose}>Cerrar</button></div>
